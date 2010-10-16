@@ -18,7 +18,7 @@
 
 int line_number = 1;
 char *file_name;
-void fatal(const char *fmt, ...);
+extern "C" void fatal(const char *fmt, ...);
 
 %}
 
@@ -30,7 +30,7 @@ void fatal(const char *fmt, ...);
 #.*                         /* ignore */
 \n                          line_number++; return '\n';
 \<icu:state>                BEGIN(STATE); return _STATE;
---                          return MACHINE_SEPARATOR;
+ /*--                          return MACHINE_SEPARATOR;*/
 \<[^>]+>                    return TAG;
 (\\[xX][0-9a-fA-F]+\+?)+    return CHARSEQ;
 [0-9]+                      return NUMBER;

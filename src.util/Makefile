@@ -11,16 +11,19 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CFILES.genconv := genconv.c common.c minimize_state_machine.c
-GFILES.genconv := ucmparser.g
-LFILES.genconv := ucmlexer.l
-DEPS.ucmparser.g := ucmlexer.l genconv.c
+CXXFILES.ucm2cct := ucm2cct.cc ucm.cc
+GGFILES.ucm2cct := ucmparser.gg
+LFILES.ucm2cct := ucmlexer.l
+DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
 
-TARGETS := genconv
+CXXTARGETS := ucm2cct
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -I. -I../src -I.objects
+CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
+
+$(warning Overriding C compiler with c++ for now)
+CC:=$(CXX)

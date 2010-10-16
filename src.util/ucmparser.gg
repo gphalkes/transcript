@@ -12,7 +12,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//FIXME: the first CHARMAP may also contain complex mappings
 
 %options "generate-symbol-table lowercase-symbols generate-lexer-wrapper reentrant";
 %label CHARMAP, "CHARMAP";
@@ -21,22 +20,20 @@
 %label CHARSEQ, "character sequence";
 %label _INITIAL, "initial";
 %label _STATE, "state";
-%label MACHINE_SEPARATOR, "machine separator";
 %token TAG, SURROGATES, ACTION, STRING, NUMBER, PRECISION;
 
 %start parse_ucm, ucm;
-%start parse_states_file, states_file;
 
 {
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "genconv.h"
+#include "ucm2cct.h"
 
 extern char *yytext;
 
-void LLmessage(int class) {
-	switch (class) {
+void LLmessage(int _class) {
+	switch (_class) {
 		case LL_MISSINGEOF:
 			fatal("%s:%d: Expected %s, found %s (%s).\n", file_name, line_number, LLgetSymbol(EOFILE), LLgetSymbol(LLsymb), yytext);
 			break;
@@ -44,30 +41,25 @@ void LLmessage(int class) {
 			fatal("%s:%d: Unexpected %s (%s).\n", file_name, line_number, LLgetSymbol(LLsymb), yytext);
 			break;
 		default:
-			fatal("%s:%d: Expected %s, found %s (%s).\n", file_name, line_number, LLgetSymbol(class), LLgetSymbol(LLsymb), yytext);
+			fatal("%s:%d: Expected %s, found %s (%s).\n", file_name, line_number, LLgetSymbol(_class), LLgetSymbol(LLsymb), yytext);
 			break;
 	}
 }
 
-static ucm_t *ucm;
+static Ucm *ucm;
 
 }
 
 ucm<void *>:
-	{ LLretval = ucm = new_ucm(); }
+	{ LLretval = ucm = new Ucm(); }
 	'\n'*
 	[
 		header_line
 		'\n'+
 	]+
 	{
-		process_header_part1(ucm);
-		flatten_states_with_default(ucm);
-		validate_states((flat_states_t *) ucm);
-		process_header_part2(ucm);
-		calculate_state_attributes(ucm);
-		//print_states(ucm);
-		allocate_charmap(ucm);
+		ucm->process_header();
+		ucm->validate_states();
 	}
 	CHARMAP '\n'+
 	[
@@ -90,12 +82,12 @@ ucm<void *>:
 ;
 
 header_line {
-	tag_t tag;
+	Ucm::tag_t tag;
 } :
 	TAG
 	{ tag = string_to_tag(yytext); }
 	value
-	{ set_tag_value(ucm, tag, yytext); }
+	{ ucm->set_tag_value(tag, yytext); }
 |
 	_STATE
 	state
@@ -114,13 +106,13 @@ state {
 } :
 	[
 		[
-			_INITIAL { flags |= STATE_INITIAL; }
+			_INITIAL { flags |= State::INITIAL; }
 		|
 			SURROGATES
 		]
 		','
 	]?
-	{ new_state(flags); }
+	{ ucm->new_codepage_state(flags); }
 	[
 		entry
 		[
@@ -131,7 +123,7 @@ state {
 ;
 
 entry {
-	linked_entry_t result = { 0, 0, 0, ACTION_FINAL, NULL, NULL };
+	Entry result(0, 0, 0, ACTION_FINAL, 0, 0, 0);
 } :
 	HEXNUM
 	//FIXME: check for range of numbers!
@@ -175,21 +167,18 @@ entry {
 			{ result.action = ACTION_FINAL; }
 		]
 	]?
-	{ new_entry(result); }
+	{ ucm->new_codepage_entry(result); }
 ;
 
 mapping {
-	uint32_t codepoints[17];
-	int codepoints_size = 0;
-	uint32_t mapped[31];
-	int mapped_size;
-	int precision = 0;
+	Mapping mapping;
 } :
 	TAG
 	{
-		if (sscanf(yytext, "<U%" SCNx32 ">", &codepoints[codepoints_size]) == 0 || codepoints[codepoints_size] > 0x10ffff)
+		uint32_t codepoint;
+		if (sscanf(yytext, "<U%" SCNx32 ">", &codepoint) == 0 || codepoint > 0x10ffff)
 			fatal("%s:%d: Tag does not specify a valid unicode codepoint\n", file_name, line_number);
-		codepoints_size++;
+		mapping.codepoints.push_back(codepoint);
 	}
 	[
 		'+'?
@@ -197,33 +186,24 @@ mapping {
 	]*
 	CHARSEQ
 	{
-		if (!map_charseq(ucm, yytext, mapped, &mapped_size))
-			fatal("%s:%d: Character sequence '%s' is not valid in the state machine\n", file_name, line_number, yytext);
+		char *charseq = yytext;
+		long value;
+
+		while (*charseq != 0) {
+			charseq += 2; /* Skip \x */
+			value = strtol(charseq, &charseq, 16);
+			if (value > 255 || value < 0)
+				fatal("%s:%d: byte value out of range\n", file_name, line_number);
+			mapping.codepage_bytes.push_back(value);
+			if (*charseq == '+')
+				charseq++;
+		}
+		if (mapping.codepage_bytes.size() > 31)
+			fatal("%s:%d: character sequence too long\n", file_name, line_number);
 	}
 	[
 		PRECISION
-		{ precision = yytext[1] - '0'; }
+		{ mapping.precision = yytext[1] - '0'; }
 	]?
-	{ add_mapping(ucm, codepoints, codepoints_size, mapped, mapped_size, precision); }
-;
-
-states_file :
-	'\n'*
-	[
-		_STATE state
-		'\n'+
-	]*
-	{
-		flatten_states(&codepage_machine);
-		validate_states(&codepage_machine);
-	}
-	MACHINE_SEPARATOR '\n'+
-	[
-		_STATE state
-		'\n'+
-	]*
-	{
-		flatten_states(&unicode_machine);
-		validate_states(&unicode_machine);
-	}
+	{ ucm->add_mapping(mapping); }
 ;

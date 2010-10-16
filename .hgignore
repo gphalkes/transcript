@@ -1,5 +1,6 @@
 syntax: glob
+src.util/ucm2cct
 
-src.util/.objects
-src.util/.deps
+src*/.objects
+src*/.deps
 src.util/genconv
