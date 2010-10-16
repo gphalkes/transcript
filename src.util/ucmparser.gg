@@ -51,7 +51,11 @@ static Ucm *ucm;
 }
 
 ucm<void *>:
-	{ LLretval = ucm = new Ucm(); }
+	{
+		if (option_verbose)
+			fprintf(stderr, "Reading input\n");
+		LLretval = ucm = new Ucm();
+	}
 	'\n'*
 	[
 		header_line
@@ -79,6 +83,7 @@ ucm<void *>:
 			'\n'*
 		]?
 	]?
+	{ ucm->check_duplicates(); }
 ;
 
 header_line {

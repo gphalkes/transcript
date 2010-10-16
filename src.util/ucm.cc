@@ -13,6 +13,7 @@
 */
 #include <cstring>
 #include <cstdio>
+#include <algorithm>
 #include "ucm2cct.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
@@ -246,37 +247,56 @@ next_char:;
 	return count;
 }
 
+static int compareCodepageBytesSimple(Mapping &a, Mapping &b) {
+	size_t i;
 
-/* void Ucm::check_duplicates(vector<Mapping> &mappings, Mapping &mapping) {
-	vector<Mapping>::iterator iter;
-	for (iter = mappings.begin(); iter != mappings.end(); iter++) {
-		size_t i;
-		if (iter->codepoints.size() == mapping.codepoints.size()) {
-			for (i = 0; i < mapping.codepoints.size(); i++)
-				if (iter->codepoints[i] != mapping.codepoints[i])
-					break;
-
-			if (i == mapping.codepoints.size()) {
-				fprintf(stderr, "%s:%d: Duplicate mapping for codepoint", file_name, line_number);
-				for (i = 0; i < mapping.codepoints.size(); i++)
-					fprintf(stderr, " U+%04" PRIX32 "\n", mapping.codepoints[i]);
-				fatal("\n");
-			}
-		}
-
-		if (iter->codepage_bytes.size() == mapping.codepage_bytes.size()) {
-			for (i = 0; i < mapping.codepage_bytes.size(); i++)
-				if (iter->codepage_bytes[i] != mapping.codepage_bytes[i])
-					break;
-			if (i == mapping.codepage_bytes.size()) {
-				fprintf(stderr, "%s:%d: Duplicate mapping for byte sequence ", file_name, line_number);
-				for (i = 0; i < mapping.codepage_bytes.size(); i++)
-					fprintf(stderr, "\\x%02X", mapping.codepage_bytes[i]);
-				fatal("\n");
-			}
-		}
+	for (i = 0; i < a.codepage_bytes.size() && i < b.codepage_bytes.size(); i++) {
+		if (a.codepage_bytes[i] < b.codepage_bytes[i])
+			return -1;
+		if (a.codepage_bytes[i] > b.codepage_bytes[i])
+			return 1;
 	}
-} */
+
+	if (a.codepage_bytes.size() < b.codepage_bytes.size())
+		return -1;
+	else if (a.codepage_bytes.size() > b.codepage_bytes.size())
+		return 1;
+	return 0;
+}
+
+static const int reorder_precision[4] = {0, 2, 3, 1};
+static bool compareCodepageBytes(Mapping a, Mapping b) {
+	int result = compareCodepageBytesSimple(a, b);
+
+	if (result == 0)
+		return reorder_precision[a.precision] < reorder_precision[b.precision];
+	return result < 0;
+}
+
+static int compareCodepointsSimple(Mapping &a, Mapping &b) {
+	size_t i;
+
+	for (i = 0; i < a.codepoints.size() && i < b.codepoints.size(); i++) {
+		if (a.codepoints[i] < b.codepoints[i])
+			return -1;
+		if (a.codepoints[i] > b.codepoints[i])
+			return 1;
+	}
+
+	if (a.codepoints.size() < b.codepoints.size())
+		return -1;
+	else if (a.codepoints.size() > b.codepoints.size())
+		return 1;
+	return 0;
+}
+
+static bool compareCodepoints(Mapping a, Mapping b) {
+	int result = compareCodepointsSimple(a, b);
+
+	if (result == 0)
+		return a.precision < b.precision;
+	return result < 0;
+}
 
 void Ucm::add_mapping(Mapping &mapping) {
 	int codepage_chars = check_codepage_bytes(mapping.codepage_bytes);
@@ -287,3 +307,40 @@ void Ucm::add_mapping(Mapping &mapping) {
 		multi_mappings.push_back(mapping);
 }
 
+void Ucm::check_duplicates(vector<Mapping> &mappings) {
+	vector<Mapping>::iterator iter;
+	if (mappings.size() != 0) {
+		sort(mappings.begin(), mappings.end(), compareCodepoints);
+		for (iter = mappings.begin() + 1; iter != mappings.end(); iter++) {
+			if (compareCodepointsSimple(*iter, *(iter - 1)) == 0) {
+				if (iter->precision > 1 || (iter - 1)->precision > 1)
+					continue;
+				fprintf(stderr, "Duplicate mapping defined for ");
+				for (vector<uint32_t>::iterator codepoint_iter = iter->codepoints.begin();
+						codepoint_iter != iter->codepoints.end(); codepoint_iter++)
+					fprintf(stderr,  "<U%04" PRIX32 ">", *codepoint_iter);
+				fatal("\n");
+			}
+		}
+
+		sort(mappings.begin(), mappings.end(), compareCodepageBytes);
+		for (iter = mappings.begin() + 1; iter != mappings.end(); iter++) {
+			if (compareCodepageBytesSimple(*iter, *(iter - 1)) == 0) {
+				if (reorder_precision[iter->precision] > 1 || reorder_precision[(iter - 1)->precision] > 1)
+					continue;
+				fprintf(stderr, "Duplicate mapping defined for ");
+				for (vector<uint8_t>::iterator codepage_byte_iter = iter->codepage_bytes.begin();
+						codepage_byte_iter != iter->codepage_bytes.end(); codepage_byte_iter++)
+					fprintf(stderr,  "\\x%02" PRIX32, *codepage_byte_iter);
+				fatal("\n");
+			}
+		}
+	}
+}
+
+void Ucm::check_duplicates(void) {
+	if (option_verbose)
+		fprintf(stderr, "Checking for duplicate mappings\n");
+	check_duplicates(simple_mappings);
+	check_duplicates(multi_mappings);
+}

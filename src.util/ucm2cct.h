@@ -62,8 +62,8 @@ class Mapping {
 		uint8_t flags, precision;
 
 		Mapping() : flags(0), precision(0) {};
-		Mapping(const Mapping &other) : codepoints(other.codepoints), codepage_bytes(other.codepage_bytes),
-			flags(other.flags), precision(other.precision) {}
+		//~ Mapping(const Mapping &other) : codepoints(other.codepoints), codepage_bytes(other.codepage_bytes),
+			//~ flags(other.flags), precision(other.precision) {}
 };
 
 
@@ -107,7 +107,7 @@ class Ucm {
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
 		int check_codepage_bytes(vector<uint8_t> &bytes);
-		/* void check_duplicates(vector<Mapping> &mappings, Mapping &mapping); */
+		void check_duplicates(vector<Mapping> &mappings);
 
 	public:
 		Ucm(void);
@@ -117,6 +117,7 @@ class Ucm {
 		void process_header(void);
 		void validate_states(void);
 		void add_mapping(Mapping &mapping);
+		void check_duplicates(void);
 };
 
 extern "C" int line_number;
@@ -125,6 +126,8 @@ extern "C" char *file_name;
 extern "C" void fatal(const char *fmt, ...);
 #define PANIC() fatal("Program logic error at line: %s:%d\n", __FILE__, __LINE__)
 #define OOM() fatal("Out of memory\n")
+
+extern bool option_verbose;
 
 Ucm::tag_t string_to_tag(const char *str);
 #endif
