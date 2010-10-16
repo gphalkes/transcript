@@ -1,0 +1,5 @@
+syntax: glob
+
+src.util/.objects
+src.util/.deps
+src.util/genconv
