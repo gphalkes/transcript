@@ -225,24 +225,6 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
 }
 
 static int find_best_merge(full_state_t *merge[2]) {
-/*	full_state_t *ptr;
-	int merge_cost, best_merge_cost = INT_MAX;
-
-	for (; head != NULL; head = head->next) {
-		for (ptr = head->next; ptr != NULL; ptr = ptr->next) {
-			if (!can_merge(head, ptr))
-				continue;
-
-			merge_cost = calculate_merge_cost(head, ptr);
-			if (merge_cost < best_merge_cost) {
-				best_merge_cost = merge_cost;
-				merge[0] = head;
-				merge[1] = ptr;
-			}
-		}
-	}
-	return best_merge_cost;*/
-
 	int best_merge_cost = INT_MAX;
 	for (map<pair<full_state_t *, full_state_t *>, int>::iterator iter = costs.begin();
 			iter != costs.end(); iter++)
