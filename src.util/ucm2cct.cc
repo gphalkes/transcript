@@ -129,9 +129,12 @@ int main(int argc, char *argv[]) {
 	file_name = argv[optind];
 
 	parse_ucm((void **) &ucm);
-	print_state_machine(ucm->codepage_states);
-	//~ ucm->check_duplicates();
+	ucm->check_duplicates();
 	ucm->minimize_state_machines();
-	print_state_machine(ucm->codepage_states);
-	print_state_machine(ucm->unicode_states);
+	if (option_verbose) {
+		printf("Codepage state machine\n");
+		print_state_machine(ucm->codepage_states);
+		printf("Unicode state machine\n");
+		print_state_machine(ucm->unicode_states);
+	}
 }
