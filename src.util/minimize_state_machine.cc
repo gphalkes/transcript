@@ -34,15 +34,16 @@ struct full_state_t {
 };
 
 typedef struct {
-	state_t *state;
+	const State *state;
 	full_state_t *full_state;
 } state_pair_t;
 
-static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, ucm_t *ucm, int idx) {
+static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
 	full_state_t *current;
-	int i, j;
+	size_t i;
+	int j;
 
-	if ((current = calloc(1, sizeof(full_state_t))) == NULL)
+	if ((current = (full_state_t *) calloc(1, sizeof(full_state_t))) == NULL)
 		OOM();
 
 	/* Set pointers correctly for systems which use non-zero NULL ptr. */
@@ -60,25 +61,29 @@ static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail
 		*tail = current;
 	}
 
-	for (i = 0; i < ucm->states[idx].nr_entries; i++) {
-		for (j = ucm->states[idx].entries[i].low; j <= ucm->states[idx].entries[i].high; j++) {
-			switch (ucm->states[idx].entries[i].action) {
+	for (i = 0; i < states[idx]->entries.size(); i++) {
+		for (j = states[idx]->entries[i].low; j <= states[idx]->entries[i].high; j++) {
+			switch (states[idx]->entries[i].action) {
 				case ACTION_VALID:
 					current->entries[j].action = ACTION_VALID;
-					current->entries[j].next_state = allocate_new_state(head, tail, ucm, ucm->states[idx].entries[i].next_state);
+					current->entries[j].next_state = allocate_new_state(head, tail, states, states[idx]->entries[i].next_state);
 					current->entries[j].next_state->linked_from = current;
 					break;
 				case ACTION_FINAL:
 				case ACTION_FINAL_PAIR:
 				case ACTION_UNASSIGNED:
 					current->entries[j].action = ACTION_UNASSIGNED;
-					current->entries[j].next_state = (full_state_t *) &ucm->states[ucm->states[idx].entries[i].next_state];
+					/* This is a bit of a hack: we store the pointers to the original states
+					   rather than the actual state-tree state. Because we never follow
+					   this pointer, this doesn't cause problems. However, this does mean we
+					   have to do some extra stuff later on. */
+					current->entries[j].next_state = (full_state_t *) states[states[idx]->entries[i].next_state];
 					break;
 				case ACTION_SHIFT:
-					current->entries[j].next_state = (full_state_t *) &ucm->states[ucm->states[idx].entries[i].next_state];
-					/* FALLTHROUGH */
 				case ACTION_ILLEGAL:
-					current->entries[j].action = ucm->states[idx].entries[i].action;
+					// See note on previous entry.
+					current->entries[j].next_state = (full_state_t *) states[states[idx]->entries[i].next_state];
+					current->entries[j].action = states[idx]->entries[i].action;
 					break;
 				default:
 					PANIC();
@@ -89,65 +94,21 @@ static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail
 }
 
 static void mark_entry(full_state_t *start, unsigned char *bytes, int length, bool pair) {
-	if (length > 1) {
-		if (start->entries[*bytes].action != ACTION_VALID)
+	switch (start->entries[*bytes].action) {
+		case ACTION_VALID:
+			if (length == 1)
+				PANIC();
+			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, pair);
+			return;
+		case ACTION_UNASSIGNED:
+		case ACTION_FINAL:
+			start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
+			return;
+		case ACTION_FINAL_PAIR:
+			return;
+		default:
 			PANIC();
-
-		mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, pair);
-	} else {
-		if (start->entries[*bytes].action != ACTION_UNASSIGNED) {
-			fprintf(stderr, "Action is: %d\n", start->entries[*bytes].action);
-			PANIC();
-		}
-
-		start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
 	}
-}
-
-static void linear_to_bytes(ucm_t *ucm, uint32_t mapped, unsigned char *bytes, int *length) {
-	int state, i;
-
-	for (state = 0; state < ucm->nr_states; state++) {
-		if (!(ucm->states[state].flags & STATE_INITIAL))
-			continue;
-
-		if (!(ucm->states[state].base <= (int) mapped && ucm->states[state].base + ucm->states[state].range > (int) mapped))
-			continue;
-		break;
-	}
-	mapped -= ucm->states[state].base;
-
-	*length = 0;
-	while (1) {
-		for (i = 0; i < ucm->states[state].nr_entries; i++) {
-			if (!((int) mapped >= ucm->states[state].entries[i].base && (int) mapped < ucm->states[state].entries[i].max))
-				continue;
-
-			mapped -= ucm->states[state].entries[i].base;
-			if (*length >= 8) PANIC();
-			bytes[(*length)++] = ucm->states[state].entries[i].low + mapped / ucm->states[state].entries[i].mul;
-			mapped %= ucm->states[state].entries[i].mul;
-
-			switch (ucm->states[state].entries[i].action) {
-				case ACTION_ILLEGAL:
-				case ACTION_SHIFT:
-					PANIC();
-				case ACTION_FINAL_PAIR:
-				case ACTION_FINAL:
-				case ACTION_UNASSIGNED:
-					return;
-				case ACTION_VALID:
-					state = ucm->states[state].entries[i].next_state;
-					goto next_char;
-				default:
-					PANIC();
-			}
-		}
-		PANIC();
-next_char:;
-	}
-	/* This should be unreachable. */
-	PANIC();
 }
 
 static int count_states(full_state_t *ptr) {
@@ -160,7 +121,7 @@ static int count_states(full_state_t *ptr) {
 static bool can_merge(full_state_t *a, full_state_t *b) {
 	int i;
 
-	if ((a->flags & STATE_INITIAL) || (b->flags & STATE_INITIAL))
+	if ((a->flags & State::INITIAL) || (b->flags & State::INITIAL))
 		return false;
 
 	for (i = 0; i < 256; i++) {
@@ -196,7 +157,7 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 }
 
 static int calculate_state_cost(full_state_t *state) {
-	action_t last_action = -1;
+	action_t last_action = (action_t) -1;
 	int i, cost;
 
 	cost = 256; //FIXME: chose: either calculate in memory costs, or on disk cost, but not something inbetween!!!
@@ -367,41 +328,51 @@ static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 static void print_action(full_entry_t *entry) {
 	switch (entry->action) {
 		case ACTION_VALID:
-			printf(":%x", (int)(intptr_t) entry->next_state);
+			printf(":%x", (int) (intptr_t) entry->next_state);
 			break;
 		case ACTION_FINAL:
 			if (entry->next_state != 0)
-				printf(":%x.", (int)(intptr_t) entry->next_state);
+				printf(":%x.", (int) (intptr_t) entry->next_state);
 			break;
 		case ACTION_FINAL_PAIR:
 			if (entry->next_state != 0)
-				printf(":%x", (int)(intptr_t) entry->next_state);
+				printf(":%x", (int) (intptr_t) entry->next_state);
 			printf(".p");
 			break;
 		case ACTION_ILLEGAL:
 			if (entry->next_state != 0)
-				printf(":%x", (int)(intptr_t) entry->next_state);
+				printf(":%x", (int) (intptr_t) entry->next_state);
 			printf(".i");
 			break;
 		case ACTION_UNASSIGNED:
 			if (entry->next_state != 0)
-				printf(":%x", (int)(intptr_t) entry->next_state);
+				printf(":%x", (int) (intptr_t) entry->next_state);
 			printf(".u");
 			break;
 		case ACTION_SHIFT:
-			printf(":%x.s", (int)(intptr_t) entry->next_state);
+			printf(":%x.s", (int) (intptr_t) entry->next_state);
 			break;
 		default:
 			PANIC();
 	}
 }
 
-void minimize_state_machine(ucm_t *ucm) {
+void minimize_state_machine(StateMachineInfo *info, int flags) {
+	const vector<State *> &states = info->get_state_machine();
 	full_state_t *head = NULL, *tail = NULL, *ptr;
 	state_pair_t initial_states[16];
 	full_state_t *serialized_states[256];
-	int i, j, nr_states, nr_serialized_states = 0;
-	int last;
+	size_t i, j, nr_serialized_states = 0, last;
+	int nr_states;
+
+	uint8_t bytes[31];
+	size_t length;
+	bool pair;
+	int state;
+
+
+	if (option_verbose)
+		fprintf(stderr, "Minimizing state machine\n");
 
 	/*
 		- take state machine description from ucm and convert to full_XXX_t
@@ -418,43 +389,31 @@ void minimize_state_machine(ucm_t *ucm) {
 		initial_states[i].full_state = NULL;
 	}
 
-	/* Create state tables */
-	nr_states = 0;
-	for (i = 0; i < ucm->nr_states; i++) {
-		if (ucm->states[i].flags & STATE_INITIAL) {
-			initial_states[nr_states].state = &ucm->states[i];
-			initial_states[nr_states].full_state = allocate_new_state(&head, &tail, ucm, i);
-			initial_states[nr_states].full_state->flags = STATE_INITIAL;
-			serialized_states[nr_states] = initial_states[nr_states].full_state;
-			nr_states++;
+	// Create state table tree
+	nr_serialized_states = 0;
+	for (i = 0; i < states.size(); i++) {
+		if (states[i]->flags & State::INITIAL) {
+			initial_states[nr_serialized_states].state = states[i];
+			initial_states[nr_serialized_states].full_state = allocate_new_state(&head, &tail, states, i);
+			initial_states[nr_serialized_states].full_state->flags = State::INITIAL;
+			serialized_states[nr_serialized_states] = initial_states[nr_serialized_states].full_state;
+			nr_serialized_states++;
 		}
 	}
-	nr_serialized_states = nr_states;
 
-	for (i = 0; i < ucm->range; i++) {
-		if (ucm->to_unicode_mappings[i] == UINT16_C(0xffff) && ucm->to_unicode_flags[i] == 0)
-			continue;
-
-		for (j = 0; j < nr_states; j++) {
-			if (initial_states[j].state == NULL)
-				continue;
-
-			if (initial_states[j].state->base <= i && initial_states[j].state->base + initial_states[j].state->range > i) {
-				unsigned char bytes[8];
-				int length;
-				linear_to_bytes(ucm, i, bytes, &length);
-				mark_entry(initial_states[j].full_state, bytes, length, (ucm->to_unicode_mappings[i] & UINT16_C(0xfc00)) == 0xd800);
-				if ((ucm->to_unicode_mappings[i] & UINT16_C(0xfc00)) == 0xd800)
-					i++;
-				break;
-			}
-		}
+	// Mark all used entries
+	while (info->get_next_byteseq(bytes, length, pair)) {
+		state = (flags & Ucm::MULTIBYTE_START_STATE_1) && length > 1 ? 1 : 0;
+		mark_entry(initial_states[state].full_state, bytes, length, pair);
 	}
 
 	nr_states = count_states(head);
 	printf("Nr of states: %d\n", nr_states);
+
+	// Merge duplicate states using a fast algorithm
 	merge_duplicate_states(head, &tail);
 	nr_states = count_states(head);
+
 	printf("Nr of states: %d\n", nr_states);
 	while (1) {
 		full_state_t *merge[2];
@@ -470,38 +429,32 @@ void minimize_state_machine(ucm_t *ucm) {
 	}
 	merge_duplicate_states(head, &tail);
 
+	// Put all states in an array
 	for (ptr = head; ptr != NULL; ptr = ptr->next) {
-		for (i = 0; i < 256; i++) {
-			if (ptr->entries[i].action == ACTION_VALID || ptr->entries[i].action == ACTION_ILLEGAL)
-				continue;
-
-			for (j = 0; j < nr_serialized_states; j++)
-				if (ptr->entries[i].next_state == (full_state_t *) initial_states[j].state)
-					ptr->entries[i].next_state = (void *) (intptr_t) j;
-		}
-	}
-
-	for (ptr = head; ptr != NULL; ptr = ptr->next) {
-		if (ptr->flags & STATE_INITIAL)
+		if (ptr->flags & State::INITIAL)
 			continue;
 
 		serialized_states[nr_serialized_states++] = ptr;
 	}
 
+	// Convert pointers to full_state_t to indices
 	for (ptr = head; ptr != NULL; ptr = ptr->next) {
 		for (i = 0; i < 256; i++) {
-			if (ptr->entries[i].action != ACTION_VALID)
-				continue;
-
-			for (j = 0; j < nr_serialized_states; j++)
-				if (ptr->entries[i].next_state == serialized_states[j])
-					ptr->entries[i].next_state = (void *) (intptr_t) j;
+			if (ptr->entries[i].action == ACTION_VALID) {
+				for (j = 0; j < nr_serialized_states; j++)
+					if (ptr->entries[i].next_state == serialized_states[j])
+						ptr->entries[i].next_state = (full_state_t *) (intptr_t) j;
+			} else {
+				for (j = 0; j < nr_serialized_states; j++)
+					if (ptr->entries[i].next_state == (full_state_t *) initial_states[j].state)
+						ptr->entries[i].next_state = (full_state_t *) (intptr_t) j;
+			}
 		}
 	}
 
 	for (i = 0; i < nr_serialized_states; i++) {
 		printf("<icu:state>\t");
-		if (i != 0 && (serialized_states[i]->flags & STATE_INITIAL))
+		if (i != 0 && (serialized_states[i]->flags & State::INITIAL))
 			printf("initial, ");
 		printf("00");
 		last = 0;
@@ -521,14 +474,14 @@ void minimize_state_machine(ucm_t *ucm) {
 			}
 
 			if (last != j - 1)
-				printf("-%02x", j - 1);
+				printf("-%02zx", j - 1);
 
 			print_action(&serialized_states[i]->entries[last]);
-			printf(", %02x", j);
+			printf(", %02zx", j);
 			last = j;
 		}
 		if (last != j - 1)
-			printf("-%02x", j - 1);
+			printf("-%02zx", j - 1);
 		print_action(&serialized_states[i]->entries[last]);
 		printf("\n");
 	}

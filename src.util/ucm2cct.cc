@@ -61,8 +61,48 @@ static void print_usage(void) {
 	exit(EXIT_SUCCESS);
 }
 
+static void print_state_machine(Ucm *ucm) {
+	for (size_t i = 0; i < ucm->codepage_states.size(); i++) {
+		printf("State %zd:", i);
+		for (size_t j = 0; j < ucm->codepage_states[i]->entries.size(); j++) {
+			if (j != 0)
+				putchar(',');
+			printf(" %d", ucm->codepage_states[i]->entries[j].low);
+			if (ucm->codepage_states[i]->entries[j].low != ucm->codepage_states[i]->entries[j].high)
+				printf("-%d", ucm->codepage_states[i]->entries[j].high);
+
+			if (ucm->codepage_states[i]->entries[j].next_state != 0)
+				printf(":%d", ucm->codepage_states[i]->entries[j].next_state);
+
+			switch (ucm->codepage_states[i]->entries[j].action) {
+				case ACTION_FINAL:
+					putchar('.');
+					break;
+				case ACTION_FINAL_PAIR:
+					printf(".p");
+					break;
+				case ACTION_ILLEGAL:
+					printf(".i");
+					break;
+				case ACTION_UNASSIGNED:
+					printf(".u");
+					break;
+				case ACTION_SHIFT:
+					printf(".s");
+					break;
+				case ACTION_VALID:
+					break;
+				default:
+					PANIC();
+			}
+		}
+		putchar('\n');
+	}
+}
+
+
 int main(int argc, char *argv[]) {
-	Ucm *file;
+	Ucm *ucm;
 	int c;
 
 	while ((c = getopt(argc, argv, "ho:v")) != -1) {
@@ -88,6 +128,8 @@ int main(int argc, char *argv[]) {
 		fatal("Could not open '%s': %s\n", argv[optind], strerror(errno));
 	file_name = argv[optind];
 
-	parse_ucm((void **) &file);
-
+	parse_ucm((void **) &ucm);
+	print_state_machine(ucm);
+	//~ ucm->check_duplicates();
+	ucm->minimize_state_machines();
 }

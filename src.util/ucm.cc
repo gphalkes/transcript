@@ -38,9 +38,9 @@ void State::new_entry(Entry entry) {
 		} else {
 			// Split entry
 			Entry insert[2] = { entry, *ptr_low };
-			insert[2].low = entry.high + 1;
+			insert[1].low = entry.high + 1;
 			ptr_low->high = entry.low - 1;
-			entries.insert(ptr_low, insert, insert + 2);
+			entries.insert(ptr_low + 1, insert, insert + 2);
 		}
 	} else {
 		if (ptr_low->low == entry.low) {
@@ -72,10 +72,10 @@ void Ucm::set_tag_value(tag_t tag, const char *value) {
 }
 
 void Ucm::new_codepage_state(int _flags) {
-	codepage_states.resize(codepage_states.size() + 1);
-	codepage_states.back().flags = _flags;
+	codepage_states.push_back(new State());
+	codepage_states.back()->flags = _flags;
 	if (codepage_states.size() == 1)
-		codepage_states.back().flags |= State::INITIAL;
+		codepage_states.back()->flags |= State::INITIAL;
 }
 
 void Ucm::new_codepage_entry(Entry entry) {
@@ -84,15 +84,15 @@ void Ucm::new_codepage_entry(Entry entry) {
 			entry.next_state < 0 || entry.next_state > 255)
 		fatal("%s:%d: Range definition or next state invalid\n", file_name, line_number);
 
-	codepage_states.back().new_entry(entry);
+	codepage_states.back()->new_entry(entry);
 }
 
 bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 	size_t i;
-	for (i = 0; i < codepage_states[state].entries.size(); i++) {
-		if (!(byte >= codepage_states[state].entries[i].low && byte <= codepage_states[state].entries[i].high))
+	for (i = 0; i < codepage_states[state]->entries.size(); i++) {
+		if (!(byte >= codepage_states[state]->entries[i].low && byte <= codepage_states[state]->entries[i].high))
 			continue;
-		return codepage_states[state].entries[i].action == action && codepage_states[state].entries[i].next_state == next_state;
+		return codepage_states[state]->entries[i].action == action && codepage_states[state]->entries[i].next_state == next_state;
 	}
 	PANIC();
 	return false;
@@ -113,7 +113,7 @@ void Ucm::process_header(void) {
 	if (codepage_states.size() == 0)
 		set_default_codepage_states();
 
-	if (codepage_states.size() > 2 && (codepage_states[1].flags & State::INITIAL) &&
+	if (codepage_states.size() > 2 && (codepage_states[1]->flags & State::INITIAL) &&
 			check_map(0, 0xe, ACTION_SHIFT, 1) && check_map(1, 0xe, ACTION_SHIFT, 1) &&
 			check_map(0, 0xf, ACTION_SHIFT, 0) && check_map(1, 0xf, ACTION_SHIFT, 0))
 		flags |= MULTIBYTE_START_STATE_1;
@@ -126,43 +126,43 @@ void Ucm::set_default_codepage_states(void) {
 
 	if (uconv_class == CLASS_SBCS) {
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0, 255, 0, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0, 255, 0, ACTION_FINAL));
 	} else if (uconv_class == CLASS_DBCS) {
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0, 0x3f, 3, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0x40, 0x40, 2, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0x41, 0xfe, 1, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0xff, 0xff, 3, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0, 0x3f, 3, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0x40, 0x40, 2, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0x41, 0xfe, 1, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0xff, 0xff, 3, ACTION_VALID));
 
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0x41, 0xfe, 0, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0x41, 0xfe, 0, ACTION_FINAL));
 
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0x40, 0x40, 0, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0x40, 0x40, 0, ACTION_FINAL));
 
 		new_codepage_state();
 		// All illegal state
 	} else if (uconv_class == CLASS_EBCDIC_STATEFUL) {
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0, 0x0d, 0, ACTION_FINAL));
-		codepage_states.back().new_entry(ENTRY(0x0e, 0x0e, 1, ACTION_SHIFT));
-		codepage_states.back().new_entry(ENTRY(0x0f, 0x0f, 0, ACTION_SHIFT));
-		codepage_states.back().new_entry(ENTRY(0x10, 0xff, 0, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0, 0x0d, 0, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0x0e, 0x0e, 1, ACTION_SHIFT));
+		codepage_states.back()->new_entry(ENTRY(0x0f, 0x0f, 0, ACTION_SHIFT));
+		codepage_states.back()->new_entry(ENTRY(0x10, 0xff, 0, ACTION_FINAL));
 		new_codepage_state(State::INITIAL);
 
-		codepage_states.back().new_entry(ENTRY(0, 0x0d, 4, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0x0e, 0x0e, 1, ACTION_SHIFT));
-		codepage_states.back().new_entry(ENTRY(0x0f, 0x0f, 0, ACTION_SHIFT));
-		codepage_states.back().new_entry(ENTRY(0x10, 0x3f, 4, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0x40, 0x40, 3, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0x41, 0xfe, 2, ACTION_VALID));
-		codepage_states.back().new_entry(ENTRY(0xff, 0xff, 4, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0, 0x0d, 4, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0x0e, 0x0e, 1, ACTION_SHIFT));
+		codepage_states.back()->new_entry(ENTRY(0x0f, 0x0f, 0, ACTION_SHIFT));
+		codepage_states.back()->new_entry(ENTRY(0x10, 0x3f, 4, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0x40, 0x40, 3, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0x41, 0xfe, 2, ACTION_VALID));
+		codepage_states.back()->new_entry(ENTRY(0xff, 0xff, 4, ACTION_VALID));
 
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0x41, 0xfe, 1, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0x41, 0xfe, 1, ACTION_FINAL));
 
 		new_codepage_state();
-		codepage_states.back().new_entry(ENTRY(0x40, 0x40, 1, ACTION_FINAL));
+		codepage_states.back()->new_entry(ENTRY(0x40, 0x40, 1, ACTION_FINAL));
 
 		new_codepage_state();
 		// All illegal state
@@ -175,26 +175,26 @@ void Ucm::set_default_codepage_states(void) {
 void Ucm::validate_states(void) {
 	size_t i, j;
 	for (i = 0; i < codepage_states.size(); i++) {
-		for (j = 0; j < codepage_states[i].entries.size(); j++) {
-			if (codepage_states[i].entries[j].action == ACTION_UNASSIGNED &&
-					codepage_states[i].entries[j].action == ACTION_ILLEGAL)
+		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
+			if (codepage_states[i]->entries[j].action == ACTION_UNASSIGNED &&
+					codepage_states[i]->entries[j].action == ACTION_ILLEGAL)
 				continue;
 
-			if (codepage_states[i].entries[j].next_state >= (int) codepage_states.size())
+			if (codepage_states[i]->entries[j].next_state >= (int) codepage_states.size())
 				fatal("State %zd:%x-%x designates a non-existant state as next state\n", i,
-					codepage_states[i].entries[j].low, codepage_states[i].entries[j].high);
+					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 
-			if (codepage_states[i].entries[j].action != ACTION_VALID &&
-					!(codepage_states[codepage_states[i].entries[j].next_state].flags & State::INITIAL))
+			if (codepage_states[i]->entries[j].action != ACTION_VALID &&
+					!(codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL))
 				fatal("State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
-					i, codepage_states[i].entries[j].low, codepage_states[i].entries[j].high);
+					i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 
-			if (codepage_states[i].entries[j].action != ACTION_VALID)
+			if (codepage_states[i]->entries[j].action != ACTION_VALID)
 				continue;
 
-			if (codepage_states[codepage_states[i].entries[j].next_state].flags & State::INITIAL)
+			if (codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL)
 				fatal("State %d:%x-%x designates an initial state as next state for non-final transition\n", i,
-					codepage_states[i].entries[j].low, codepage_states[i].entries[j].high);
+					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 		}
 	}
 }
@@ -218,11 +218,11 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 	state = (flags & MULTIBYTE_START_STATE_1) && bytes.size() > 1 ? 1 : 0;
 
 	for (i = 0; i < bytes.size(); i++) {
-		for (j = 0; j < codepage_states[state].entries.size(); j++) {
-			if (!(bytes[i] >= codepage_states[state].entries[j].low && bytes[i] <= codepage_states[state].entries[j].high))
+		for (j = 0; j < codepage_states[state]->entries.size(); j++) {
+			if (!(bytes[i] >= codepage_states[state]->entries[j].low && bytes[i] <= codepage_states[state]->entries[j].high))
 				continue;
 
-			switch (codepage_states[state].entries[j].action) {
+			switch (codepage_states[state]->entries[j].action) {
 				case ACTION_ILLEGAL:
 					fatal("%s:%d: Illegal sequence\n", file_name, line_number);
 				case ACTION_UNASSIGNED:
@@ -230,11 +230,11 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 				case ACTION_SHIFT:
 					fatal("%s:%d: Shift in sequence\n", file_name, line_number);
 				case ACTION_VALID:
-					state = codepage_states[state].entries[j].next_state;
+					state = codepage_states[state]->entries[j].next_state;
 					goto next_char;
 				case ACTION_FINAL_PAIR:
 				case ACTION_FINAL:
-					state = codepage_states[state].entries[j].next_state;
+					state = codepage_states[state]->entries[j].next_state;
 					count++;
 					goto next_char;
 				default:
@@ -344,3 +344,54 @@ void Ucm::check_duplicates(void) {
 	check_duplicates(simple_mappings);
 	check_duplicates(multi_mappings);
 }
+
+void Ucm::minimize_state_machines(void) {
+	CodepageBytesStateMachineInfo *codepage_info = new CodepageBytesStateMachineInfo(*this);
+	minimize_state_machine(codepage_info, flags);
+
+}
+
+Ucm::CodepageBytesStateMachineInfo::CodepageBytesStateMachineInfo(Ucm &_source) : source(_source),
+	iterating_simple_mappings(true), idx(0)
+{}
+
+const vector<State *> &Ucm::CodepageBytesStateMachineInfo::get_state_machine(void) {
+	return source.codepage_states;
+}
+
+bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+
+	if (iterating_simple_mappings) {
+next_simple_mapping:
+		if (idx < source.simple_mappings.size()) {
+			if (source.simple_mappings[idx]->precision != 0 && source.simple_mappings[idx]->precision != 3) {
+				idx++;
+				goto next_simple_mapping;
+			}
+			copy(source.simple_mappings[idx]->codepage_bytes.begin(), source.simple_mappings[idx]->codepage_bytes.end(), bytes);
+			length = source.simple_mappings[idx]->codepage_bytes.size();
+			pair = source.simple_mappings[idx]->codepoints[0] > UINT32_C(0xffff);
+			idx++;
+			return true;
+		} else {
+			iterating_simple_mappings = false;
+			idx = 0;
+		}
+	}
+
+next_multi_mapping:
+	if (idx >= source.multi_mappings.size())
+		return false;
+
+	if (source.multi_mappings[idx]->precision != 0 && source.multi_mappings[idx]->precision != 3) {
+		idx++;
+		goto next_multi_mapping;
+	}
+
+	copy(source.multi_mappings[idx]->codepage_bytes.begin(), source.multi_mappings[idx]->codepage_bytes.end(), bytes);
+	length = source.multi_mappings[idx]->codepage_bytes.size();
+	pair = false;
+	idx++;
+	return true;
+}
+

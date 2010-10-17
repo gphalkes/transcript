@@ -83,7 +83,6 @@ ucm<void *>:
 			'\n'*
 		]?
 	]?
-	{ ucm->check_duplicates(); }
 ;
 
 header_line {

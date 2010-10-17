@@ -66,11 +66,16 @@ class Mapping {
 			//~ flags(other.flags), precision(other.precision) {}
 };
 
+class StateMachineInfo {
+	public:
+		virtual const vector<State *> &get_state_machine(void) = 0;
+		virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
+};
 
 class Ucm {
 	public:
-		vector<State> codepage_states;
-		vector<State> unicode_states;
+		vector<State *> codepage_states;
+		vector<State *> unicode_states;
 		vector<Mapping *> simple_mappings;
 		vector<Mapping *> multi_mappings;
 
@@ -109,6 +114,17 @@ class Ucm {
 		int check_codepage_bytes(vector<uint8_t> &bytes);
 		void check_duplicates(vector<Mapping *> &mappings);
 
+		class CodepageBytesStateMachineInfo : public StateMachineInfo {
+			private:
+				Ucm &source;
+				bool iterating_simple_mappings;
+				size_t idx;
+			public:
+				CodepageBytesStateMachineInfo(Ucm &_source);
+				virtual const vector<State *> &get_state_machine(void);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
+		};
+
 	public:
 		Ucm(void);
 		void set_tag_value(tag_t tag, const char *value);
@@ -118,6 +134,7 @@ class Ucm {
 		void validate_states(void);
 		void add_mapping(Mapping *mapping);
 		void check_duplicates(void);
+		void minimize_state_machines(void);
 };
 
 extern "C" int line_number;
@@ -130,4 +147,6 @@ extern "C" void fatal(const char *fmt, ...);
 extern bool option_verbose;
 
 Ucm::tag_t string_to_tag(const char *str);
+void minimize_state_machine(StateMachineInfo *info, int flags);
+
 #endif
