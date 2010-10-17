@@ -396,13 +396,11 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 	merge_duplicate_states(head, &tail);
 	nr_states = count_states(head);
 
-	fprintf(stderr, "calculating costs\n");
-
 	// Calculate cached costs for all states for which it makes sense
 	for (ptr = head; ptr != NULL; ptr = ptr->next)
 		if (ptr->cost)
 			ptr->cost = calculate_state_cost(ptr);
-	fprintf(stderr, "filling map\n");
+
 	fill_map(head);
 
 	while (1) {
@@ -434,7 +432,8 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 		nr_states = count_states(head);
 	}
 	merge_duplicate_states(head, &tail);
-	fputc('\n', stderr);
+	if (option_verbose)
+		fputc('\n', stderr);
 
 	// Put all states in an array
 	for (ptr = head; ptr != NULL; ptr = ptr->next) {
