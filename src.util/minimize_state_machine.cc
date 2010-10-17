@@ -16,7 +16,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdint.h>
-#include "genconv.h"
+#include "ucm2cct.h"
 
 typedef struct full_state_t full_state_t;
 

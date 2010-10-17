@@ -71,8 +71,8 @@ class Ucm {
 	public:
 		vector<State> codepage_states;
 		vector<State> unicode_states;
-		vector<Mapping> simple_mappings;
-		vector<Mapping> multi_mappings;
+		vector<Mapping *> simple_mappings;
+		vector<Mapping *> multi_mappings;
 
 		enum tag_t {
 			IGNORED = -1,
@@ -107,7 +107,7 @@ class Ucm {
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
 		int check_codepage_bytes(vector<uint8_t> &bytes);
-		void check_duplicates(vector<Mapping> &mappings);
+		void check_duplicates(vector<Mapping *> &mappings);
 
 	public:
 		Ucm(void);
@@ -116,7 +116,7 @@ class Ucm {
 		void new_codepage_entry(Entry entry);
 		void process_header(void);
 		void validate_states(void);
-		void add_mapping(Mapping &mapping);
+		void add_mapping(Mapping *mapping);
 		void check_duplicates(void);
 };
 

@@ -176,14 +176,14 @@ entry {
 ;
 
 mapping {
-	Mapping mapping;
+	Mapping *mapping = new Mapping();
 } :
 	TAG
 	{
 		uint32_t codepoint;
 		if (sscanf(yytext, "<U%" SCNx32 ">", &codepoint) == 0 || codepoint > 0x10ffff)
 			fatal("%s:%d: Tag does not specify a valid unicode codepoint\n", file_name, line_number);
-		mapping.codepoints.push_back(codepoint);
+		mapping->codepoints.push_back(codepoint);
 	}
 	[
 		'+'?
@@ -199,16 +199,16 @@ mapping {
 			value = strtol(charseq, &charseq, 16);
 			if (value > 255 || value < 0)
 				fatal("%s:%d: byte value out of range\n", file_name, line_number);
-			mapping.codepage_bytes.push_back(value);
+			mapping->codepage_bytes.push_back(value);
 			if (*charseq == '+')
 				charseq++;
 		}
-		if (mapping.codepage_bytes.size() > 31)
+		if (mapping->codepage_bytes.size() > 31)
 			fatal("%s:%d: character sequence too long\n", file_name, line_number);
 	}
 	[
 		PRECISION
-		{ mapping.precision = yytext[1] - '0'; }
+		{ mapping->precision = yytext[1] - '0'; }
 	]?
 	{ ucm->add_mapping(mapping); }
 ;
