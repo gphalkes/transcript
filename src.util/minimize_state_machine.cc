@@ -16,6 +16,7 @@
 #include <limits.h>
 #include <string.h>
 #include <stdint.h>
+#include <map>
 #include "ucm2cct.h"
 
 typedef struct full_state_t full_state_t;
@@ -40,6 +41,8 @@ typedef struct {
 } state_pair_t;
 
 static int calculate_state_cost(full_state_t *state);
+
+static map<pair<full_state_t *, full_state_t *>, int> costs;
 
 static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
 	bool calculate_cost = true;
@@ -221,8 +224,8 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
 	return calculate_state_cost(&tmp_state) - (a->cost + b->cost);
 }
 
-static int find_best_merge(full_state_t *head, full_state_t *merge[2]) {
-	full_state_t *ptr;
+static int find_best_merge(full_state_t *merge[2]) {
+/*	full_state_t *ptr;
 	int merge_cost, best_merge_cost = INT_MAX;
 
 	for (; head != NULL; head = head->next) {
@@ -236,6 +239,18 @@ static int find_best_merge(full_state_t *head, full_state_t *merge[2]) {
 				merge[0] = head;
 				merge[1] = ptr;
 			}
+		}
+	}
+	return best_merge_cost;*/
+
+	int best_merge_cost = INT_MAX;
+	for (map<pair<full_state_t *, full_state_t *>, int>::iterator iter = costs.begin();
+			iter != costs.end(); iter++)
+	{
+		if (iter->second < best_merge_cost) {
+			merge[0] = iter->first.first;
+			merge[1] = iter->first.second;
+			best_merge_cost = iter->second;
 		}
 	}
 	return best_merge_cost;
@@ -290,10 +305,11 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	}
 
 	left->count += right->count;
-	free(right);
 
 	if (left->cost > 0)
 		left->cost = calculate_state_cost(left);
+
+	free(right);
 }
 
 static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
@@ -310,6 +326,20 @@ static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 	}
 }
 
+static void fill_map(full_state_t *head) {
+	full_state_t *ptr;
+
+	costs.clear();
+	for (; head != NULL; head = head->next) {
+		for (ptr = head->next; ptr != NULL; ptr = ptr->next) {
+			if (!can_merge(head, ptr))
+				continue;
+
+			costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(head, ptr), calculate_merge_cost(head, ptr)));
+		}
+	}
+}
+
 void minimize_state_machine(StateMachineInfo *info, int flags) {
 	const vector<State *> &states = info->get_state_machine();
 	vector<State *> new_states;
@@ -321,7 +351,7 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 
 	uint8_t bytes[31];
 	size_t length;
-	bool pair;
+	bool is_pair;
 	int state;
 
 
@@ -357,29 +387,50 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 	nr_initial_states = nr_serialized_states;
 
 	// Mark all used entries
-	while (info->get_next_byteseq(bytes, length, pair)) {
+	while (info->get_next_byteseq(bytes, length, is_pair)) {
 		state = (flags & Ucm::MULTIBYTE_START_STATE_1) && length > 1 ? 1 : 0;
-		mark_entry(initial_states[state].full_state, bytes, length, pair);
+		mark_entry(initial_states[state].full_state, bytes, length, is_pair);
 	}
 
 	// Merge duplicate states using a fast algorithm
 	merge_duplicate_states(head, &tail);
 	nr_states = count_states(head);
 
+	fprintf(stderr, "calculating costs\n");
+
 	// Calculate cached costs for all states for which it makes sense
 	for (ptr = head; ptr != NULL; ptr = ptr->next)
 		if (ptr->cost)
 			ptr->cost = calculate_state_cost(ptr);
+	fprintf(stderr, "filling map\n");
+	fill_map(head);
 
 	while (1) {
 		if (option_verbose)
 			fprintf(stderr, "\rStates remaining: %d ", nr_states);
 		full_state_t *merge[2];
-		int cost = find_best_merge(head, merge);
+		int cost = find_best_merge(merge);
 		if (nr_states <= 256 && cost > 0)
 			break;
 
+		for (ptr = head; ptr != merge[1]; ptr = ptr->next)
+			costs.erase(pair<full_state_t *, full_state_t *>(ptr, merge[1]));
+
+		for (ptr = ptr->next; ptr != NULL; ptr = ptr->next)
+			costs.erase(pair<full_state_t *, full_state_t *>(merge[1], ptr));
+
 		merge_states(&tail, merge[0], merge[1]);
+
+		for (ptr = head; ptr != merge[0]; ptr = ptr->next) {
+			if (costs.erase(pair<full_state_t *, full_state_t *>(ptr, merge[0])))
+				costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(ptr, merge[0]), calculate_merge_cost(ptr, merge[0])));
+		}
+
+		for (ptr = ptr->next; ptr != NULL; ptr = ptr->next) {
+			if (costs.erase(pair<full_state_t *, full_state_t *>(merge[0], ptr)))
+				costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(merge[0], ptr), calculate_merge_cost(merge[0], ptr)));
+		}
+
 		nr_states = count_states(head);
 	}
 	merge_duplicate_states(head, &tail);
