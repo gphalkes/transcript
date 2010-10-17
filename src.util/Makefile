@@ -23,7 +23,7 @@ CXXTARGETS := ucm2cct
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS
+CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -O2
 
 $(warning Overriding C compiler with c++ for now)
 CC:=$(CXX)

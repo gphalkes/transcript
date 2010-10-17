@@ -406,7 +406,7 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 	while (1) {
 		if (option_verbose)
 			fprintf(stderr, "\rStates remaining: %d ", nr_states);
-		full_state_t *merge[2];
+		full_state_t *merge[2] = { NULL, NULL };
 		int cost = find_best_merge(merge);
 		if (nr_states <= 256 && cost > 0)
 			break;
