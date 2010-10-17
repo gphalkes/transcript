@@ -296,16 +296,21 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 
 static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 	full_state_t *ptr;
+	bool change;
 
-	for (; head != NULL; head = head->next) {
-		for (ptr = head->next; ptr != NULL; ptr = ptr->next) {
-			if (memcmp(head->entries, ptr->entries, sizeof(full_entry_t) * 256) != 0)
-				continue;
+	do {
+		change = false;
+		for (; head != NULL; head = head->next) {
+			for (ptr = head->next; ptr != NULL; ptr = ptr->next) {
+				if (memcmp(head->entries, ptr->entries, sizeof(full_entry_t) * 256) != 0)
+					continue;
 
-			ptr = ptr->prev;
-			merge_states(tail, head, ptr->next);
+				ptr = ptr->prev;
+				merge_states(tail, head, ptr->next);
+				change = true;
+			}
 		}
-	}
+	} while (change);
 }
 
 static void fill_map(full_state_t *head) {

@@ -80,6 +80,9 @@ class Ucm {
 		vector<Mapping *> simple_mappings;
 		vector<Mapping *> multi_mappings;
 
+		uint32_t codepage_range;
+		uint32_t unicode_range;
+
 		enum tag_t {
 			IGNORED = -1,
 			CODE_SET_NAME,
@@ -164,4 +167,5 @@ extern bool option_verbose;
 Ucm::tag_t string_to_tag(const char *str);
 void minimize_state_machine(StateMachineInfo *info, int flags);
 void print_state_machine(const vector<State *> &states);
+uint32_t calculate_state_attributes(vector<State *> &states);
 #endif

@@ -100,6 +100,54 @@ void print_state_machine(const vector<State *> &states) {
 	}
 }
 
+static void update_state_attributes(vector<State *> &states, size_t idx) {
+	size_t i, sum = 0;
+
+	if (states[idx]->complete)
+		return;
+
+	for (i = 0; i < states[idx]->entries.size(); i++) {
+		switch (states[idx]->entries[i].action) {
+			case ACTION_VALID:
+				update_state_attributes(states, states[idx]->entries[i].next_state);
+				states[idx]->entries[i].base = sum;
+				states[idx]->entries[i].mul = states[states[idx]->entries[i].next_state]->range;
+				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) *
+					states[idx]->entries[i].mul;
+				states[idx]->entries[i].max = sum;
+				break;
+			case ACTION_FINAL_PAIR:
+				states[idx]->entries[i].mul = 2;
+				goto action_final_shared;
+			case ACTION_FINAL:
+				states[idx]->entries[i].mul = 1;
+			action_final_shared:
+				states[idx]->entries[i].base = sum;
+				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) * states[idx]->entries[i].mul;
+				states[idx]->entries[i].max = sum;
+				break;
+			default:
+				break;
+		}
+	}
+	states[idx]->range = sum;
+	states[idx]->complete = true;
+}
+
+uint32_t calculate_state_attributes(vector<State *> &states) {
+	uint32_t range = 0;
+	size_t i;
+
+	for (i = 0; i < states.size(); i++) {
+		if (states[i]->flags & State::INITIAL) {
+			update_state_attributes(states, i);
+			states[i]->base = range;
+			range += states[i]->range;
+		}
+	}
+	return range;
+}
+
 
 int main(int argc, char *argv[]) {
 	Ucm *ucm;
@@ -136,5 +184,11 @@ int main(int argc, char *argv[]) {
 		print_state_machine(ucm->codepage_states);
 		printf("Unicode state machine\n");
 		print_state_machine(ucm->unicode_states);
+	}
+	ucm->codepage_range = calculate_state_attributes(ucm->codepage_states);
+	ucm->unicode_range = calculate_state_attributes(ucm->unicode_states);
+	if (option_verbose) {
+		fprintf(stderr, "Codepoint range: %" PRId32 "\n", ucm->codepage_range);
+		fprintf(stderr, "Unicode range: %" PRId32 "\n", ucm->unicode_range);
 	}
 }
