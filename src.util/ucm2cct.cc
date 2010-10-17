@@ -61,7 +61,7 @@ static void print_usage(void) {
 	exit(EXIT_SUCCESS);
 }
 
-static void print_state_machine(const vector<State *> &states) {
+void print_state_machine(const vector<State *> &states) {
 	for (size_t i = 0; i < states.size(); i++) {
 		printf("State %zx:", i);
 		for (size_t j = 0; j < states[i]->entries.size(); j++) {

@@ -49,18 +49,23 @@ void State::new_entry(Entry entry) {
 			if (ptr_high != entries.end())
 				ptr_high->low = entry.high + 1;
 			entries.erase(ptr_low + 1, ptr_high);
+		} else if (ptr_low + 1 == ptr_high) {
+			ptr_low->high = entry.low - 1;
+			ptr_high->low = entry.high + 1;
+			entries.insert(ptr_high, entry);
 		} else {
 			*(ptr_low + 1) = entry;
 			ptr_low->high = entry.low - 1;
 			if (ptr_high != entries.end())
 				ptr_high->low = entry.high + 1;
-			entries.erase(ptr_low + 2, ptr_high);
+			if (ptr_low + 1 != entries.end() && ptr_low + 2 != entries.end())
+				entries.erase(ptr_low + 2, ptr_high);
 		}
 	}
 }
 
 
-Ucm::Ucm(void) {
+Ucm::Ucm(void) : flags(0) {
 	for (int i = 0; i < LAST_TAG; i++)
 		tag_values[i] = NULL;
 }

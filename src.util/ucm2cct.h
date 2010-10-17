@@ -163,5 +163,5 @@ extern bool option_verbose;
 
 Ucm::tag_t string_to_tag(const char *str);
 void minimize_state_machine(StateMachineInfo *info, int flags);
-
+void print_state_machine(const vector<State *> &states);
 #endif
