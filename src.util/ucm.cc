@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cstdio>
 #include <algorithm>
+#include <arpa/inet.h>
 #include "ucm2cct.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
@@ -98,6 +99,7 @@ bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 	return false;
 }
 
+#define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0, 0)
 void Ucm::process_header(void) {
 	if (strcmp(tag_values[UCONV_CLASS], "SBCS") == 0)
 		uconv_class = CLASS_SBCS;
@@ -117,10 +119,43 @@ void Ucm::process_header(void) {
 			check_map(0, 0xe, ACTION_SHIFT, 1) && check_map(1, 0xe, ACTION_SHIFT, 1) &&
 			check_map(0, 0xf, ACTION_SHIFT, 0) && check_map(1, 0xf, ACTION_SHIFT, 0))
 		flags |= MULTIBYTE_START_STATE_1;
+
+	// Initial state
+	unicode_states.push_back(new State());
+	unicode_states.back()->flags |= State::INITIAL;
+	unicode_states.back()->new_entry(ENTRY(0, 0, 1, ACTION_VALID));
+	unicode_states.back()->new_entry(ENTRY(1, 0x10, 2, ACTION_VALID));
+
+	// Second state for BMP
+	unicode_states.push_back(new State());
+	unicode_states.back()->new_entry(ENTRY(0, 0xff, 3, ACTION_VALID));
+	unicode_states.back()->new_entry(ENTRY(0xd8, 0xdf, 4, ACTION_VALID));
+	unicode_states.back()->new_entry(ENTRY(0xfd, 0xfd, 5, ACTION_VALID));
+	unicode_states.back()->new_entry(ENTRY(0xff, 0xff, 6, ACTION_VALID));
+
+	// Second state for non-BMP planes
+	unicode_states.push_back(new State());
+	unicode_states.back()->new_entry(ENTRY(0, 0xfe, 3, ACTION_VALID));
+	unicode_states.back()->new_entry(ENTRY(0xff, 0xff, 6, ACTION_VALID));
+
+	// Final state for all regular ranges
+	unicode_states.push_back(new State());
+	unicode_states.back()->new_entry(ENTRY(0, 0xff, 0, ACTION_UNASSIGNED));
+
+	// Final state for U+D800..U+DFFF (surrogates)
+	unicode_states.push_back(new State());
+
+	// Final state for U+FD00..U+FDFF, which contains a reserved range
+	unicode_states.push_back(new State());
+	unicode_states.back()->new_entry(ENTRY(0, 0xff, 0, ACTION_UNASSIGNED));
+	unicode_states.back()->new_entry(ENTRY(0xd0, 0xef, 0, ACTION_ILLEGAL));
+
+	// Final state for U+??FF00..U+??FFFF, which contains two reserved codepoints
+	unicode_states.push_back(new State());
+	unicode_states.back()->new_entry(ENTRY(0, 0xfd, 0, ACTION_UNASSIGNED));
 }
 
 void Ucm::set_default_codepage_states(void) {
-#define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0, 0)
 	if (uconv_class == 0 || uconv_class == CLASS_MBCS)
 		fatal("No states specified and no implicit states defined through <uconv_class> either\n");
 
@@ -169,8 +204,8 @@ void Ucm::set_default_codepage_states(void) {
 	} else {
 		PANIC();
 	}
-#undef ENTRY
 }
+#undef ENTRY
 
 void Ucm::validate_states(void) {
 	size_t i, j;
@@ -346,9 +381,12 @@ void Ucm::check_duplicates(void) {
 }
 
 void Ucm::minimize_state_machines(void) {
-	CodepageBytesStateMachineInfo *codepage_info = new CodepageBytesStateMachineInfo(*this);
-	minimize_state_machine(codepage_info, flags);
-
+	StateMachineInfo *info = new CodepageBytesStateMachineInfo(*this);
+	minimize_state_machine(info, flags);
+	delete info;
+	info = new UnicodeStateMachineInfo(*this);
+	minimize_state_machine(info, 0);
+	delete info;
 }
 
 Ucm::CodepageBytesStateMachineInfo::CodepageBytesStateMachineInfo(Ucm &_source) : source(_source),
@@ -357,6 +395,14 @@ Ucm::CodepageBytesStateMachineInfo::CodepageBytesStateMachineInfo(Ucm &_source) 
 
 const vector<State *> &Ucm::CodepageBytesStateMachineInfo::get_state_machine(void) {
 	return source.codepage_states;
+}
+
+void Ucm::CodepageBytesStateMachineInfo::replace_state_machine(vector<State *> &states) {
+	for (vector<State *>::iterator iter = source.codepage_states.begin();
+			iter != source.codepage_states.end(); iter++)
+		delete (*iter);
+
+	source.codepage_states = states;
 }
 
 bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
@@ -390,6 +436,61 @@ next_multi_mapping:
 
 	copy(source.multi_mappings[idx]->codepage_bytes.begin(), source.multi_mappings[idx]->codepage_bytes.end(), bytes);
 	length = source.multi_mappings[idx]->codepage_bytes.size();
+	pair = false;
+	idx++;
+	return true;
+}
+
+Ucm::UnicodeStateMachineInfo::UnicodeStateMachineInfo(Ucm &_source) : source(_source),
+	iterating_simple_mappings(true), idx(0), single_bytes(2) //FIXME: make dependent on codepage
+{}
+
+const vector<State *> &Ucm::UnicodeStateMachineInfo::get_state_machine(void) {
+	return source.unicode_states;
+}
+
+void Ucm::UnicodeStateMachineInfo::replace_state_machine(vector<State *> &states) {
+	for (vector<State *>::iterator iter = source.unicode_states.begin();
+			iter != source.unicode_states.end(); iter++)
+		delete (*iter);
+
+	source.unicode_states = states;
+}
+
+bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+	uint32_t codepoint;
+
+	if (iterating_simple_mappings) {
+next_simple_mapping:
+		if (idx < source.simple_mappings.size()) {
+			if (source.simple_mappings[idx]->precision != 0 && source.simple_mappings[idx]->precision != 1) {
+				idx++;
+				goto next_simple_mapping;
+			}
+			codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
+			memcpy(bytes, 1 + (char *) &codepoint, 3);
+			length = 3;
+			pair = source.simple_mappings[idx]->codepage_bytes.size() > single_bytes;
+			idx++;
+			return true;
+		} else {
+			iterating_simple_mappings = false;
+			idx = 0;
+		}
+	}
+
+next_multi_mapping:
+	if (idx >= source.multi_mappings.size())
+		return false;
+
+	if (source.multi_mappings[idx]->precision != 0 && source.multi_mappings[idx]->precision != 1) {
+		idx++;
+		goto next_multi_mapping;
+	}
+
+	codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
+	memcpy(bytes, 1 + (char *) &codepoint, 3);
+	length = 3;
 	pair = false;
 	idx++;
 	return true;

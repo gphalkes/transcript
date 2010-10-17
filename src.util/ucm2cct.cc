@@ -61,20 +61,20 @@ static void print_usage(void) {
 	exit(EXIT_SUCCESS);
 }
 
-static void print_state_machine(Ucm *ucm) {
-	for (size_t i = 0; i < ucm->codepage_states.size(); i++) {
-		printf("State %zd:", i);
-		for (size_t j = 0; j < ucm->codepage_states[i]->entries.size(); j++) {
+static void print_state_machine(const vector<State *> &states) {
+	for (size_t i = 0; i < states.size(); i++) {
+		printf("State %zx:", i);
+		for (size_t j = 0; j < states[i]->entries.size(); j++) {
 			if (j != 0)
 				putchar(',');
-			printf(" %d", ucm->codepage_states[i]->entries[j].low);
-			if (ucm->codepage_states[i]->entries[j].low != ucm->codepage_states[i]->entries[j].high)
-				printf("-%d", ucm->codepage_states[i]->entries[j].high);
+			printf(" %02x", states[i]->entries[j].low);
+			if (states[i]->entries[j].low != states[i]->entries[j].high)
+				printf("-%02x", states[i]->entries[j].high);
 
-			if (ucm->codepage_states[i]->entries[j].next_state != 0)
-				printf(":%d", ucm->codepage_states[i]->entries[j].next_state);
+			if (states[i]->entries[j].next_state != 0)
+				printf(":%x", states[i]->entries[j].next_state);
 
-			switch (ucm->codepage_states[i]->entries[j].action) {
+			switch (states[i]->entries[j].action) {
 				case ACTION_FINAL:
 					putchar('.');
 					break;
@@ -129,7 +129,9 @@ int main(int argc, char *argv[]) {
 	file_name = argv[optind];
 
 	parse_ucm((void **) &ucm);
-	print_state_machine(ucm);
+	print_state_machine(ucm->codepage_states);
 	//~ ucm->check_duplicates();
 	ucm->minimize_state_machines();
+	print_state_machine(ucm->codepage_states);
+	print_state_machine(ucm->unicode_states);
 }

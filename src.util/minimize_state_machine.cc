@@ -130,7 +130,9 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 				if (a->entries[i].next_state != b->entries[i].next_state)
 					return false;
 			case ACTION_ILLEGAL:
-				if (b->entries[i].action != a->entries[i].action)
+				if (a->entries[i].action != b->entries[i].action)
+					return false;
+				if (a->entries[i].next_state != b->entries[i].next_state)
 					return false;
 				break;
 			case ACTION_FINAL_PAIR:
@@ -282,32 +284,6 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	free(right);
 }
 
-static void print_full_state(full_state_t *state) {
-	int i;
-	for (i = 0; i < 256; i++) {
-		switch (state->entries[i].action) {
-			case ACTION_FINAL:
-				putchar('+');
-				break;
-			case ACTION_FINAL_PAIR:
-				putchar('*');
-				break;
-			case ACTION_ILLEGAL:
-				putchar('X');
-				break;
-			case ACTION_UNASSIGNED:
-				putchar('u');
-				break;
-			case ACTION_VALID:
-				putchar('v');
-				break;
-			default:
-				PANIC();
-		}
-	}
-	putchar('\n');
-}
-
 static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 	full_state_t *ptr;
 
@@ -317,52 +293,18 @@ static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 				continue;
 
 			ptr = ptr->prev;
-			printf("Merging: [%d]\n", head->count);
-			print_full_state(head);
-			print_full_state(ptr->next);
 			merge_states(tail, head, ptr->next);
 		}
 	}
 }
 
-static void print_action(full_entry_t *entry) {
-	switch (entry->action) {
-		case ACTION_VALID:
-			printf(":%x", (int) (intptr_t) entry->next_state);
-			break;
-		case ACTION_FINAL:
-			if (entry->next_state != 0)
-				printf(":%x.", (int) (intptr_t) entry->next_state);
-			break;
-		case ACTION_FINAL_PAIR:
-			if (entry->next_state != 0)
-				printf(":%x", (int) (intptr_t) entry->next_state);
-			printf(".p");
-			break;
-		case ACTION_ILLEGAL:
-			if (entry->next_state != 0)
-				printf(":%x", (int) (intptr_t) entry->next_state);
-			printf(".i");
-			break;
-		case ACTION_UNASSIGNED:
-			if (entry->next_state != 0)
-				printf(":%x", (int) (intptr_t) entry->next_state);
-			printf(".u");
-			break;
-		case ACTION_SHIFT:
-			printf(":%x.s", (int) (intptr_t) entry->next_state);
-			break;
-		default:
-			PANIC();
-	}
-}
-
 void minimize_state_machine(StateMachineInfo *info, int flags) {
 	const vector<State *> &states = info->get_state_machine();
+	vector<State *> new_states;
 	full_state_t *head = NULL, *tail = NULL, *ptr;
 	state_pair_t initial_states[16];
 	full_state_t *serialized_states[256];
-	size_t i, j, nr_serialized_states = 0, last;
+	size_t i, j, nr_serialized_states = 0, last, nr_initial_states;
 	int nr_states;
 
 	uint8_t bytes[31];
@@ -400,6 +342,7 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 			nr_serialized_states++;
 		}
 	}
+	nr_initial_states = nr_serialized_states;
 
 	// Mark all used entries
 	while (info->get_next_byteseq(bytes, length, pair)) {
@@ -407,22 +350,15 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 		mark_entry(initial_states[state].full_state, bytes, length, pair);
 	}
 
-	nr_states = count_states(head);
-	printf("Nr of states: %d\n", nr_states);
-
 	// Merge duplicate states using a fast algorithm
 	merge_duplicate_states(head, &tail);
 	nr_states = count_states(head);
 
-	printf("Nr of states: %d\n", nr_states);
 	while (1) {
 		full_state_t *merge[2];
 		int cost = find_best_merge(head, merge);
 		if (nr_states <= 256 && cost > 0)
 			break;
-		printf("Merging states: (cost %d, count %d [%d] [%d])\n", cost, nr_states, merge[0]->count, merge[1]->count);
-		print_full_state(merge[0]);
-		print_full_state(merge[1]);
 
 		merge_states(&tail, merge[0], merge[1]);
 		nr_states = count_states(head);
@@ -441,50 +377,43 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 	for (ptr = head; ptr != NULL; ptr = ptr->next) {
 		for (i = 0; i < 256; i++) {
 			if (ptr->entries[i].action == ACTION_VALID) {
-				for (j = 0; j < nr_serialized_states; j++)
-					if (ptr->entries[i].next_state == serialized_states[j])
+				for (j = 0; j < nr_serialized_states; j++) {
+					if (ptr->entries[i].next_state == serialized_states[j]) {
 						ptr->entries[i].next_state = (full_state_t *) (intptr_t) j;
+						break;
+					}
+				}
 			} else {
-				for (j = 0; j < nr_serialized_states; j++)
-					if (ptr->entries[i].next_state == (full_state_t *) initial_states[j].state)
+				for (j = 0; j < nr_initial_states; j++) {
+					if (ptr->entries[i].next_state == (full_state_t *) initial_states[j].state) {
 						ptr->entries[i].next_state = (full_state_t *) (intptr_t) j;
+						break;
+					}
+				}
 			}
 		}
 	}
 
 	for (i = 0; i < nr_serialized_states; i++) {
-		printf("<icu:state>\t");
-		if (i != 0 && (serialized_states[i]->flags & State::INITIAL))
-			printf("initial, ");
-		printf("00");
+		new_states.push_back(new State());
+		if (serialized_states[i]->flags & State::INITIAL)
+			new_states.back()->flags |= State::INITIAL;
+
 		last = 0;
 		for (j = 1; j < 256; j++) {
-			if (serialized_states[i]->entries[j].action == serialized_states[i]->entries[j - 1].action) {
-				switch (serialized_states[i]->entries[j].action) {
-					case ACTION_VALID:
-					case ACTION_FINAL:
-					case ACTION_FINAL_PAIR:
-					case ACTION_SHIFT:
-						if (serialized_states[i]->entries[j].next_state == serialized_states[i]->entries[j - 1].next_state)
-							continue;
-						break;
-					default:
-						continue;
-				}
-			}
+			if (serialized_states[i]->entries[j].action == serialized_states[i]->entries[j - 1].action &&
+					serialized_states[i]->entries[j].next_state == serialized_states[i]->entries[j - 1].next_state)
+				continue;
 
-			if (last != j - 1)
-				printf("-%02zx", j - 1);
-
-			print_action(&serialized_states[i]->entries[last]);
-			printf(", %02zx", j);
+			new_states.back()->new_entry(Entry(last, j - 1, (int) (intptr_t) serialized_states[i]->entries[last].next_state,
+				serialized_states[i]->entries[last].action, 0, 0, 0));
 			last = j;
 		}
-		if (last != j - 1)
-			printf("-%02zx", j - 1);
-		print_action(&serialized_states[i]->entries[last]);
-		printf("\n");
+		new_states.back()->new_entry(Entry(last, j - 1, (int) (intptr_t) serialized_states[i]->entries[last].next_state,
+			serialized_states[i]->entries[last].action, 0, 0, 0));
 	}
+
+	info->replace_state_machine(new_states);
 
 	/* Free allocated memory */
 	for (ptr = head; ptr != NULL; ptr = head) {

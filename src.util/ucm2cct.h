@@ -69,6 +69,7 @@ class Mapping {
 class StateMachineInfo {
 	public:
 		virtual const vector<State *> &get_state_machine(void) = 0;
+		virtual void replace_state_machine(vector<State *> &states) = 0;
 		virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
 };
 
@@ -122,6 +123,20 @@ class Ucm {
 			public:
 				CodepageBytesStateMachineInfo(Ucm &_source);
 				virtual const vector<State *> &get_state_machine(void);
+				virtual void replace_state_machine(vector<State *> &states);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
+		};
+
+		class UnicodeStateMachineInfo : public StateMachineInfo {
+			private:
+				Ucm &source;
+				bool iterating_simple_mappings;
+				size_t idx;
+				size_t single_bytes;
+			public:
+				UnicodeStateMachineInfo(Ucm &_source);
+				virtual const vector<State *> &get_state_machine(void);
+				virtual void replace_state_machine(vector<State *> &states);
 				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
 		};
 
