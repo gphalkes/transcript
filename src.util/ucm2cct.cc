@@ -178,6 +178,9 @@ int main(int argc, char *argv[]) {
 
 	parse_ucm((void **) &ucm);
 	ucm->check_duplicates();
+	ucm->remove_fullwidth_fallbacks();
+	ucm->remove_private_use_fallbacks();
+
 	ucm->minimize_state_machines();
 	if (option_verbose) {
 		printf("Codepage state machine\n");
@@ -185,6 +188,7 @@ int main(int argc, char *argv[]) {
 		printf("Unicode state machine\n");
 		print_state_machine(ucm->unicode_states);
 	}
+
 	ucm->codepage_range = calculate_state_attributes(ucm->codepage_states);
 	ucm->unicode_range = calculate_state_attributes(ucm->unicode_states);
 	if (option_verbose) {

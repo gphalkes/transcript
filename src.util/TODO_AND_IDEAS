@@ -1,6 +1,3 @@
 - do proper cost calculations based on what will actually be stored per
   character. Take into account that the attribute flags/bits may not be
   necessary.
-- filter out fall-back (|1) mappings in the range FF01-FF5E in as far as they
-  can be done algorithmically. These are fall-backs from full-width to normal
-  forms for the ASCII range 21-7E.

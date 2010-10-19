@@ -347,6 +347,69 @@ void Ucm::add_mapping(Mapping *mapping) {
 		multi_mappings.push_back(mapping);
 }
 
+void Ucm::remove_fullwidth_fallbacks(void) {
+	if (option_verbose)
+		fprintf(stderr, "Removing fullwidth fallbacks\n");
+
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); ) {
+		if ((*iter)->codepoints[0] >= UINT32_C(0xff01) && (*iter)->codepoints[0] <= UINT32_C(0xff5e) && (*iter)->precision == 1) {
+			vector<Mapping *>::iterator search_iter;
+			uint32_t search_for;
+			size_t i;
+
+			search_for = (*iter)->codepoints[0] - 0xff00 + 0x20;
+			for (search_iter = simple_mappings.begin(); search_iter != simple_mappings.end(); search_iter++) {
+				if ((*search_iter)->codepoints[0] == search_for)
+					break;
+			}
+
+			if (search_iter == simple_mappings.end()) {
+				iter++;
+				continue;
+			}
+
+			if ((*iter)->codepage_bytes.size() != (*search_iter)->codepage_bytes.size()) {
+				iter++;
+				continue;
+			}
+
+			for (i = 0; i < (*iter)->codepage_bytes.size(); i++) {
+				if ((*iter)->codepage_bytes[i] != (*search_iter)->codepage_bytes[i])
+					break;
+			}
+
+			if (i == (*iter)->codepage_bytes.size()) {
+				iter = simple_mappings.erase(iter);
+				flags |= FULLWIDTH_ASCII_FALLBACKS;
+				continue;
+			}
+		}
+
+		iter++;
+	}
+}
+
+void Ucm::remove_private_use_fallbacks(void) {
+	/* The fallbacks from private-use codepoints are only useful if you have
+	   previously converted texts in which the private-use codepoints were actually
+	   saved, or if the use of private-use codepoints is standardized between all
+	   convertors. The first is something that should not occur because private-use
+	   codepoints should not be used without context, and the second is unenforcable. */
+	if (option_verbose)
+		fprintf(stderr, "Removing fallbacks from private-use codepoints\n");
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); ) {
+		if ((*iter)->precision == 1 &&
+				(((*iter)->codepoints[0] >= UINT32_C(0xe000) && (*iter)->codepoints[0] <= UINT32_C(0xf8ff)) ||
+				((*iter)->codepoints[0] >= UINT32_C(0xf0000) && (*iter)->codepoints[0] <= UINT32_C(0xffffd)) ||
+				((*iter)->codepoints[0] >= UINT32_C(0x100000) && (*iter)->codepoints[0] <= UINT32_C(0x10fffd))))
+		{
+			iter = simple_mappings.erase(iter);
+			continue;
+		}
+		iter++;
+	}
+}
+
 void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 	vector<Mapping *>::iterator iter;
 	if (mappings.size() != 0) {

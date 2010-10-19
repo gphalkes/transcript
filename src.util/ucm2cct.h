@@ -103,7 +103,8 @@ class Ucm {
 		};
 
 		enum {
-			MULTIBYTE_START_STATE_1 = (1<<0)
+			MULTIBYTE_START_STATE_1 = (1<<0),
+			FULLWIDTH_ASCII_FALLBACKS = (1<<1)
 		};
 
 	private:
@@ -152,6 +153,8 @@ class Ucm {
 		void validate_states(void);
 		void add_mapping(Mapping *mapping);
 		void check_duplicates(void);
+		void remove_fullwidth_fallbacks(void);
+		void remove_private_use_fallbacks(void);
 		void minimize_state_machines(void);
 };
 

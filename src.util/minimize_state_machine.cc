@@ -227,20 +227,6 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
 	return calculate_state_cost(&tmp_state) - (a->cost + b->cost);
 }
 
-/*static int find_best_merge(merge_cost_t &remove, merge_cost_t &result) {
-	for (list<merge_cost_t>::iterator iter = costs.begin(); iter != costs.end(); ) {
-		if (iter->left == remove.left || iter->right == remove.left || iter->left == remove.right || iter->right == remove.right) {
-			iter = costs.erase(iter);
-			continue;
-		}
-
-		if (iter->second < result.cost)
-			result = *iter;
-
-		iter++;
-	}
-}*/
-
 static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right) {
 	full_state_t *ptr;
 	int i;
@@ -344,7 +330,7 @@ static void minimize_states(full_state_t *head, full_state_t **tail) {
 
 	while (1) {
 		if (option_verbose)
-			fprintf(stderr, "\rStates remaining: %d ", nr_states);
+			fprintf(stderr, "\rStates remaining: %d    ", nr_states);
 
 		/* Find the best option for merging, simultaneously removing/replacing cost information
 		   relating to the previous merge. */
@@ -460,6 +446,7 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 		}
 	}
 
+	// Create new state machine in vector<State *> form
 	for (i = 0; i < nr_serialized_states; i++) {
 		new_states.push_back(new State());
 		if (serialized_states[i]->flags & State::INITIAL)
