@@ -35,7 +35,11 @@ void fatal(const char *fmt, ...) {
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
+#ifdef DEBUG
+	abort();
+#else
 	exit(EXIT_FAILURE);
+#endif
 }
 
 Ucm::tag_t string_to_tag(const char *str) {
@@ -49,6 +53,12 @@ Ucm::tag_t string_to_tag(const char *str) {
 		return Ucm::SUBCHAR1;
 	if (strcmp(str, "<icu:base>") == 0)
 		return Ucm::ICU_BASE;
+	if (strcmp(str, "<mb_cur_max>") == 0)
+		return Ucm::MB_MAX;
+	if (strcmp(str, "<mb_cur_min>") == 0)
+		return Ucm::MB_MIN;
+	if (strcmp(str, "<icu:charsetFamily>") == 0)
+		return Ucm::CHARSET_FAMILY;
 	return Ucm::IGNORED;
 }
 
@@ -134,7 +144,7 @@ static void update_state_attributes(vector<State *> &states, size_t idx) {
 	states[idx]->complete = true;
 }
 
-uint32_t calculate_state_attributes(vector<State *> &states) {
+static uint32_t calculate_state_attributes(vector<State *> &states) {
 	uint32_t range = 0;
 	size_t i;
 
@@ -147,7 +157,6 @@ uint32_t calculate_state_attributes(vector<State *> &states) {
 	}
 	return range;
 }
-
 
 int main(int argc, char *argv[]) {
 	Ucm *ucm;
@@ -178,8 +187,11 @@ int main(int argc, char *argv[]) {
 
 	parse_ucm((void **) &ucm);
 	ucm->check_duplicates();
+	ucm->ensure_ascii_controls();
 	ucm->remove_fullwidth_fallbacks();
 	ucm->remove_private_use_fallbacks();
+
+	ucm->calculate_item_costs();
 
 	ucm->minimize_state_machines();
 	if (option_verbose) {

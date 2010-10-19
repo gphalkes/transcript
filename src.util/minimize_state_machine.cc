@@ -45,7 +45,7 @@ struct merge_cost_t {
 	int cost;
 };
 
-static int calculate_state_cost(full_state_t *state);
+static int calculate_state_cost(full_state_t *state, StateMachineInfo *info);
 
 static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
 	bool calculate_cost = true;
@@ -172,9 +172,10 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 	return true;
 }
 
-static int calculate_state_cost(full_state_t *state) {
+static int calculate_state_cost(full_state_t *state, StateMachineInfo *info) {
 	action_t last_action = (action_t) -1;
-	int i, cost;
+	int i;
+	double cost;
 
 	cost = 256; //FIXME: chose: either calculate in memory costs, or on disk cost, but not something inbetween!!!
 
@@ -187,20 +188,20 @@ static int calculate_state_cost(full_state_t *state) {
 			case ACTION_UNASSIGNED:
 				break;
 			case ACTION_FINAL_PAIR:
-				cost += state->count * 6;
+				cost += (double) state->count * 2.0 * info->get_single_cost();
 				break;
 			case ACTION_FINAL:
-				cost += state->count * 3;
+				cost += (double) state->count * info->get_single_cost();
 				break;
 			default:
 				PANIC();
 		}
 		last_action = state->entries[i].action;
 	}
-	return cost;
+	return cost + 0.9;
 }
 
-static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
+static int calculate_merge_cost(full_state_t *a, full_state_t *b, StateMachineInfo *info) {
 	full_state_t tmp_state;
 	int i;
 
@@ -224,10 +225,10 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
 				PANIC();
 		}
 	}
-	return calculate_state_cost(&tmp_state) - (a->cost + b->cost);
+	return calculate_state_cost(&tmp_state, info) - (a->cost + b->cost);
 }
 
-static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right) {
+static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right, StateMachineInfo *info) {
 	full_state_t *ptr;
 	int i;
 
@@ -278,12 +279,12 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	left->count += right->count;
 
 	if (left->cost > 0)
-		left->cost = calculate_state_cost(left);
+		left->cost = calculate_state_cost(left, info);
 
 	free(right);
 }
 
-static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
+static void merge_duplicate_states(full_state_t *head, full_state_t **tail, StateMachineInfo *info) {
 	full_state_t *ptr;
 	bool change;
 
@@ -295,42 +296,42 @@ static void merge_duplicate_states(full_state_t *head, full_state_t **tail) {
 					continue;
 
 				ptr = ptr->prev;
-				merge_states(tail, head, ptr->next);
+				merge_states(tail, head, ptr->next, info);
 				change = true;
 			}
 		}
 	} while (change);
 }
 
-static void minimize_states(full_state_t *head, full_state_t **tail) {
+static void minimize_states(full_state_t *head, full_state_t **tail, StateMachineInfo *info) {
 	merge_cost_t previous = { NULL, NULL, 0 }, best = { NULL, NULL, INT_MAX };
 	list<merge_cost_t> costs;
-	full_state_t *ptr;
+	full_state_t *ptr, *subptr;
 	int nr_states;
 
 	// Merge duplicate states using a fast algorithm
-	merge_duplicate_states(head, tail);
+	merge_duplicate_states(head, tail, info);
 	nr_states = count_states(head);
 
 	// Calculate cached costs for all states for which it makes sense
 	for (ptr = head; ptr != NULL; ptr = ptr->next)
 		if (ptr->cost)
-			ptr->cost = calculate_state_cost(ptr);
+			ptr->cost = calculate_state_cost(ptr, info);
 
 	// Fill cost list
-	for (; head != NULL; head = head->next) {
-		for (ptr = head->next; ptr != NULL; ptr = ptr->next) {
-			if (!can_merge(head, ptr))
+	for (ptr = head; ptr != NULL; ptr = ptr->next) {
+		for (subptr = ptr->next; subptr != NULL; subptr = subptr->next) {
+			if (!can_merge(ptr, subptr))
 				continue;
 
-			merge_cost_t tmp = { head, ptr, calculate_merge_cost(head, ptr) };
+			merge_cost_t tmp = { ptr, subptr, calculate_merge_cost(ptr, subptr, info) };
 			costs.push_back(tmp);
 		}
 	}
 
 	while (1) {
 		if (option_verbose)
-			fprintf(stderr, "\rStates remaining: %d    ", nr_states);
+			fprintf(stderr, "\rStates remaining: %d   ", nr_states);
 
 		/* Find the best option for merging, simultaneously removing/replacing cost information
 		   relating to the previous merge. */
@@ -339,7 +340,7 @@ static void minimize_states(full_state_t *head, full_state_t **tail) {
 				iter = costs.erase(iter);
 				continue;
 			} else  if (iter->left == previous.left || iter->right == previous.left) {
-				iter->cost = calculate_merge_cost(iter->left, iter->right);
+				iter->cost = calculate_merge_cost(iter->left, iter->right, info);
 			}
 
 			if (iter->cost < best.cost)
@@ -351,17 +352,17 @@ static void minimize_states(full_state_t *head, full_state_t **tail) {
 		if (nr_states <= 256 && best.cost > 0)
 			break;
 
-		merge_states(tail, best.left, best.right);
+		merge_states(tail, best.left, best.right, info);
 		previous = best;
 		best.cost = INT_MAX;
 
 		nr_states = count_states(head);
 	}
-
-	// Do a quick scan for duplicate states (should not do anything)
-	merge_duplicate_states(head, tail);
 	if (option_verbose)
 		fputc('\n', stderr);
+
+	// Do a quick scan for duplicate states (should not do anything)
+	merge_duplicate_states(head, tail, info);
 }
 
 void minimize_state_machine(StateMachineInfo *info, int flags) {
@@ -415,7 +416,7 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 		mark_entry(initial_states[state].full_state, bytes, length, is_pair);
 	}
 
-	minimize_states(head, &tail);
+	minimize_states(head, &tail, info);
 
 	// Put all states in an array
 	for (ptr = head; ptr != NULL; ptr = ptr->next) {

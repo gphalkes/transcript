@@ -26,7 +26,7 @@ extern "C" void fatal(const char *fmt, ...);
 %option noyywrap
 
 %%
-[ \t]                       /* ignore space */
+[ \t\r]                     /* ignore space */
 #.*                         /* ignore */
 \n                          line_number++; return '\n';
 \<icu:state>                BEGIN(STATE); return _STATE;
@@ -43,7 +43,7 @@ END                         return END;
 
 
 <STATE>{
-[ \t]                       /* ignore space */
+[ \t\r]                     /* ignore space */
 \n                          line_number++; BEGIN(INITIAL); return '\n';
 initial                     return _INITIAL;
 surrogates                  return SURROGATES;
