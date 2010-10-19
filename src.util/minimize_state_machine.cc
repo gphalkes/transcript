@@ -16,15 +16,15 @@
 #include <limits.h>
 #include <string.h>
 #include <stdint.h>
-#include <map>
+#include <list>
 #include "ucm2cct.h"
 
-typedef struct full_state_t full_state_t;
+struct full_state_t;
 
-typedef struct {
+struct full_entry_t {
 	full_state_t *next_state;
 	action_t action;
-} full_entry_t;
+};
 
 struct full_state_t {
 	full_state_t *prev, *next; // Doubly linked list
@@ -35,14 +35,19 @@ struct full_state_t {
 	int cost;
 };
 
-typedef struct {
+struct state_pair_t {
 	const State *state;
 	full_state_t *full_state;
-} state_pair_t;
+};
+
+struct cost_t {
+	full_state_t *left, *right;
+	int cost;
+};
 
 static int calculate_state_cost(full_state_t *state);
 
-static map<pair<full_state_t *, full_state_t *>, int> costs;
+static list<cost_t> costs;
 
 static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
 	bool calculate_cost = true;
@@ -224,19 +229,19 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b) {
 	return calculate_state_cost(&tmp_state) - (a->cost + b->cost);
 }
 
-static int find_best_merge(full_state_t *merge[2]) {
-	int best_merge_cost = INT_MAX;
-	for (map<pair<full_state_t *, full_state_t *>, int>::iterator iter = costs.begin();
-			iter != costs.end(); iter++)
-	{
-		if (iter->second < best_merge_cost) {
-			merge[0] = iter->first.first;
-			merge[1] = iter->first.second;
-			best_merge_cost = iter->second;
+/*static int find_best_merge(cost_t &remove, cost_t &result) {
+	for (list<cost_t>::iterator iter = costs.begin(); iter != costs.end(); ) {
+		if (iter->left == remove.left || iter->right == remove.left || iter->left == remove.right || iter->right == remove.right) {
+			iter = costs.erase(iter);
+			continue;
 		}
+
+		if (iter->second < result.cost)
+			result = *iter;
+
+		iter++;
 	}
-	return best_merge_cost;
-}
+}*/
 
 static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right) {
 	full_state_t *ptr;
@@ -322,7 +327,8 @@ static void fill_map(full_state_t *head) {
 			if (!can_merge(head, ptr))
 				continue;
 
-			costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(head, ptr), calculate_merge_cost(head, ptr)));
+			cost_t tmp = { head, ptr, calculate_merge_cost(head, ptr) };
+			costs.push_back(tmp);
 		}
 	}
 }
@@ -390,31 +396,31 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 
 	fill_map(head);
 
+	cost_t previous = { NULL, NULL, 0 }, best = { NULL, NULL, INT_MAX };
 	while (1) {
 		if (option_verbose)
 			fprintf(stderr, "\rStates remaining: %d ", nr_states);
-		full_state_t *merge[2] = { NULL, NULL };
-		int cost = find_best_merge(merge);
-		if (nr_states <= 256 && cost > 0)
+
+		for (list<cost_t>::iterator iter = costs.begin(); iter != costs.end(); ) {
+			if (iter->left == previous.right || iter->right == previous.right) {
+				iter = costs.erase(iter);
+				continue;
+			} else  if (iter->left == previous.left || iter->right == previous.left) {
+				iter->cost = calculate_merge_cost(iter->left, iter->right);
+			}
+
+			if (iter->cost < best.cost)
+				best = *iter;
+
+			iter++;
+		}
+
+		if (nr_states <= 256 && best.cost > 0)
 			break;
 
-		for (ptr = head; ptr != merge[1]; ptr = ptr->next)
-			costs.erase(pair<full_state_t *, full_state_t *>(ptr, merge[1]));
-
-		for (ptr = ptr->next; ptr != NULL; ptr = ptr->next)
-			costs.erase(pair<full_state_t *, full_state_t *>(merge[1], ptr));
-
-		merge_states(&tail, merge[0], merge[1]);
-
-		for (ptr = head; ptr != merge[0]; ptr = ptr->next) {
-			if (costs.erase(pair<full_state_t *, full_state_t *>(ptr, merge[0])))
-				costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(ptr, merge[0]), calculate_merge_cost(ptr, merge[0])));
-		}
-
-		for (ptr = ptr->next; ptr != NULL; ptr = ptr->next) {
-			if (costs.erase(pair<full_state_t *, full_state_t *>(merge[0], ptr)))
-				costs.insert(pair<pair<full_state_t *, full_state_t*>, int>(pair<full_state_t *, full_state_t *>(merge[0], ptr), calculate_merge_cost(merge[0], ptr)));
-		}
+		merge_states(&tail, best.left, best.right);
+		previous = best;
+		best.cost = INT_MAX;
 
 		nr_states = count_states(head);
 	}
