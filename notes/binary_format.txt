@@ -1,0 +1,206 @@
+WARNING: this document is not finished!
+TODO:
+- delta tables
+
+
+Table file format
+=================
+
+All fields are in Big Endian format. The "string" format consists of a 1 byte
+length field, followed by that many bytes representing the string. Codepoints
+and linear codepage numbers that are unused are represented by an all 1s
+pattern.
+
+
+Header
+------
+
+The header fields are described in the following table. The first two fields
+are guaranteed to be the same for all versions of the file format. All other
+information describes version 0 of the file format.
+
+Field                   | Bytes
+---------------------------------------------------
+Magic                   | 4 (54h 33h 43h 4Dh, T3CM)
+Format version          | 4
+---------------------------------------------------
+Flags                   | 1 (See defined flag values below)
+Subchar                 | string
+Subchar initial state   | 1
+Subchar1                | 1
+Num. of shift sequences | 1
+Number of states        | 1
+
+The Flags field is a bit mask. The following flags are defined (0 is least
+significant bit).
+
+Bit   | Meaning
+---------------------------------------------------
+0     | A table with information about the from-unicode transformation is available
+1     | A table with information about the to-unicode transformation is available
+2     | A table with m:n mappings is available
+3     | Subchar1 is valid
+4-7   | Reserved (must be 0)
+
+After the header follow the definitions of the shift sequences, followed by the
+definitions of the states. The lookup tables are stored at the end of the file.
+
+
+Shift sequences
+---------------
+
+The shift sequences are stored separately for easy conversion from unicode. Each
+shift sequence is defined as follows:
+
+Field                   | Bytes
+---------------------------------------------------
+From state              | 1
+To state                | 1
+Sequence                | string
+
+
+State table
+-----------
+
+For each state the following is stored
+
+Field                   | Bytes
+---------------------------------------------------
+Flags                   | 1 (See defined flag values below)
+Number of range entries | 1
+
+The Flags field is a bit mask. The following flags are defined (0 is least
+significant bit).
+
+Bit   | Meaning
+---------------------------------------------------
+0     | State is an initial state
+1-7   | Reserved (must be 0)
+
+
+Range entry
+------------
+
+Field                   | Bytes
+---------------------------------------------------
+Low end of range        | 1
+High end of range       | 1
+Next state              | 1
+Action                  | 1 (See list of action values below)
+
+The Action field can have the following values:
+
+Value | Meaning
+---------------------------------------------------
+0     | Byte is the last byte of a sequence encoding a character
+1     | Byte is an intermediate byte of a sequence
+2     | Byte is the last byte of a sequence encoding an unassigned code point
+3     | Byte is the last byte of a sequence encoding a state shift
+4     | Byte is illegal at this point in the input
+5-255 | Reserverd
+
+
+Lookup tables
+-------------
+
+Following the states, two to four lookup tables are defined. The first lookup
+table is a mapping from linear codepage numbers to unicode codepoints. The
+second lookup table is a mapping from unicode codepoints to linear codepage
+numbers. Next are two optional tables (see the Flags field in the header),
+which encode information about the transformation.
+
+All lookup tables are saved as tries, and start with a header describing the
+different levels in the trie. To understand the fields describing the overal
+trie structure and the different levels in the trie, the following explanation
+of the trie structure may be useful:
+
+Each level in the trie consists of a number of nodes. The top level consists of
+a single node with a number of entries. These entries point to ndoes deeper in
+the trie. The different nodes at a single level are stored in an array of
+nodes. Each node contains a number (a power of 2) of either pointers to the
+next deeper level, or actual data if there are no deeper levels. Thus the table
+for each level in the trie, except for the first level, consists of an array of
+arrays. The first level in the trie is a single array of pointers to the next
+level.
+
+Because the information is often sparse or repetitive, many nodes at the lowest
+level contain exactly the same information. So instead of saving these nodes
+multiple times, only a single copy is saved. This also means that at the next
+higher level, many pointers will be the same because they all point to the same
+deeper level node. Because of this, nodes on this level also often are
+duplicates. Again, we can save space by only saving one copy, etc.
+
+Field                   | Bytes
+---------------------------------------------------
+Number of levels        | 1 (Valid values are between 0 and 4)
+Maximum defined entry   | 4
+Data field size         | 1 (Valid values are 1, 2, 4 and FFh)
+
+If the Data field size contains the value FFh, then the data are unicode
+codepoints encoded as UTF-16BE.
+
+Note that if the number of levels is 0, than the information is stored in a
+flat table. For each level from the top there follows information on the
+encoding:
+
+Field                   | Bytes
+---------------------------------------------------
+Number of nodes         | 2
+Bits to shift right     | 1 (Valid values are 1 through 31)
+Bits to mask            | 1 (Valid values are 1 through 16)
+
+The full number of entries for each level is:
+Number_of_nodes * 2 ^ (Bits_to_mask).
+
+The size of the index entries is always as small as possible, and is therefore
+directly related to the Number of nodes entry for the next lower level. I.e.,
+if the Number of nodes of the next lower level <= 256, the size of the index
+entries is 1 byte. It is 2 bytes if the Number of nodes for the next lower
+level <= 65536, and 4 bytes otherwise.
+
+After the headers describing the levels, the actual trie data is stored. The
+information starts at the top level. Each node is listed in turn, so the
+data is stored as:
+(Node 0, Entry 0) ... (Node 0, Entry n) (Node 1, Entry 0) ... (Node 1, Entry n) ... (Node m, Entry n)
+
+The two optional tables are (in order) a table with information about the
+from-unicode transformation and a table with information about the to-unicode
+transformation. The both the from-unicode and the to-unicode tables consist of
+single-byte values representing a flags bit mask. For the from-unicode flags
+the following values are defined:
+
+Bit   | Meaning
+---------------------------------------------------
+0     | Mapping is a fallback (i.e. a similar looking character)
+1     | The mapping is not available and the subchar1 character should be used
+2     | The codepoint is used as the first codepoint in a m:n conversion
+3-7   | Reserved (must be 0)
+
+For the to-unicode flags the following values are defined:
+
+Bit   | Meaning
+---------------------------------------------------
+0     | Mapping is a fallback (i.e. maps to the same codepoint as another)
+1     | The mapping maps to a private use character to allow round-trip conversion
+2     | The codepage number is used as the first codepage number in a m:n conversion
+3-7   | Reserved (must be 0)
+
+Note that a to-unicode fallback is different from a from-unicode fallback. A
+to-unicode fallback means that the same character is encoded in the input
+character set more than once, while a from-unicode fallback means that there is
+no character available in the target character set, only a character that is
+"similar". Similar in this context means that a human may find it useful to
+have this conversion performed, but it is by no means an exact representation
+of the original codepoint.
+
+Finally, there is an optional m:n mapping table. This table consists of a
+single 4 byte number indicating the number of m:n mappings, followed by the
+mappings:
+
+Field                      | Bytes
+---------------------------------------------------
+Number of codepoints       | 1
+[ codepoints ]+            | [ UTF-16BE ]+
+Number of codepage numbers | 1
+Codepage number format     | 1 (Valid values are 1, 2 and 4)
+[ codepage numbers ]+      | [ Indicated by previous field ]+
