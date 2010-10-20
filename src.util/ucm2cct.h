@@ -66,12 +66,14 @@ class Mapping {
 		enum {
 			FROM_UNICODE_FALLBACK = (1<<0),
 			FROM_UNICODE_SUBCHAR1 = (1<<1),
-			FROM_UNICODE_LENGTH_MASK = (3<<2)
+			FROM_UNICODE_MULTI_START = (1<<2),
+			FROM_UNICODE_LENGTH_MASK = (3<<3)
 		};
 
 		enum {
 			TO_UNICODE_FALLBACK = (1<<0),
-			TO_UNICODE_PRIVATE_USE = (1<<1)
+			TO_UNICODE_PRIVATE_USE = (1<<1),
+			TO_UNICODE_MULTI_START = (1<<2)
 		};
 
 		Mapping() : from_unicode_flags(0), to_unicode_flags(0), precision(0) {};

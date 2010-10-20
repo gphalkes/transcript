@@ -607,6 +607,11 @@ void Ucm::calculate_item_costs(void) {
 		length_counts[(*iter)->codepage_bytes.size() - 1]++;
 	}
 
+	if (multi_mappings.size() > 0) {
+		used_from_unicode_flags |= Mapping::FROM_UNICODE_MULTI_START;
+		used_to_unicode_flags |= Mapping::TO_UNICODE_MULTI_START;
+	}
+
 	if (option_verbose) {
 		fprintf(stderr, "Items to save:\n");
 		if (used_from_unicode_flags & (Mapping::FROM_UNICODE_FALLBACK | Mapping::FROM_UNICODE_SUBCHAR1))
@@ -618,12 +623,12 @@ void Ucm::calculate_item_costs(void) {
 	}
 
 	from_flag_costs = to_flag_costs = 0.0;
-	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_FALLBACK | Mapping::FROM_UNICODE_SUBCHAR1))
-		from_flag_costs += 0.25;
+	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_FALLBACK | Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START))
+		from_flag_costs += 0.5;
 	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_LENGTH_MASK))
 		from_flag_costs += 0.25;
-	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_PRIVATE_USE))
-		to_flag_costs += 0.25;
+	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_PRIVATE_USE | Mapping::TO_UNICODE_MULTI_START))
+		to_flag_costs += 0.5;
 
 	best_size = INT_MAX;
 	for (i = 1; i <= 3; i++) {
