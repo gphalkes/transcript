@@ -39,6 +39,7 @@ END                         return END;
 \"[^\"\n]+\"                { size_t len = strlen(yytext); memmove(yytext, yytext + 1, len - 2); yytext[len - 2] = 0; return STRING; }
 \".                         fatal("%s:%d: Incomplete string\n", file_name, line_number);
 \|[0-3]                     return PRECISION;
+[-[:alnum:]._]+             return STRING;
 .                           fatal("%s:%d: Unexpected character '%c'\n", file_name, line_number, yytext[0]);
 
 

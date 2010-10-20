@@ -300,6 +300,13 @@ void Ucm::validate_states(void) {
 	}
 }
 
+static const char *print_sequence(vector<uint8_t> &bytes) {
+	static char sequence_buffer[31 * 4 + 1];
+	size_t i;
+	for (i = 0; i < 31 && i < bytes.size(); i++)
+		sprintf(sequence_buffer + i * 4, "\\x%02X", bytes[i]);
+	return sequence_buffer;
+}
 
 int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 	int state, count = 0;
@@ -325,11 +332,11 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 
 			switch (codepage_states[state]->entries[j].action) {
 				case ACTION_ILLEGAL:
-					fatal("%s:%d: Illegal sequence\n", file_name, line_number);
+					fatal("%s:%d: Illegal sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
 				case ACTION_UNASSIGNED:
-					fatal("%s:%d: Unassigned sequence\n", file_name, line_number);
+					fatal("%s:%d: Unassigned sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
 				case ACTION_SHIFT:
-					fatal("%s:%d: Shift in sequence\n", file_name, line_number);
+					fatal("%s:%d: Shift in sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
 				case ACTION_VALID:
 					state = codepage_states[state]->entries[j].next_state;
 					goto next_char;
@@ -419,7 +426,9 @@ void Ucm::add_mapping(Mapping *mapping) {
 			default:
 				PANIC();
 		}
-		//FIXME: check for non-characters!
+		if ((mapping->codepoints[0] >= UINT32_C(0xfdd0) && mapping->codepoints[0] <= UINT32_C(0xfdef)) ||
+				(mapping->codepoints[0] & UINT32_C(0xfffe)) == UINT32_C(0xfffe))
+			fatal("%s:%d: codepoint specifies a non-character (U%04" PRIX32 ")\n", file_name, line_number - 1, mapping->codepoints[0]);
 
 		if ((mapping->codepoints[0] >= UINT32_C(0xe000) && mapping->codepoints[0] <= UINT32_C(0xf8ff)) ||
 				(mapping->codepoints[0] >= UINT32_C(0xf0000) && mapping->codepoints[0] <= UINT32_C(0xffffd)) ||
@@ -428,6 +437,7 @@ void Ucm::add_mapping(Mapping *mapping) {
 		mapping->from_unicode_flags |= (mapping->codepage_bytes.size() - 1) << 2;
 		simple_mappings.push_back(mapping);
 	} else {
+		//FIXME: check for private-use or non-character codepoints
 		multi_mappings.push_back(mapping);
 	}
 }
