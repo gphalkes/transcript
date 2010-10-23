@@ -17,12 +17,14 @@
 #include <cerrno>
 #include <cstring>
 #include <unistd.h>
+#include <arpa/inet.h>
 
 #include "ucm2cct.h"
 #include "ucmparser.h"
 
 bool option_verbose = false;
 const char *option_output_name = NULL;
+char *output_name;
 extern FILE *yyin;
 
 /** Alert the user of a fatal error and quit.
@@ -62,6 +64,21 @@ Ucm::tag_t string_to_tag(const char *str) {
 	return Ucm::IGNORED;
 }
 
+void parse_byte_sequence(char *charseq, vector<uint8_t> &store) {
+	long value;
+
+	while (*charseq != 0) {
+		charseq += 2; /* Skip \x */
+		value = strtol(charseq, &charseq, 16);
+		if (value > 255 || value < 0)
+			fatal("%s:%d: byte value out of range\n", file_name, line_number);
+		store.push_back(value);
+		if (*charseq == '+')
+			charseq++;
+	}
+	if (store.size() > 31)
+		fatal("%s:%d: character sequence too long\n", file_name, line_number);
+}
 
 static void print_usage(void) {
 	printf("Usage: ucm2ctt [<options>] <ucm file>\n"
@@ -69,6 +86,16 @@ static void print_usage(void) {
 		"  -o <output>         Specify the output file name\n"
 		"  -v                  Increase verbosity\n");
 	exit(EXIT_SUCCESS);
+}
+
+char *safe_strdup(const char *str) {
+	size_t len = strlen(str) + 1;
+	char *retval;
+
+	if ((retval = (char *) malloc(len)) == NULL)
+		OOM();
+	memcpy(retval, str, len);
+	return retval;
 }
 
 void print_state_machine(const vector<State *> &states) {
@@ -158,7 +185,53 @@ static uint32_t calculate_state_attributes(vector<State *> &states) {
 	return range;
 }
 
+uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags) {
+	uint32_t value;
+	int i, state;
+	size_t j;
+
+	/* Some stateful converters are treated specially: single byte characters can not
+	   be part of a multi-byte sequence && must be defined in state 0. See
+	   process_header_part2() to see what conditions a convertor must satisfy for this
+	   special treatment.
+
+	   The spec is really deficient in this respect: there is no way to know what initial
+	   state a byte-sequence belongs to. Because of this, several hacks were construed to
+	   allow the parser to determine this. However, this is not a nice clean general
+	   solution, but rather a work-around for certain types of converters (i.e. the EBCDIC
+	   stateful converters and similar ones).
+	*/
+	state = (flags & Ucm::MULTIBYTE_START_STATE_1) && length > 1 ? 1 : 0;
+	value = states[state]->base;
+
+	for (i = 0; i < length; i++) {
+		for (j = 0; j < states[state]->entries.size(); j++) {
+			if (!(charseq[i] >= states[state]->entries[j].low && charseq[i] <= states[state]->entries[j].high))
+				continue;
+
+			value += states[state]->entries[j].base + (uint32_t)(charseq[i] - states[state]->entries[j].low) *
+				states[state]->entries[j].mul;
+			switch (states[state]->entries[j].action) {
+				case ACTION_VALID:
+					state = states[state]->entries[j].next_state;
+					goto next_char;
+				case ACTION_FINAL_PAIR:
+				case ACTION_FINAL:
+					return value;
+				default:
+					printf("action %d\n", states[state]->entries[j].action);
+					PANIC();
+			}
+		}
+		PANIC();
+next_char:;
+	}
+	return true;
+}
+
+
 int main(int argc, char *argv[]) {
+	FILE *output;
 	Ucm *ucm;
 	int c;
 
@@ -204,7 +277,23 @@ int main(int argc, char *argv[]) {
 	ucm->codepage_range = calculate_state_attributes(ucm->codepage_states);
 	ucm->unicode_range = calculate_state_attributes(ucm->unicode_states);
 	if (option_verbose) {
-		fprintf(stderr, "Codepoint range: %" PRId32 "\n", ucm->codepage_range);
+		fprintf(stderr, "Codepage range: %" PRId32 "\n", ucm->codepage_range);
 		fprintf(stderr, "Unicode range: %" PRId32 "\n", ucm->unicode_range);
 	}
+
+	if (option_output_name != NULL) {
+		output_name = safe_strdup(option_output_name);
+	} else {
+		size_t len = strlen(file_name);
+		if (len < 4 || strcmp(file_name + len - 4, ".ucm") != 0)
+			fatal("Input file does not end in .ucm. Please use explicit output name (-o)\n");
+		output_name = safe_strdup(file_name);
+		strcpy(output_name + len - 3, "cct");
+	}
+
+	if ((output = fopen(output_name, "w+b")) == NULL)
+		fatal("Could not open output file: %s\n", strerror(errno));
+
+	ucm->write_table(output);
+	return EXIT_SUCCESS;
 }

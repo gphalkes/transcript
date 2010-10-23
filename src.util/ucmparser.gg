@@ -189,22 +189,7 @@ mapping {
 		...
 	]*
 	CHARSEQ
-	{
-		char *charseq = yytext;
-		long value;
-
-		while (*charseq != 0) {
-			charseq += 2; /* Skip \x */
-			value = strtol(charseq, &charseq, 16);
-			if (value > 255 || value < 0)
-				fatal("%s:%d: byte value out of range\n", file_name, line_number);
-			mapping->codepage_bytes.push_back(value);
-			if (*charseq == '+')
-				charseq++;
-		}
-		if (mapping->codepage_bytes.size() > 31)
-			fatal("%s:%d: character sequence too long\n", file_name, line_number);
-	}
+	{ parse_byte_sequence(yytext, mapping->codepage_bytes); }
 	[
 		PRECISION
 		{ mapping->precision = yytext[1] - '0'; }

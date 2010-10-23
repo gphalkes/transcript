@@ -64,16 +64,17 @@ class Mapping {
 			precision;
 
 		enum {
-			FROM_UNICODE_FALLBACK = (1<<0),
-			FROM_UNICODE_SUBCHAR1 = (1<<1),
-			FROM_UNICODE_MULTI_START = (1<<2),
-			FROM_UNICODE_LENGTH_MASK = (3<<3)
+			FROM_UNICODE_NOT_AVAIL = (1<<0),
+			FROM_UNICODE_FALLBACK = (1<<1),
+			FROM_UNICODE_SUBCHAR1 = (1<<2),
+			FROM_UNICODE_MULTI_START = (1<<3),
+			FROM_UNICODE_LENGTH_MASK = (3<<4)
 		};
 
 		enum {
 			TO_UNICODE_FALLBACK = (1<<0),
-			TO_UNICODE_PRIVATE_USE = (1<<1),
-			TO_UNICODE_MULTI_START = (1<<2)
+			TO_UNICODE_MULTI_START = (1<<1),
+			TO_UNICODE_PRIVATE_USE = (1<<2)
 		};
 
 		Mapping() : from_unicode_flags(0), to_unicode_flags(0), precision(0) {};
@@ -120,17 +121,22 @@ class Ucm {
 		};
 
 		enum {
-			MULTIBYTE_START_STATE_1 = (1<<0),
-			FULLWIDTH_ASCII_FALLBACKS = (1<<1)
+			FROM_UNICODE_FLAGS_TABLE_INCLUDED = (1<<0),
+			TO_UNICODE_FLAGS_TABLE_INCLUDED = (1<<1),
+			MULTI_MAPPINGS_AVAILABLE = (1<<2),
+			SUBCHAR1_VALID = (1<<3),
+			MULTIBYTE_START_STATE_1 = (1<<4)
 		};
 
 	private:
 		char *tag_values[LAST_TAG];
-		int uconv_class;
 		int flags;
 		int single_bytes;
+		int uconv_class;
 
 		double from_flag_costs, to_flag_costs;
+		uint8_t from_unicode_flags, to_unicode_flags;
+		uint8_t from_unicode_flags_save, to_unicode_flags_save;
 
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
@@ -178,6 +184,11 @@ class Ucm {
 		void ensure_ascii_controls(void);
 		void calculate_item_costs(void);
 		void minimize_state_machines(void);
+		void write_to_unicode_table(FILE *output);
+		void write_table(FILE *output);
+		void write_from_unicode_table(FILE *output);
+		void write_to_unicode_flags(FILE *output);
+		void write_from_unicode_flags(FILE *output);
 };
 
 extern "C" int line_number;
@@ -190,6 +201,8 @@ extern "C" void fatal(const char *fmt, ...);
 extern bool option_verbose;
 
 Ucm::tag_t string_to_tag(const char *str);
+void parse_byte_sequence(char *charseq, vector<uint8_t> &store);
 void minimize_state_machine(StateMachineInfo *info, int flags);
 void print_state_machine(const vector<State *> &states);
+uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
 #endif

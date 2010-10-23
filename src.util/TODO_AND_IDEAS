@@ -1,5 +1,2 @@
-- do proper cost calculations based on what will actually be stored per
-  character. Take into account that the attribute flags/bits may not be
-  necessary.
-- either all codepages should be checked for possibility of fullwidth
-  fallbacks, or we should not save it in the output
+- split the flag stuf into separate groups (availability is always required)
+- write output (update binary format description)

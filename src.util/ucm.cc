@@ -66,7 +66,7 @@ void State::new_entry(Entry entry) {
 }
 
 
-Ucm::Ucm(void) : flags(0) {
+Ucm::Ucm(void) : flags(0), from_unicode_flags(0), to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0) {
 	for (int i = 0; i < LAST_TAG; i++)
 		tag_values[i] = NULL;
 }
@@ -125,6 +125,11 @@ void Ucm::process_header(void) {
 		fatal("<mb_cur_max> unspecified\n");
 	if (tag_values[MB_MIN] == NULL)
 		fatal("<mb_cur_min> unspecified\n");
+	if (tag_values[SUBCHAR] == NULL)
+		fatal("<subchar> unspecified\n");
+
+	if (tag_values[SUBCHAR1] != NULL)
+		flags |= SUBCHAR1_VALID;
 
 	if (codepage_states.size() == 0)
 		set_default_codepage_states();
@@ -133,6 +138,8 @@ void Ucm::process_header(void) {
 			check_map(0, 0xe, ACTION_SHIFT, 1) && check_map(1, 0xe, ACTION_SHIFT, 1) &&
 			check_map(0, 0xf, ACTION_SHIFT, 0) && check_map(1, 0xf, ACTION_SHIFT, 0))
 		flags |= MULTIBYTE_START_STATE_1;
+
+	//FIXME: check for multiple initial states (only permissible if MULTIBYTE_START_STATE_1 flag is set)
 
 	// Initial state
 	unicode_states.push_back(new State());
@@ -298,6 +305,13 @@ void Ucm::validate_states(void) {
 				fatal("State machine specifies byte sequences shorter than <mb_cur_min>\n");
 		}
 	}
+
+	vector<uint8_t> bytes;
+	/* FIXME: line number is not correct at this point, so the error messages generated from the
+	   functions below will be confusing. */
+
+	parse_byte_sequence(tag_values[SUBCHAR], bytes);
+	check_codepage_bytes(bytes);
 }
 
 static const char *print_sequence(vector<uint8_t> &bytes) {
@@ -417,8 +431,13 @@ void Ucm::add_mapping(Mapping *mapping) {
 				mapping->from_unicode_flags |= Mapping::FROM_UNICODE_FALLBACK;
 				break;
 			case 2:
-				/* When calculating which bits are required, don't include length for SUBCHAR1 flagged mappings */
-				mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1;
+				if (tag_values[SUBCHAR1] == NULL) {
+					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n", file_name, line_number - 1);
+					return;
+				} else {
+					/* When calculating which bits are required, don't include length for SUBCHAR1 flagged mappings */
+					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1;
+				}
 				break;
 			case 3:
 				mapping->to_unicode_flags |= Mapping::TO_UNICODE_FALLBACK;
@@ -475,7 +494,6 @@ void Ucm::remove_fullwidth_fallbacks(void) {
 
 			if (i == (*iter)->codepage_bytes.size()) {
 				iter = simple_mappings.erase(iter);
-				flags |= FULLWIDTH_ASCII_FALLBACKS;
 				continue;
 			}
 		}
@@ -487,9 +505,11 @@ void Ucm::remove_fullwidth_fallbacks(void) {
 void Ucm::remove_private_use_fallbacks(void) {
 	/* The fallbacks from private-use codepoints are only useful if you have
 	   previously converted texts in which the private-use codepoints were actually
-	   saved, or if the use of private-use codepoints is standardized between all
-	   convertors. The first is something that should not occur because private-use
-	   codepoints should not be used without context, and the second is unenforcable. */
+	   saved, and then mostly if the use of private-use codepoints is standardized
+	   between all convertors. The first is something that should not occur because
+	   private-use codepoints should not be used without context, and the second is
+	   unenforcable. If a unicode codepoint is finally assigned, it should be used
+	   in all relevant codepages. */
 	if (option_verbose)
 		fprintf(stderr, "Removing fallbacks from private-use codepoints\n");
 	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); ) {
@@ -598,8 +618,8 @@ void Ucm::ensure_ascii_controls(void) {
 }
 
 void Ucm::calculate_item_costs(void) {
-	uint8_t from_unicode_flags = simple_mappings[0]->from_unicode_flags;
-	uint8_t to_unicode_flags = simple_mappings[0]->to_unicode_flags;
+	from_unicode_flags = simple_mappings[0]->from_unicode_flags;
+	to_unicode_flags = simple_mappings[0]->to_unicode_flags;
 
 	uint8_t used_from_unicode_flags = 0, used_to_unicode_flags = 0;
 	int length_counts[4] = { 0, 0, 0, 0 };
@@ -622,23 +642,46 @@ void Ucm::calculate_item_costs(void) {
 		used_to_unicode_flags |= Mapping::TO_UNICODE_MULTI_START;
 	}
 
-	if (option_verbose) {
+	if (option_verbose)
 		fprintf(stderr, "Items to save:\n");
-		if (used_from_unicode_flags & (Mapping::FROM_UNICODE_FALLBACK | Mapping::FROM_UNICODE_SUBCHAR1))
-			fprintf(stderr, "- from unicode fallback/subchar1 flags\n");
-		if (used_from_unicode_flags & (Mapping::FROM_UNICODE_LENGTH_MASK))
-			fprintf(stderr, "- from unicode length\n");
-		if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_PRIVATE_USE))
-			fprintf(stderr, "- to unicode fallback/private-use flags\n");
-	}
 
 	from_flag_costs = to_flag_costs = 0.0;
-	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_FALLBACK | Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START))
-		from_flag_costs += 0.5;
-	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_LENGTH_MASK))
+	from_flag_costs += 0.25; /* FIXME: when there are no unassigned mappings in the range, and there
+		are no FROM_UNICODE_FALLBACK characters, this should be 0. However, we don't know whether there
+		are unassigned mappings, because that will be calculated based on the costs calculated here.
+		Chicken, egg, etc. */
+	from_unicode_flags &= ~(Mapping::FROM_UNICODE_NOT_AVAIL | Mapping::FROM_UNICODE_FALLBACK);
+	from_unicode_flags_save = 1;
+	fprintf(stderr, "- from unicode not available/fallback flags\n");
+	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START)) {
 		from_flag_costs += 0.25;
-	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_PRIVATE_USE | Mapping::TO_UNICODE_MULTI_START))
-		to_flag_costs += 0.5;
+		from_unicode_flags &= ~(Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START);
+		from_unicode_flags_save |= 2;
+		if (option_verbose)
+			fprintf(stderr, "- from unicode M:N mappings/subchar1 flags\n");
+	}
+	if (used_from_unicode_flags & Mapping::FROM_UNICODE_LENGTH_MASK) {
+		from_flag_costs += 0.25;
+		from_unicode_flags &= ~Mapping::FROM_UNICODE_LENGTH_MASK;
+		from_unicode_flags_save |= 4;
+		if (option_verbose)
+			fprintf(stderr, "- from unicode length\n");
+	}
+
+	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_MULTI_START)) {
+		to_flag_costs += 0.25;
+		to_unicode_flags &= ~(Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_MULTI_START);
+		to_unicode_flags_save |= 1;
+		if (option_verbose)
+			fprintf(stderr, "- to unicode fallback/M:N mappings\n");
+	}
+	if (used_to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE) {
+		to_flag_costs += 0.25;
+		to_unicode_flags &= ~Mapping::TO_UNICODE_PRIVATE_USE;
+		to_unicode_flags_save |= 2;
+		if (option_verbose)
+			fprintf(stderr, "- to unicode private use\n");
+	}
 
 	best_size = INT_MAX;
 	for (i = 1; i <= 3; i++) {
@@ -659,6 +702,13 @@ void Ucm::calculate_item_costs(void) {
 			single_bytes = i;
 		}
 	}
+
+	if (from_unicode_flags_save != 0)
+		flags |= FROM_UNICODE_FLAGS_TABLE_INCLUDED;
+	if (to_unicode_flags_save != 0)
+		flags |= TO_UNICODE_FLAGS_TABLE_INCLUDED;
+	if (!multi_mappings.empty())
+		flags |= MULTI_MAPPINGS_AVAILABLE;
 }
 
 void Ucm::minimize_state_machines(void) {
@@ -669,6 +719,231 @@ void Ucm::minimize_state_machines(void) {
 	minimize_state_machine(info, 0);
 	delete info;
 }
+
+#define WRITE(file, count, bytes) do { if (fwrite(bytes, 1, count, file) != count) fatal("Error writing file\n"); } while (0)
+#define WRITE_BYTE(file, value) do { uint8_t byte = value; if (fwrite(&byte, 1, 1, file) != 1) fatal("Error writing file\n"); } while (0)
+#define WRITE_WORD(file, value) do { uint16_t byte = htons(value); if (fwrite(&byte, 1, 2, file) != 2) fatal("Error writing file\n"); } while (0)
+#define WRITE_DWORD(file, value) do { uint32_t byte = htons(value); if (fwrite(&byte, 1, 4, file) != 4) fatal("Error writing file\n"); } while (0)
+
+void Ucm::write_table(FILE *output) {
+	const char magic[] = "T3CM";
+	size_t total_entries;
+
+	WRITE(output, 4, magic); // magic (4)
+	WRITE_DWORD(output, 0); // version (4)
+	WRITE_BYTE(output, flags); // flags (1)
+	vector<uint8_t> subchar;
+	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
+	WRITE_BYTE(output, subchar.size()); // subchar length (1)
+	for (vector<uint8_t>::iterator iter = subchar.begin(); iter != subchar.end(); iter++)
+		WRITE_BYTE(output, *iter); // subchar byte (1)
+	WRITE_BYTE(output, tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
+	WRITE_BYTE(output, 0); //FIXME: nr of shift sequences
+	WRITE_BYTE(output, codepage_states.size()); // nr of states in codepage state machine (1)
+	total_entries = 0;
+	for (vector<State *>::iterator state_iter = codepage_states.begin();
+			state_iter != codepage_states.end(); state_iter++)
+		total_entries += (*state_iter)->entries.size();
+	WRITE_WORD(output, total_entries); // total nr of entries (code page) (2)
+	WRITE_BYTE(output, unicode_states.size()); // nr of states in unicode state machine (1)
+	total_entries = 0;
+	for (vector<State *>::iterator state_iter = unicode_states.begin();
+			state_iter != unicode_states.end(); state_iter++)
+		total_entries += (*state_iter)->entries.size();
+	WRITE_WORD(output, total_entries); // total nr of entries (unicode) (2)
+	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
+	WRITE_BYTE(output, to_unicode_flags); //default to-unicode flags (1)
+	//FIXME: write shift sequences
+
+	for (vector<State *>::iterator state_iter = codepage_states.begin();
+			state_iter != codepage_states.end(); state_iter++)
+	{
+		WRITE_BYTE(output, (*state_iter)->entries.size());
+		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
+				entry_iter != (*state_iter)->entries.end(); entry_iter++)
+		{
+			WRITE_BYTE(output, entry_iter->low);
+			WRITE_BYTE(output, entry_iter->high);
+			WRITE_BYTE(output, entry_iter->next_state);
+			WRITE_BYTE(output, entry_iter->action);
+		}
+	}
+
+	for (vector<State *>::iterator state_iter = unicode_states.begin();
+		state_iter != unicode_states.end(); state_iter++)
+	{
+		WRITE_BYTE(output, (*state_iter)->entries.size());
+		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
+			entry_iter != (*state_iter)->entries.end(); entry_iter++)
+		{
+			WRITE_BYTE(output, entry_iter->low);
+			WRITE_BYTE(output, entry_iter->high);
+			WRITE_BYTE(output, entry_iter->next_state);
+			WRITE_BYTE(output, entry_iter->action);
+		}
+	}
+
+	write_from_unicode_table(output);
+	write_to_unicode_table(output);
+	if (from_unicode_flags_save != 0)
+		write_from_unicode_flags(output);
+	if (to_unicode_flags_save != 0)
+		write_to_unicode_flags(output);
+}
+
+void Ucm::write_to_unicode_table(FILE *output) {
+	uint16_t *codepoints;
+	uint8_t buffer[32];
+	uint32_t idx;
+
+	if ((codepoints = (uint16_t *) malloc(codepage_range * sizeof(uint16_t))) == NULL)
+		OOM();
+
+	memset(codepoints, 0xff, codepage_range * sizeof(uint16_t));
+
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->precision != 0 && (*iter)->precision != 3)
+			continue;
+
+		copy((*iter)->codepage_bytes.begin(), (*iter)->codepage_bytes.end(), buffer);
+		idx = map_charseq(codepage_states, buffer, (*iter)->codepage_bytes.size(), flags);
+		if ((*iter)->codepoints[0] > UINT32_C(0xffff)) {
+			codepoints[idx] = (((*iter)->codepoints[0] - 0x10000) >> 10) + 0xd800;
+			codepoints[idx + 1] = (((*iter)->codepoints[0] - 0x10000) & 0x3ff) + 0xdc00;
+		} else {
+			codepoints[idx] = (*iter)->codepoints[0];
+		}
+	}
+
+	for (idx = 0; idx < codepage_range; idx++)
+		WRITE_WORD(output, codepoints[idx]);
+
+	free(codepoints);
+}
+
+void Ucm::write_from_unicode_table(FILE *output) {
+	uint8_t *codepage_bytes;
+	uint32_t idx, codepoint;
+
+	if ((codepage_bytes = (uint8_t *) malloc(unicode_range * single_bytes)) == NULL)
+		OOM();
+
+	memset(codepage_bytes, 0x00, unicode_range * single_bytes);
+
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->precision != 0 && (*iter)->precision != 1)
+			continue;
+
+		codepoint = htonl((*iter)->codepoints[0]);
+		idx = map_charseq(unicode_states, 1 + (uint8_t *) &codepoint, 3, 0);
+		copy((*iter)->codepage_bytes.begin(), (*iter)->codepage_bytes.end(), codepage_bytes + idx * single_bytes);
+	}
+
+	WRITE(output, unicode_range * single_bytes, codepage_bytes);
+	free(codepage_bytes);
+}
+
+static uint8_t convert_flags(uint8_t flags_save, uint8_t flags) {
+	static uint8_t mask[16] = { 0x00, 0x03, 0x0c, 0x0f, 0x30, 0x33, 0x3c, 0x00, 0xc0, 0xc3, 0xcc, 0x00, 0xf0, 0x00, 0x00, 0xff };
+	static int shift_1[16] = { 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0 };
+	static int shift_2[16] = { 0, 0, 0, 0, 4, 2, 2, 0, 0, 0, 0, 0, 4, 0, 0, 0 };
+	static int shift_3[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 6, 4, 4, 0, 4, 0, 0, 0 };
+	uint8_t parts[4];
+
+	flags &= mask[flags_save];
+	parts[0] = flags & mask[1];
+	parts[1] = flags & mask[2];
+	parts[2] = flags & mask[4];
+	parts[3] = flags & mask[8];
+
+	return parts[0] | (parts[1] >> shift_1[flags_save]) | (parts[2] >> shift_2[flags_save]) | (parts[3] >> shift_3[flags_save]);
+}
+
+static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, uint8_t flags_save) {
+	static int shift[16] = {0, 2, 2, 4, 2, 4, 4, 0, 2, 4, 4, 0, 4, 0, 0, 8};
+	static int step[16] = {0, 4, 4, 2, 4, 2, 2, 0, 4, 2, 2, 0, 2, 0, 0, 1};
+	size_t store_idx = 0;
+	uint8_t byte;
+	uint32_t i;
+	int j;
+
+	for (i = 0; i < range; ) {
+		byte = 0;
+		for (j = 0; j < step[flags_save]; j++)
+			byte |= convert_flags(flags_save, data[i++]) << (shift[flags_save] * j);
+		data[store_idx++] = byte;
+	}
+	WRITE(output, store_idx, data);
+}
+
+void Ucm::write_to_unicode_flags(FILE *output) {
+	uint32_t idx;
+	uint8_t buffer[32];
+	uint8_t *save_flags;
+
+	if ((save_flags = (uint8_t *) malloc(codepage_range + 7)) == NULL)
+		OOM();
+
+	memset(save_flags, 0, codepage_range + 7);
+	WRITE_BYTE(output, to_unicode_flags_save);
+
+	for (vector<Mapping *>::iterator simple_iter = simple_mappings.begin();
+			simple_iter != simple_mappings.end(); simple_iter++)
+	{
+		if ((*simple_iter)->precision == 1)
+			continue;
+
+		copy((*simple_iter)->codepage_bytes.begin(), (*simple_iter)->codepage_bytes.end(), buffer);
+		idx = map_charseq(codepage_states, buffer, (*simple_iter)->codepage_bytes.size(), flags);
+		save_flags[idx] = (*simple_iter)->to_unicode_flags;
+	}
+
+	for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
+			multi_iter != multi_mappings.end(); multi_iter++)
+	{
+		copy((*multi_iter)->codepage_bytes.begin(), (*multi_iter)->codepage_bytes.end(), buffer);
+		idx = map_charseq(codepage_states, buffer, (*multi_iter)->codepage_bytes.size(), flags);
+		save_flags[idx] |= Mapping::TO_UNICODE_MULTI_START;
+	}
+
+	merge_and_write_flags(output, save_flags, codepage_range, to_unicode_flags_save);
+	free(save_flags);
+}
+
+void Ucm::write_from_unicode_flags(FILE *output) {
+	uint32_t idx, codepoint;
+	uint8_t *save_flags;
+
+	if ((save_flags = (uint8_t *) malloc(unicode_range + 7)) == NULL)
+		OOM();
+
+	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + 7);
+	WRITE_BYTE(output, from_unicode_flags_save);
+
+	for (vector<Mapping *>::iterator simple_iter = simple_mappings.begin();
+			simple_iter != simple_mappings.end(); simple_iter++)
+	{
+		if ((*simple_iter)->precision == 3)
+			continue;
+
+		codepoint = htonl((*simple_iter)->codepoints[0]);
+		idx = map_charseq(unicode_states, 1 + (uint8_t *) &codepoint, 3, 0);
+		save_flags[idx] |= (*simple_iter)->from_unicode_flags;
+		save_flags[idx] &= ~Mapping::FROM_UNICODE_NOT_AVAIL;
+	}
+
+	for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
+			multi_iter != multi_mappings.end(); multi_iter++)
+	{
+		codepoint = htonl((*multi_iter)->codepoints[0]);
+		idx = map_charseq(unicode_states, 1 + (uint8_t *) &codepoint, 3, 0);
+		save_flags[idx] |= Mapping::FROM_UNICODE_MULTI_START;
+	}
+
+	merge_and_write_flags(output, save_flags, unicode_range, from_unicode_flags_save);
+	free(save_flags);
+}
+
 
 Ucm::CodepageBytesStateMachineInfo::CodepageBytesStateMachineInfo(Ucm &_source) : source(_source),
 	iterating_simple_mappings(true), idx(0)
@@ -748,7 +1023,7 @@ bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &leng
 	if (iterating_simple_mappings) {
 next_simple_mapping:
 		if (idx < source.simple_mappings.size()) {
-			if (source.simple_mappings[idx]->precision != 0 && source.simple_mappings[idx]->precision != 1) {
+			if (source.simple_mappings[idx]->precision == 3) {
 				idx++;
 				goto next_simple_mapping;
 			}
