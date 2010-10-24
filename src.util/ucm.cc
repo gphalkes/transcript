@@ -667,6 +667,8 @@ void Ucm::calculate_item_costs(void) {
 		if (option_verbose)
 			fprintf(stderr, "- from unicode length\n");
 	}
+	if (from_unicode_flags_save == 7)
+		from_unicode_flags_save = 15;
 
 	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_MULTI_START)) {
 		to_flag_costs += 0.25;
