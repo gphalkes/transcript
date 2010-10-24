@@ -1,6 +1,11 @@
 syntax: glob
+src/charconv_errors.h
+src/charconv_api.h
+src/libt3charconv.la
 src.util/ucm2cct
 
 src*/.objects
 src*/.deps
 src.util/genconv
+src.util/ibm-ucm
+src/.libs

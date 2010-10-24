@@ -736,7 +736,7 @@ void Ucm::trace_back(size_t idx, shift_sequence_t &shift_sequence) {
 		for (vector<Entry>::iterator entry_iter = codepage_states[i]->entries.begin();
 				entry_iter != codepage_states[i]->entries.end(); entry_iter++)
 		{
-			if (entry_iter->action == ACTION_VALID && entry_iter->next_state == idx) {
+			if (entry_iter->action == ACTION_VALID && entry_iter->next_state == (int) idx) {
 				shift_sequence.bytes.push_front(entry_iter->low);
 				trace_back(i, shift_sequence);
 				shift_sequence.bytes.pop_front();
@@ -771,6 +771,7 @@ void Ucm::find_shift_sequences(void) {
 void Ucm::write_table(FILE *output) {
 	const char magic[] = "T3CM";
 	size_t total_entries;
+	size_t i;
 
 	WRITE(output, 4, magic); // magic (4)
 	WRITE_DWORD(output, 0); // version (4)
@@ -778,8 +779,10 @@ void Ucm::write_table(FILE *output) {
 	vector<uint8_t> subchar;
 	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
 	WRITE_BYTE(output, subchar.size()); // subchar length (1)
-	for (vector<uint8_t>::iterator iter = subchar.begin(); iter != subchar.end(); iter++)
-		WRITE_BYTE(output, *iter); // subchar byte (1)
+	for (i = 0; i < subchar.size(); i++)
+		WRITE_BYTE(output, subchar[i]); // subchar byte (1)
+	for (; i < 4; i++)
+		WRITE_BYTE(output, 0);
 	WRITE_BYTE(output, tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
 	WRITE_BYTE(output, shift_sequences.size()); //FIXME: nr of shift sequences
 	WRITE_BYTE(output, codepage_states.size()); // nr of states in codepage state machine (1)
@@ -795,7 +798,8 @@ void Ucm::write_table(FILE *output) {
 		total_entries += (*state_iter)->entries.size();
 	WRITE_WORD(output, total_entries); // total nr of entries (unicode) (2)
 	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
-	WRITE_BYTE(output, to_unicode_flags); //default to-unicode flags (1)
+	WRITE_BYTE(output, to_unicode_flags); // default to-unicode flags (1)
+	WRITE_BYTE(output, single_bytes); // Final codepage action size (1)
 	for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
 			shift_iter != shift_sequences.end(); shift_iter++)
 	{
@@ -803,9 +807,10 @@ void Ucm::write_table(FILE *output) {
 		WRITE_BYTE(output, shift_iter->to_state);
 		WRITE_BYTE(output, shift_iter->bytes.size());
 
-		for (deque<uint8_t>::iterator byte_iter = shift_iter->bytes.begin();
-				byte_iter != shift_iter->bytes.end(); byte_iter++)
-			WRITE_BYTE(output, *byte_iter);
+		for (i = 0; i < shift_iter->bytes.size(); i++)
+			WRITE_BYTE(output, shift_iter->bytes[i]);
+		for (; i < 4; i++)
+			WRITE_BYTE(output, 0);
 	}
 
 	for (vector<State *>::iterator state_iter = codepage_states.begin();

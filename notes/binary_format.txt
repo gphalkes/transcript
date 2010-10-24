@@ -5,7 +5,7 @@ Table file format
 =================
 
 All fields are in Big Endian format. The "string" format consists of a 1 byte
-length field, followed by that many bytes representing the string. Codepoints
+length field, followed by 4 bytes representing the string. Codepoints
 that are unused are represented by an all 1s pattern.
 
 
@@ -32,6 +32,7 @@ Number of states (unicode)   | 1
 Total range entries (unicode)| 2
 Default from-unicode flags   | 1
 Default to-unicode flags     | 1
+Final codepage action size   | 1
 
 The Flags field is a bit mask. The following flags are defined (0 is least
 significant bit).
