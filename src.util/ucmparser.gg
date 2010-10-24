@@ -127,7 +127,7 @@ state {
 ;
 
 entry {
-	Entry result(0, 0, 0, ACTION_FINAL, 0, 0, 0);
+	Entry result(0, 0, 0, ACTION_FINAL, 0, 0);
 } :
 	HEXNUM
 	//FIXME: check for range of numbers!

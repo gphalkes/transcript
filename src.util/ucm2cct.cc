@@ -151,7 +151,6 @@ static void update_state_attributes(vector<State *> &states, size_t idx) {
 				states[idx]->entries[i].mul = states[states[idx]->entries[i].next_state]->range;
 				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) *
 					states[idx]->entries[i].mul;
-				states[idx]->entries[i].max = sum;
 				break;
 			case ACTION_FINAL_PAIR:
 				states[idx]->entries[i].mul = 2;
@@ -161,7 +160,6 @@ static void update_state_attributes(vector<State *> &states, size_t idx) {
 			action_final_shared:
 				states[idx]->entries[i].base = sum;
 				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) * states[idx]->entries[i].mul;
-				states[idx]->entries[i].max = sum;
 				break;
 			default:
 				break;
@@ -280,6 +278,8 @@ int main(int argc, char *argv[]) {
 		fprintf(stderr, "Codepage range: %" PRId32 "\n", ucm->codepage_range);
 		fprintf(stderr, "Unicode range: %" PRId32 "\n", ucm->unicode_range);
 	}
+
+	ucm->find_shift_sequences();
 
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);

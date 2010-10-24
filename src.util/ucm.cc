@@ -19,7 +19,7 @@
 #include "ucm2cct.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
-	entries.push_back(Entry(0, 255, 0, ACTION_ILLEGAL, 0, 0, 0));
+	entries.push_back(Entry(0, 255, 0, ACTION_ILLEGAL, 0, 0));
 }
 
 void State::new_entry(Entry entry) {
@@ -105,7 +105,7 @@ bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 	return false;
 }
 
-#define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0, 0)
+#define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0)
 void Ucm::process_header(void) {
 	if (tag_values[UCONV_CLASS] == NULL)
 		fatal("<uconv_class> unspecified\n");
@@ -652,7 +652,8 @@ void Ucm::calculate_item_costs(void) {
 		Chicken, egg, etc. */
 	from_unicode_flags &= ~(Mapping::FROM_UNICODE_NOT_AVAIL | Mapping::FROM_UNICODE_FALLBACK);
 	from_unicode_flags_save = 1;
-	fprintf(stderr, "- from unicode not available/fallback flags\n");
+	if (option_verbose)
+		fprintf(stderr, "- from unicode not available/fallback flags\n");
 	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START)) {
 		from_flag_costs += 0.25;
 		from_unicode_flags &= ~(Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START);
@@ -722,10 +723,50 @@ void Ucm::minimize_state_machines(void) {
 	delete info;
 }
 
-#define WRITE(file, count, bytes) do { if (fwrite(bytes, 1, count, file) != count) fatal("Error writing file\n"); } while (0)
-#define WRITE_BYTE(file, value) do { uint8_t byte = value; if (fwrite(&byte, 1, 1, file) != 1) fatal("Error writing file\n"); } while (0)
-#define WRITE_WORD(file, value) do { uint16_t byte = htons(value); if (fwrite(&byte, 1, 2, file) != 2) fatal("Error writing file\n"); } while (0)
-#define WRITE_DWORD(file, value) do { uint32_t byte = htons(value); if (fwrite(&byte, 1, 4, file) != 4) fatal("Error writing file\n"); } while (0)
+
+void Ucm::trace_back(size_t idx, shift_sequence_t &shift_sequence) {
+	if (codepage_states[idx]->flags & State::INITIAL) {
+		shift_sequence.from_state = idx;
+		if (shift_sequence.from_state != shift_sequence.to_state)
+			shift_sequences.push_back(shift_sequence);
+		return;
+	}
+
+	for (size_t i = 0; i != codepage_states.size(); i++) {
+		for (vector<Entry>::iterator entry_iter = codepage_states[i]->entries.begin();
+				entry_iter != codepage_states[i]->entries.end(); entry_iter++)
+		{
+			if (entry_iter->action == ACTION_VALID && entry_iter->next_state == idx) {
+				shift_sequence.bytes.push_front(entry_iter->low);
+				trace_back(i, shift_sequence);
+				shift_sequence.bytes.pop_front();
+			}
+		}
+	}
+}
+
+void Ucm::find_shift_sequences(void) {
+	if (!(flags & MULTIBYTE_START_STATE_1))
+		return;
+
+	for (size_t i = 0; i != codepage_states.size(); i++) {
+		for (vector<Entry>::iterator entry_iter = codepage_states[i]->entries.begin();
+				entry_iter != codepage_states[i]->entries.end(); entry_iter++)
+		{
+			if (entry_iter->action == ACTION_SHIFT) {
+				shift_sequence_t shift_sequence;
+				shift_sequence.bytes.push_front(entry_iter->low);
+				shift_sequence.to_state = entry_iter->next_state;
+				trace_back(i, shift_sequence);
+			}
+		}
+	}
+}
+
+#define WRITE(file, count, bytes) do { if (fwrite(bytes, 1, count, file) != (size_t) count) fatal("Error writing file\n"); } while (0)
+#define WRITE_BYTE(file, value) do { uint8_t _write_value = value; if (fwrite(&_write_value, 1, 1, file) != 1) fatal("Error writing file\n"); } while (0)
+#define WRITE_WORD(file, value) do { uint16_t _write_value = htons(value); if (fwrite(&_write_value, 1, 2, file) != 2) fatal("Error writing file\n"); } while (0)
+#define WRITE_DWORD(file, value) do { uint32_t _write_value = htons(value); if (fwrite(&_write_value, 1, 4, file) != 4) fatal("Error writing file\n"); } while (0)
 
 void Ucm::write_table(FILE *output) {
 	const char magic[] = "T3CM";
@@ -740,7 +781,7 @@ void Ucm::write_table(FILE *output) {
 	for (vector<uint8_t>::iterator iter = subchar.begin(); iter != subchar.end(); iter++)
 		WRITE_BYTE(output, *iter); // subchar byte (1)
 	WRITE_BYTE(output, tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
-	WRITE_BYTE(output, 0); //FIXME: nr of shift sequences
+	WRITE_BYTE(output, shift_sequences.size()); //FIXME: nr of shift sequences
 	WRITE_BYTE(output, codepage_states.size()); // nr of states in codepage state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
@@ -755,7 +796,17 @@ void Ucm::write_table(FILE *output) {
 	WRITE_WORD(output, total_entries); // total nr of entries (unicode) (2)
 	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
 	WRITE_BYTE(output, to_unicode_flags); //default to-unicode flags (1)
-	//FIXME: write shift sequences
+	for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
+			shift_iter != shift_sequences.end(); shift_iter++)
+	{
+		WRITE_BYTE(output, shift_iter->from_state);
+		WRITE_BYTE(output, shift_iter->to_state);
+		WRITE_BYTE(output, shift_iter->bytes.size());
+
+		for (deque<uint8_t>::iterator byte_iter = shift_iter->bytes.begin();
+				byte_iter != shift_iter->bytes.end(); byte_iter++)
+			WRITE_BYTE(output, *byte_iter);
+	}
 
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
 			state_iter != codepage_states.end(); state_iter++)
@@ -765,7 +816,6 @@ void Ucm::write_table(FILE *output) {
 				entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
 			WRITE_BYTE(output, entry_iter->low);
-			WRITE_BYTE(output, entry_iter->high);
 			WRITE_BYTE(output, entry_iter->next_state);
 			WRITE_BYTE(output, entry_iter->action);
 		}
@@ -875,7 +925,50 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 			byte |= convert_flags(flags_save, data[i++]) << (shift[flags_save] * j);
 		data[store_idx++] = byte;
 	}
-	WRITE(output, store_idx, data);
+
+	//FIXME: clean this code up. It is a mess!
+
+	#define BLOCKSIZE 16
+	uint16_t *indices;
+	uint8_t *blocks;
+	uint32_t nr_of_blocks = (store_idx + BLOCKSIZE - 1) / BLOCKSIZE;
+	int saved_blocks = 0;
+
+	if ((indices = (uint16_t *) malloc(nr_of_blocks * 2)) == NULL)
+		OOM();
+	if ((blocks = (uint8_t *) malloc(nr_of_blocks * BLOCKSIZE)) == NULL)
+		OOM();
+
+	// Ensure that the last block is filled up with 0 bytes
+	memset(data + store_idx, 0, nr_of_blocks * BLOCKSIZE - store_idx);
+
+	for (i = 0; i < nr_of_blocks; i++) {
+		for (j = 0; j < saved_blocks; j++) {
+			if (memcmp(data + i * BLOCKSIZE, blocks + j * BLOCKSIZE, BLOCKSIZE) == 0)
+				break;
+		}
+		indices[i] = j;
+		if (j >= saved_blocks) {
+			memcpy(blocks + saved_blocks * BLOCKSIZE, data + i * BLOCKSIZE, BLOCKSIZE);
+			saved_blocks++;
+		}
+	}
+
+	if (option_verbose)
+		fprintf(stderr, "Trie info: %d, %zd\n", nr_of_blocks * 2 + saved_blocks * BLOCKSIZE, store_idx);
+
+	if (nr_of_blocks * 2 + saved_blocks * BLOCKSIZE > store_idx) {
+		WRITE_BYTE(output, flags_save);
+		WRITE(output, store_idx, data);
+	} else {
+		WRITE_BYTE(output, flags_save | 0x80);
+		WRITE_WORD(output, saved_blocks);
+		for (i = 0; i < nr_of_blocks; i++)
+			WRITE_WORD(output, indices[i]);
+		WRITE(output, saved_blocks * BLOCKSIZE, blocks);
+	}
+	free(indices);
+	free(blocks);
 }
 
 void Ucm::write_to_unicode_flags(FILE *output) {
@@ -887,7 +980,6 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		OOM();
 
 	memset(save_flags, 0, codepage_range + 7);
-	WRITE_BYTE(output, to_unicode_flags_save);
 
 	for (vector<Mapping *>::iterator simple_iter = simple_mappings.begin();
 			simple_iter != simple_mappings.end(); simple_iter++)
@@ -920,7 +1012,6 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 		OOM();
 
 	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + 7);
-	WRITE_BYTE(output, from_unicode_flags_save);
 
 	for (vector<Mapping *>::iterator simple_iter = simple_mappings.begin();
 			simple_iter != simple_mappings.end(); simple_iter++)

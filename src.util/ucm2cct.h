@@ -15,6 +15,7 @@
 #define UCM2CTT_H
 
 #include <vector>
+#include <deque>
 #include <inttypes.h>
 
 using namespace std;
@@ -34,10 +35,9 @@ struct Entry {
 	action_t action;
 	int base;
 	int mul;
-	int max;
 
-	Entry(int _low, int _high, int _next_state, action_t _action, int _base, int _mul, int _max) :
-		low(_low), high(_high), next_state(_next_state), action(_action), base(_base), mul(_mul), max(_max) {}
+	Entry(int _low, int _high, int _next_state, action_t _action, int _base, int _mul) :
+		low(_low), high(_high), next_state(_next_state), action(_action), base(_base), mul(_mul) {}
 };
 
 class State {
@@ -78,6 +78,11 @@ class Mapping {
 		};
 
 		Mapping() : from_unicode_flags(0), to_unicode_flags(0), precision(0) {};
+};
+
+struct shift_sequence_t {
+	deque<uint8_t> bytes;
+	uint8_t from_state, to_state;
 };
 
 class StateMachineInfo {
@@ -138,11 +143,18 @@ class Ucm {
 		uint8_t from_unicode_flags, to_unicode_flags;
 		uint8_t from_unicode_flags_save, to_unicode_flags_save;
 
+		vector<shift_sequence_t> shift_sequences;
+
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
 		int check_codepage_bytes(vector<uint8_t> &bytes);
 		void check_duplicates(vector<Mapping *> &mappings);
 		int calculate_depth(Entry *entry);
+		void trace_back(size_t idx, shift_sequence_t &shift_sequence);
+		void write_to_unicode_table(FILE *output);
+		void write_from_unicode_table(FILE *output);
+		void write_to_unicode_flags(FILE *output);
+		void write_from_unicode_flags(FILE *output);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			private:
@@ -184,11 +196,8 @@ class Ucm {
 		void ensure_ascii_controls(void);
 		void calculate_item_costs(void);
 		void minimize_state_machines(void);
-		void write_to_unicode_table(FILE *output);
+		void find_shift_sequences(void);
 		void write_table(FILE *output);
-		void write_from_unicode_table(FILE *output);
-		void write_to_unicode_flags(FILE *output);
-		void write_from_unicode_flags(FILE *output);
 };
 
 extern "C" int line_number;

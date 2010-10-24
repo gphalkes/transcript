@@ -87,7 +87,6 @@ Range entry
 Field                   | Bytes
 ---------------------------------------------------
 Low end of range        | 1
-High end of range       | 1
 Next state              | 1
 Action                  | 1 (See list of action values below)
 
@@ -120,7 +119,8 @@ The format of the data for the from- and to-unicode flag tables are specified
 by a format byte preceeding the table. This byte indicates both the size and
 meaning of each entry.
 
-For the from-unicode table, the header byte can have the following values:
+For the from-unicode table, the lower 4 bits of the header byte can have the
+following values:
 
 Value | Meaning
 ---------------------------------------------------
@@ -142,8 +142,8 @@ C     | The mapping is not available and the subchar1 character should be used
 D     | The codepoint is used as the first codepoint in a m:n conversion
 E-F   | A number representing the number of bytes in the code page sequence
 
-
-For the to-unicode table, the header byte can have the following values:
+For the to-unicode table, the lower 4 bits of the header byte can have the
+following values:
 
 Value | Meaning
 ---------------------------------------------------
@@ -171,6 +171,11 @@ Also note that the availability of a to-unicode mapping should be determined
 by checking whether the mapped value is unequal to FFFF. For the to-unicode
 mappings there also is no length field because the codepoints are encoded as
 UTF-16BE, such that the length can be determined from the encoding.
+
+If bit 7 of the header byte is set, then the flags are saved as a single level
+trie. The header byte is then followed by a list of 16 bit indices. These
+indices are into the next table of 16 byte blocks. This holds for both the
+to- and from-unicode flags tables. //FIXME: this description needs to be improved [include calculation of lengths]
 
 
 Finally, there is an optional m:n mapping table. This table consists of a

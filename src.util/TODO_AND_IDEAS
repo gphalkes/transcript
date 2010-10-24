@@ -1,2 +1,10 @@
-- split the flag stuf into separate groups (availability is always required)
-- write output (update binary format description)
+- add trie storage for flags, as they contain large blocks of similar data.
+  This should reduce file size significantly. Even a single level trie would
+  help greatly.
+- if we use zlib/lzo for compression, then we can optimize our tables for
+  in-memory size. This makes the state machine minimization easier. On the
+  other hand, that would introduce a dependency which we may want to avoid, and
+  disk space is not expensive.
+- perhaps it is a good idea to save the data such that we can simply use a
+  read-only mmap and a small set of pointers into the file.
+- allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also set

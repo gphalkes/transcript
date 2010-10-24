@@ -460,11 +460,11 @@ void minimize_state_machine(StateMachineInfo *info, int flags) {
 				continue;
 
 			new_states.back()->new_entry(Entry(last, j - 1, (int) (intptr_t) serialized_states[i]->entries[last].next_state,
-				serialized_states[i]->entries[last].action, 0, 0, 0));
+				serialized_states[i]->entries[last].action, 0, 0));
 			last = j;
 		}
 		new_states.back()->new_entry(Entry(last, j - 1, (int) (intptr_t) serialized_states[i]->entries[last].next_state,
-			serialized_states[i]->entries[last].action, 0, 0, 0));
+			serialized_states[i]->entries[last].action, 0, 0));
 	}
 
 	info->replace_state_machine(new_states);
