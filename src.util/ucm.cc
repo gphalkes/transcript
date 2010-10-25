@@ -263,25 +263,19 @@ void Ucm::validate_states(void) {
 
 	for (i = 0; i < codepage_states.size(); i++) {
 		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
-			if (codepage_states[i]->entries[j].action == ACTION_UNASSIGNED &&
-					codepage_states[i]->entries[j].action == ACTION_ILLEGAL)
-				continue;
-
 			if (codepage_states[i]->entries[j].next_state >= (int) codepage_states.size())
 				fatal("State %zd:%x-%x designates a non-existant state as next state\n", i,
 					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 
-			if (codepage_states[i]->entries[j].action != ACTION_VALID &&
-					!(codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL))
-				fatal("State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
-					i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
-
-			if (codepage_states[i]->entries[j].action != ACTION_VALID)
-				continue;
-
-			if (codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL)
-				fatal("State %d:%x-%x designates an initial state as next state for non-final transition\n", i,
-					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+			if (codepage_states[i]->entries[j].action == ACTION_VALID) {
+				if (codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL)
+					fatal("State %d:%x-%x designates an initial state as next state for non-final transition\n", i,
+						codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+			} else {
+				if (!(codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL))
+					fatal("State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
+						i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+			}
 		}
 	}
 
@@ -307,8 +301,7 @@ void Ucm::validate_states(void) {
 	}
 
 	vector<uint8_t> bytes;
-	/* FIXME: line number is not correct at this point, so the error messages generated from the
-	   functions below will be confusing. */
+	#warning FIXME: line number is not correct at this point, so the error messages generated from the functions below will be confusing.
 
 	parse_byte_sequence(tag_values[SUBCHAR], bytes);
 	check_codepage_bytes(bytes);
@@ -785,20 +778,20 @@ void Ucm::write_table(FILE *output) {
 		WRITE_BYTE(output, 0);
 	WRITE_BYTE(output, tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
 	WRITE_BYTE(output, shift_sequences.size()); //FIXME: nr of shift sequences
-	WRITE_BYTE(output, codepage_states.size()); // nr of states in codepage state machine (1)
+	WRITE_BYTE(output, codepage_states.size() - 1); // nr of states in codepage state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
 			state_iter != codepage_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
-	WRITE_WORD(output, total_entries); // total nr of entries (code page) (2)
-	WRITE_BYTE(output, unicode_states.size()); // nr of states in unicode state machine (1)
+	WRITE_WORD(output, total_entries - 1); // total nr of entries (code page) (2)
+	WRITE_BYTE(output, unicode_states.size() - 1); // nr of states in unicode state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = unicode_states.begin();
 			state_iter != unicode_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
-	WRITE_WORD(output, total_entries); // total nr of entries (unicode) (2)
-	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
+	WRITE_WORD(output, total_entries - 1); // total nr of entries (unicode) (2)
 	WRITE_BYTE(output, to_unicode_flags); // default to-unicode flags (1)
+	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
 	WRITE_BYTE(output, single_bytes); // Final codepage action size (1)
 	for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
 			shift_iter != shift_sequences.end(); shift_iter++)
@@ -816,7 +809,7 @@ void Ucm::write_table(FILE *output) {
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
 			state_iter != codepage_states.end(); state_iter++)
 	{
-		WRITE_BYTE(output, (*state_iter)->entries.size());
+		WRITE_BYTE(output, (*state_iter)->entries.size() - 1);
 		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
 				entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
@@ -829,23 +822,22 @@ void Ucm::write_table(FILE *output) {
 	for (vector<State *>::iterator state_iter = unicode_states.begin();
 		state_iter != unicode_states.end(); state_iter++)
 	{
-		WRITE_BYTE(output, (*state_iter)->entries.size());
+		WRITE_BYTE(output, (*state_iter)->entries.size() - 1);
 		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
 			entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
 			WRITE_BYTE(output, entry_iter->low);
-			WRITE_BYTE(output, entry_iter->high);
 			WRITE_BYTE(output, entry_iter->next_state);
 			WRITE_BYTE(output, entry_iter->action);
 		}
 	}
 
-	write_from_unicode_table(output);
 	write_to_unicode_table(output);
-	if (from_unicode_flags_save != 0)
-		write_from_unicode_flags(output);
+	write_from_unicode_table(output);
 	if (to_unicode_flags_save != 0)
 		write_to_unicode_flags(output);
+	if (from_unicode_flags_save != 0)
+		write_from_unicode_flags(output);
 }
 
 void Ucm::write_to_unicode_table(FILE *output) {
@@ -967,7 +959,7 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 		WRITE(output, store_idx, data);
 	} else {
 		WRITE_BYTE(output, flags_save | 0x80);
-		WRITE_WORD(output, saved_blocks);
+		WRITE_WORD(output, saved_blocks - 1);
 		for (i = 0; i < nr_of_blocks; i++)
 			WRITE_WORD(output, indices[i]);
 		WRITE(output, saved_blocks * BLOCKSIZE, blocks);

@@ -26,12 +26,12 @@ Subchar                      | string
 Subchar initial state        | 1
 Subchar1                     | 1
 Num. of shift sequences      | 1
-Number of states (code page) | 1
-Total range entries (code p) | 2
-Number of states (unicode)   | 1
-Total range entries (unicode)| 2
-Default from-unicode flags   | 1
+Number of states (code page) | 1 (0 means 1, etc)
+Total range entries (code p) | 2 (0 means 1, etc)
+Number of states (unicode)   | 1 (0 means 1, etc)
+Total range entries (unicode)| 2 (0 means 1, etc)
 Default to-unicode flags     | 1
+Default from-unicode flags   | 1
 Final codepage action size   | 1
 
 The Flags field is a bit mask. The following flags are defined (0 is least
@@ -71,7 +71,7 @@ For each state the following is stored
 Field                   | Bytes
 ---------------------------------------------------
 ##Flags                   | 1 (See defined flag values below)
-Number of range entries | 1
+Number of range entries | 1 (0 means 1, etc)
 
 ##The Flags field is a bit mask. The following flags are defined (0 is least
 ##significant bit).
@@ -113,12 +113,29 @@ Next are two optional tables (see the Flags field in the header), which encode
 information about the transformation.
 
 The two optional tables are (in order) a table with information about the
-from-unicode transformation and a table with information about the to-unicode
+to-unicode transformation and a table with information about the from-unicode
 transformation.
 
 The format of the data for the from- and to-unicode flag tables are specified
 by a format byte preceeding the table. This byte indicates both the size and
 meaning of each entry.
+
+For the to-unicode table, the lower 4 bits of the header byte can have the
+following values:
+
+Value | Meaning
+---------------------------------------------------
+1     | 2 bit entries, representing bits A & B
+2     | 2 bit entries, representing bit C
+3     | 4 bit entries, representing bits A through C
+
+For the to-unicode flags the following values are defined:
+
+Bit   | Meaning
+---------------------------------------------------
+A     | Mapping is a fallback (i.e. maps to the same codepoint as another)
+B     | The codepage number is used as the first codepage number in a m:n conversion
+C     | The mapping maps to a private use character to allow round-trip conversion
 
 For the from-unicode table, the lower 4 bits of the header byte can have the
 following values:
@@ -143,23 +160,6 @@ C     | The mapping is not available and the subchar1 character should be used
 D     | The codepoint is used as the first codepoint in a m:n conversion
 E-F   | A number representing the number of bytes in the code page sequence
 
-For the to-unicode table, the lower 4 bits of the header byte can have the
-following values:
-
-Value | Meaning
----------------------------------------------------
-1     | 2 bit entries, representing bits A & B
-2     | 2 bit entries, representing bit C
-3     | 4 bit entries, representing bits A through C
-
-For the to-unicode flags the following values are defined:
-
-Bit   | Meaning
----------------------------------------------------
-A     | Mapping is a fallback (i.e. maps to the same codepoint as another)
-B     | The codepage number is used as the first codepage number in a m:n conversion
-C     | The mapping maps to a private use character to allow round-trip conversion
-
 Note that a to-unicode fallback is different from a from-unicode fallback. A
 to-unicode fallback means that the same character is encoded in the input
 character set more than once, while a from-unicode fallback means that there is
@@ -175,8 +175,9 @@ UTF-16BE, such that the length can be determined from the encoding.
 
 If bit 7 of the header byte is set, then the flags are saved as a single level
 trie. The header byte is then followed by a list of 16 bit indices. These
-indices are into the next table of 16 byte blocks. This holds for both the
-to- and from-unicode flags tables. //FIXME: this description needs to be improved [include calculation of lengths]
+indices are into the next table of 16 byte blocks, which is itself preceeded by
+a 2 byte count of the number of blocks - 1. This holds for both the to- and
+from-unicode flags tables. //FIXME: this description needs to be improved [include calculation of lengths]
 
 
 Finally, there is an optional m:n mapping table. This table consists of a
