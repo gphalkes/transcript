@@ -16,16 +16,17 @@
 
 //FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
 typedef int (*conversion_func_t)(void *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+typedef int (*skip_func_t)(void *handle, char **inbuf, size_t *inbytesleft);
 typedef int (*reset_func_t)(void *handle);
 typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytes_left);
 
 typedef struct {
 	conversion_func_t convert;
+	skip_func_t skip;
 	reset_func_t reset;
 	put_unicode_func_t put_unicode;
-	//FIXME: skip function
 	int flags;
-} charconv_basic_t;
+} charconv_common_t;
 
 enum {
 	CHARCONV_ALLOW_FALLBACK = (1<<0), // Include fallback characters in the conversion
@@ -46,7 +47,8 @@ enum {
 	CHARCONV_ILLEGAL,
 	CHARCONV_INTERNAL_ERROR,
 	CHARCONV_PRIVATE_USE,
-	CHARCONV_NO_SPACE
+	CHARCONV_NO_SPACE,
+	CHARCONV_INCOMPLETE
 };
 
 #endif

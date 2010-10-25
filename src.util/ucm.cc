@@ -838,6 +838,36 @@ void Ucm::write_table(FILE *output) {
 		write_to_unicode_flags(output);
 	if (from_unicode_flags_save != 0)
 		write_from_unicode_flags(output);
+
+	sort(multi_mappings.begin(), multi_mappings.end(), compareCodepageBytes);
+	WRITE_DWORD(output, multi_mappings.size());
+	for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
+			multi_iter != multi_mappings.end(); multi_iter++)
+	{
+		vector<uint32_t>::iterator codepoint_iter;
+		uint8_t count = 0;
+		for (codepoint_iter = (*multi_iter)->codepoints.begin();
+				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+			count += 1 + ((*codepoint_iter) > UINT32_C(0x10000));
+
+		WRITE_BYTE(output, count);
+		for (codepoint_iter = (*multi_iter)->codepoints.begin();
+				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+		{
+			if (*codepoint_iter < UINT32_C(0x10000)) {
+				WRITE_WORD(output, *codepoint_iter);
+			} else {
+				uint32_t codepoint = (*codepoint_iter) - 0x10000;
+				WRITE_WORD(output, UINT32_C(0xd800) + (codepoint >> 10));
+				WRITE_WORD(output, UINT32_C(0xdc00) + (codepoint & 0x3ff));
+			}
+		}
+
+		WRITE_BYTE(output, (*multi_iter)->codepage_bytes.size());
+		for (vector<uint8_t>::iterator byte_iter = (*multi_iter)->codepage_bytes.begin();
+				byte_iter != (*multi_iter)->codepage_bytes.end(); byte_iter++)
+			WRITE_BYTE(output, *byte_iter);
+	}
 }
 
 void Ucm::write_to_unicode_table(FILE *output) {

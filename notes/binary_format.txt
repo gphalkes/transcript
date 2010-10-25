@@ -182,11 +182,11 @@ from-unicode flags tables. //FIXME: this description needs to be improved [inclu
 
 Finally, there is an optional m:n mapping table. This table consists of a
 single 4 byte number indicating the number of m:n mappings, followed by the
-mappings:
+mappings. The mappings should be sorted in ascending order of codepage bytes.
 
 Field                      | Bytes
 ---------------------------------------------------
-Number of codepoints       | 1
+Number of codepoints       | 1 (1 through 31)
 [ codepoints ]+            | [ UTF-16BE ]+
-Number of code page bytes  | 1
+Number of code page bytes  | 1 (1 through 19)
 [ code page bytes ]+       | [ Indicated by previous field ]+
