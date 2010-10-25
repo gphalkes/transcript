@@ -1,4 +1,5 @@
 syntax: glob
+src/cct_convertor
 src/charconv_errors.h
 src/charconv_api.h
 src/libt3charconv.la

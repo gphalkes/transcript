@@ -18,6 +18,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
+#include "charconv.h"
 #include "charconv_errors.h"
 #include "utf.h"
 
@@ -45,6 +46,20 @@ enum {
 	ACTION_UNASSIGNED,
 	ACTION_SHIFT,
 	ACTION_ILLEGAL
+};
+
+enum {
+	FROM_UNICODE_NOT_AVAIL = (1<<0),
+	FROM_UNICODE_FALLBACK = (1<<1),
+	FROM_UNICODE_SUBCHAR1 = (1<<2),
+	FROM_UNICODE_MULTI_START = (1<<3),
+	FROM_UNICODE_LENGTH_MASK = (3<<4)
+};
+
+enum {
+	TO_UNICODE_FALLBACK = (1<<0),
+	TO_UNICODE_MULTI_START = (1<<1),
+	TO_UNICODE_PRIVATE_USE = (1<<2)
 };
 
 typedef struct {
@@ -82,7 +97,7 @@ typedef struct {
 	entry_t *unicode_entries;
 	uint16_t *codepage_mappings;
 	uint8_t *unicode_mappings;
-	//FIXME: flag tries
+	//FIXME: M:N mappings
 
 	uint32_t codepage_range;
 	uint32_t unicode_range;
@@ -103,8 +118,9 @@ typedef struct {
 } convertor_t;
 
 typedef struct {
+	charconv_basic_t basic;
 	convertor_t *convertor;
-	//FIXME: add state
+	uint8_t state;
 } convertor_state_t;
 
 static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
@@ -204,11 +220,12 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 		READ_WORD(convertor->codepage_mappings[i]);
 	READ(convertor->unicode_range * convertor->single_size, convertor->unicode_mappings);
 
-	//FIXME: read flag tries
 	if (!read_flags(file, &convertor->codepage_flags, convertor->codepage_range, error))
 		goto end_error;
 	if (!read_flags(file, &convertor->unicode_flags, convertor->unicode_range, error))
 		goto end_error;
+
+	//FIXME: read M:N conversions
 
 	return convertor;
 
@@ -467,3 +484,152 @@ end_error:
 	return t3_false;
 }
 
+#define PUT_UNICODE(codepoint) do { int result; \
+	if ((result = handle->basic.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
+		return result; \
+	} while (0)
+
+static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+		char **outbuf, size_t *outbytesleft, int flags)
+{
+	uint8_t *_inbuf = (uint8_t *) *inbuf;
+	size_t _inbytesleft = *inbytesleft;
+	uint_fast8_t state = handle->state;
+	uint_fast32_t idx = 0;
+	uint_fast32_t codepoint;
+
+	if (flags & CHARCONV_FILE_START)
+		PUT_UNICODE(UINT32_C(0xFEFF));
+
+	while (_inbytesleft > 0) {
+		entry_t *entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
+
+		idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
+		_inbuf++;
+		_inbytesleft--;
+
+		switch (entry->action) {
+			case ACTION_FINAL:
+			case ACTION_FINAL_PAIR:
+				flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
+				if (flags & TO_UNICODE_MULTI_START) {
+
+
+				}
+
+				if ((flags & TO_UNICODE_PRIVATE_USE) && !(handle->basic.flags & CHARCONV_ALLOW_PRIVATE_USE))
+					return CHARCONV_PRIVATE_USE;
+				if ((flags & TO_UNICODE_FALLBACK) && !(handle->basic.flags & CHARCONV_ALLOW_FALLBACK))
+					return CHARCONV_FALLBACK;
+
+				codepoint = handle->convertor->codepage_mappings[idx];
+				if (codepoint == UINT32_C(0xFFFF)) {
+					if (!(handle->basic.flags & CHARCONV_SUBSTITUTE))
+						return CHARCONV_UNMAPPED;
+					PUT_UNICODE(UINT32_C(0xFFFD));
+				} else {
+					if (entry->action == ACTION_FINAL_PAIR && codepoint >= UINT32_C(0xD800) && codepoint <= UINT32_C(0xD8FF)) {
+						codepoint -= UINT32_C(0xD800);
+						codepoint <<= 10;
+						codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xDC00);
+						codepoint += 0x10000;
+					}
+					PUT_UNICODE(codepoint);
+				}
+				goto sequence_done;
+			case ACTION_VALID:
+				state = entry->next_state;
+				break;
+			case ACTION_ILLEGAL:
+				if (!(handle->basic.flags & CHARCONV_SUBSTITUTE_ALL))
+					return CHARCONV_ILLEGAL;
+				PUT_UNICODE(UINT32_C(0xFFFD));
+				goto sequence_done;
+			case ACTION_UNASSIGNED:
+				if (!(handle->basic.flags & CHARCONV_SUBSTITUTE))
+					return CHARCONV_UNMAPPED;
+				PUT_UNICODE(UINT32_C(0xFFFD));
+				/* FALLTHROUGH */
+			case ACTION_SHIFT:
+			sequence_done:
+				*inbuf = (char *) _inbuf;
+				*inbytesleft = _inbytesleft;
+				handle->state = state = entry->next_state;
+				break;
+			default:
+				return CHARCONV_INTERNAL_ERROR;
+		}
+	}
+
+	return CHARCONV_SUCCESS;
+}
+
+
+#if 0
+#include <stdarg.h>
+void fatal(const char *fmt, ...) {
+	va_list args;
+
+	va_start(args, fmt);
+	vfprintf(stderr, fmt, args);
+	va_end(args);
+#ifdef DEBUG
+	abort();
+#else
+	exit(EXIT_FAILURE);
+#endif
+}
+
+int main(int argc, char *argv[]) {
+	flags_t flags;
+	uint8_t bytes[256];
+	int i, twobits, fourbits;
+
+	flags.flags = bytes;
+	flags.default_flags = 0;
+
+	for (i = 0; i < 256; i++)
+		bytes[i] = i;
+
+	for (i = 0; i < 256 * 4; i++) {
+		twobits = i >> 2;
+		twobits >>= 2 * (i & 3);
+		twobits &= 3;
+		if (get_flags_1(&flags, i) != twobits)
+			fatal("%d: get_flags_1: %02x, expected: %02x\n", i, get_flags_1(&flags, i), twobits);
+		if (get_flags_2(&flags, i) != (twobits << 2))
+			fatal("%d: get_flags_2: %02x, expected: %02x\n", i, get_flags_2(&flags, i), (twobits << 2));
+		if (get_flags_4(&flags, i) != (twobits << 4))
+			fatal("%d: get_flags_4: %02x, expected: %02x\n", i, get_flags_4(&flags, i), (twobits << 4));
+		if (get_flags_8(&flags, i) != (twobits << 6))
+			fatal("%d: get_flags_8: %02x, expected: %02x\n", i, get_flags_8(&flags, i), (twobits << 6));
+	}
+
+	for (i = 0; i < 256 * 2; i++) {
+		fourbits = i >> 1;
+		fourbits >>= 4 * (i & 1);
+		fourbits &= 15;
+		if (get_flags_3(&flags, i) != fourbits)
+			fatal("%d: get_flags_3: %02x, expected: %02x\n", i, get_flags_3(&flags, i), fourbits);
+		if (get_flags_6(&flags, i) != (fourbits << 2))
+			fatal("%d: get_flags_6: %02x, expected: %02x\n", i, get_flags_6(&flags, i), (fourbits << 2));
+		if (get_flags_12(&flags, i) != (fourbits << 4))
+			fatal("%d: get_flags_12: %02x, expected: %02x\n", i, get_flags_12(&flags, i), (fourbits << 4));
+		fourbits = ((fourbits & 0xc) << 2) | (fourbits & 3);
+		if (get_flags_5(&flags, i) != fourbits)
+			fatal("%d: get_flags_5: %02x, expected: %02x\n", i, get_flags_5(&flags, i), fourbits);
+		if (get_flags_10(&flags, i) != (fourbits << 2))
+			fatal("%d: get_flags_10: %02x, expected: %02x\n", i, get_flags_10(&flags, i), (fourbits << 2));
+		fourbits = ((fourbits & 0x30) << 2) | (fourbits & 3);
+		if (get_flags_9(&flags, i) != fourbits)
+			fatal("%d: get_flags_9: %02x, expected: %02x\n", i, get_flags_9(&flags, i), fourbits);
+	}
+
+	for (i = 0; i < 256; i++) {
+		if (get_flags_15(&flags, i) != i)
+			fatal("%d: get_flags_15: %02x, expected: %02x\n", i, get_flags_15(&flags, i), i);
+	}
+
+	return 0;
+}
+#endif

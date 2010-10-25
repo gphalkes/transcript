@@ -11,10 +11,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-LCFILES.libt3charconv.la := cct_convertor.c
-CFLAGS.key := -fPIC
+LCFILES.libt3charconv.la := cct_convertor.c utf.c
+CFILES.cct_convertor := cct_convertor.c
 
 TARGETS := libt3charconv.la
+#~ TARGETS := cct_convertor
 
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #

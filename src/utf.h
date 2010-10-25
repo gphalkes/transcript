@@ -14,6 +14,15 @@
 #ifndef UTF_H
 #define UTF_H
 
-//FIXME: define get and put routines for UTF-8, UTF-16 and UTF-32
+enum {
+	UTF8,
+	UTF16,
+	UTF16BE,
+	UTF16LE,
+	UTF32,
+	UTF32BE,
+	UTF32LE
+};
+put_unicode_func_t get_put_unicode(int type);
 
 #endif
