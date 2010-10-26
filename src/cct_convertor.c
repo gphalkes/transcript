@@ -17,10 +17,12 @@
 #include <stdint.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
 #include "charconv.h"
 #include "charconv_errors.h"
 #include "utf.h"
+
 
 #warning FIXME: these should not be replicated here!!!
 #define T3_ERR_INVALID_FORMAT (-32)
@@ -96,7 +98,9 @@ typedef struct {
 	uint8_t codepoints_length;
 } multi_mapping_t;
 
-typedef struct {
+typedef struct convertor_t {
+	char *name;
+	struct convertor_t *next;
 	shift_state_t *shift_states;
 	state_t *codepage_states;
 	entry_t *codepage_entries;
@@ -105,11 +109,12 @@ typedef struct {
 	uint16_t *codepage_mappings;
 	uint8_t *unicode_mappings;
 	multi_mapping_t *multi_mappings;
-/* 	multi_mapping_t **multi_mappings_codepoint_sort; */
 
 	uint32_t codepage_range;
 	uint32_t unicode_range;
 	uint32_t nr_multi_mappings;
+
+	int refcount;
 
 	uint16_t nr_codepage_entries;
 	uint16_t nr_unicode_entries;
@@ -129,18 +134,17 @@ typedef struct {
 typedef struct {
 	charconv_common_t common;
 	convertor_t *convertor;
-	uint8_t state;
+	uint8_t to_state, from_state;
 } convertor_state_t;
 
+static void unload_cct_convertor(convertor_t *convertor);
 static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
 static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx);
 static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
-/* static int multi_codepoint_compare(const multi_mapping_t **a, const multi_mapping_t **b); */
-
-/* typedef int(*compare_func_t)(const void *, const void *); */
+static void close_cct_convertor(convertor_state_t *handle);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 #define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(T3_ERR_READ_ERROR); } while (0)
@@ -148,10 +152,11 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 #define READ_WORD(store) do { uint16_t value; if (fread(&value, 1, 2, file) != (size_t) 2) ERROR(T3_ERR_READ_ERROR); store = ntohs(value); } while (0)
 #define READ_DWORD(store) do { uint32_t value; if (fread(&value, 1, 4, file) != (size_t) 4) ERROR(T3_ERR_READ_ERROR); store = ntohl(value); } while (0)
 
-//                                    0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
 static int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
+static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+static convertor_t *cct_head = NULL;
 
-void *_t3_load_convertor(const char *file_name, int *error) {
+static convertor_t *load_cct_convertor(const char *file_name, int *error) {
 	convertor_t *convertor = NULL;
 	FILE *file;
 	char magic[4];
@@ -173,6 +178,8 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 
 	/* Make sure all pointers are correctly initialized, even if the NULL pointer
 	   is not actually zero. */
+	convertor->name = NULL;
+	convertor->next = NULL;
 	convertor->shift_states = NULL;
 	convertor->codepage_states = NULL;
 	convertor->codepage_entries = NULL;
@@ -256,28 +263,44 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 
 		if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
 			goto end_error;
-		/* if ((convertor->multi_mappings_codepoint_sort = malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-			goto end_error; */
 		for (i = 0; i < convertor->nr_multi_mappings; i++) {
-			/* convertor->multi_mappings_codepoint_sort[i] = &convertor->multi_mappings[i]; */
 			READ_BYTE(convertor->multi_mappings[i].codepoints_length);
 			for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
 				READ_WORD(convertor->multi_mappings[i].codepoints[j]);
 			READ_BYTE(convertor->multi_mappings[i].bytes_length);
 			READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
 		}
-		/* qsort(convertor->multi_mappings_codepoint_sort, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
-			(compare_func_t) multi_codepoint_compare); */
 	}
 
 	if (fread(magic, 1, 1, file) != 0 || !feof(file))
 		ERROR(T3_ERR_INVALID_FORMAT);
 
+	if ((convertor->name = strdup(file_name)) == NULL)
+		ERROR(T3_ERR_OUT_OF_MEMORY);
+
+	fclose(file);
 	return convertor;
 
 end_error:
+	if (file != NULL)
+		fclose(file);
 	if (convertor == NULL)
-		return error;
+		return NULL;
+	unload_cct_convertor(convertor);
+	return NULL;
+}
+
+static void unload_cct_convertor(convertor_t *convertor) {
+	if (convertor->next != NULL) {
+		if (cct_head == convertor) {
+			cct_head = cct_head->next;
+		} else {
+			convertor_t *ptr;
+			for (ptr = cct_head; ptr != NULL && ptr->next != convertor; ptr = ptr->next) {}
+			if (ptr != NULL)
+				ptr->next = ptr->next->next;
+		}
+	}
 	free(convertor->shift_states);
 	free(convertor->codepage_states);
 	free(convertor->codepage_entries);
@@ -291,7 +314,6 @@ end_error:
 	free(convertor->unicode_flags.indices);
 	free(convertor->multi_mappings);
 	free(convertor);
-	return NULL;
 }
 
 static t3_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
@@ -540,23 +562,9 @@ end_error:
 	return t3_false;
 }
 
-/* static int multi_codepoint_compare(const multi_mapping_t **a, const multi_mapping_t **b) {
-	int i;
-	for (i = 0; i < (*a)->codepoints_length && i < (*b)->codepoints_length; i++) {
-		if ((*a)->codepoints[i] < (*b)->codepoints[i])
-			return -1;
-		if ((*a)->codepoints[i] > (*b)->codepoints[i])
-			return 1;
-	}
-	if ((*a)->codepoints_length < (*b)->codepoints_length)
-		return -1;
-	if ((*a)->codepoints_length > (*b)->codepoints_length)
-		return 1;
-	return 0;
-} */
 
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.unicode_func.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
 		return result; \
 } while (0)
 
@@ -569,13 +577,23 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
-	uint_fast8_t state = handle->state;
-	uint_fast32_t idx = handle->convertor->codepage_states[handle->state].base;
+	uint_fast8_t state = handle->to_state;
+	uint_fast32_t idx = handle->convertor->codepage_states[handle->to_state].base;
 	uint_fast32_t codepoint;
 	entry_t *entry;
 
-	if (flags & CHARCONV_FILE_START)
-		PUT_UNICODE(UINT32_C(0xFEFF));
+	if (flags & CHARCONV_FILE_START) {
+		switch (handle->common.utf_type) {
+			case UTF32:
+			case UTF16:
+			case UTF8_BOM:
+			case UTF8_STRICT_BOM:
+				PUT_UNICODE(UINT32_C(0xFEFF));
+				break;
+			default:
+				break;
+		}
+	}
 
 	while (_inbytesleft > 0) {
 		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
@@ -617,20 +635,20 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 								codepoint += handle->convertor->multi_mappings[i].codepoints[j] - UINT32_C(0xDC00);
 								codepoint += 0x10000;
 							}
-							if ((result = handle->common.unicode_func.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
+							if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
 								return result;
 						}
 						*outbuf = outbuf_tmp;
 						*outbytesleft = outbytesleft_tmp;
 
-						handle->state = state = entry->next_state;
+						handle->to_state = state = entry->next_state;
 						*inbuf = (char *) _inbuf;
 						check_len = (*inbytesleft) - check_len;
 						*inbytesleft = _inbytesleft;
 						while (*inbytesleft > check_len)
 							if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
 								return CHARCONV_INTERNAL_ERROR;
-						idx = handle->convertor->codepage_states[handle->state].base;
+						idx = handle->convertor->codepage_states[handle->to_state].base;
 						break;
 					}
 					if (i != handle->convertor->nr_multi_mappings)
@@ -678,8 +696,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			sequence_done:
 				*inbuf = (char *) _inbuf;
 				*inbytesleft = _inbytesleft;
-				handle->state = state = entry->next_state;
-				idx = handle->convertor->codepage_states[handle->state].base;
+				handle->to_state = state = entry->next_state;
+				idx = handle->convertor->codepage_states[handle->to_state].base;
 				if (flags & CHARCONV_SINGLE_CONVERSION)
 					return CHARCONV_SUCCESS;
 				break;
@@ -705,8 +723,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
-	uint_fast8_t state = handle->state;
-	uint_fast32_t idx = handle->convertor->codepage_states[handle->state].base;
+	uint_fast8_t state = handle->to_state;
+	uint_fast32_t idx = handle->convertor->codepage_states[handle->to_state].base;
 	entry_t *entry;
 
 	while (_inbytesleft > 0) {
@@ -727,7 +745,7 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 			case ACTION_UNASSIGNED:
 				*inbuf = (char *) _inbuf;
 				*inbytesleft = _inbytesleft;
-				handle->state = state = entry->next_state;
+				handle->to_state = state = entry->next_state;
 				return CHARCONV_SUCCESS;
 			default:
 				return CHARCONV_INTERNAL_ERROR;
@@ -738,7 +756,7 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 }
 
 #define GET_UNICODE() do { \
-	codepoint = handle->common.unicode_func.get_unicode((char **) &_inbuf, &_inbytesleft, t3_false); \
+	codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, t3_false); \
 } while (0)
 
 #define PUT_BYTES(count, buffer) do { \
@@ -752,9 +770,9 @@ static int put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesl
 
 	if (handle->convertor->flags & MULTIBYTE_START_STATE_1) {
 		required_state = count > 1 ? 1 : 0;
-		if (handle->state != required_state) {
+		if (handle->from_state != required_state) {
 			for (i = 0; i < handle->convertor->nr_shift_states; i++) {
-				if (handle->convertor->shift_states[i].from_state == handle->state &&
+				if (handle->convertor->shift_states[i].from_state == handle->from_state &&
 						handle->convertor->shift_states[i].to_state == required_state)
 				{
 					if (*outbytesleft < count + handle->convertor->shift_states[i].len)
@@ -762,7 +780,7 @@ static int put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesl
 					memcpy(*outbuf, handle->convertor->shift_states[i].bytes, handle->convertor->shift_states[i].len);
 					*outbuf += handle->convertor->shift_states[i].len;
 					*outbytesleft -= handle->convertor->shift_states[i].len;
-					handle->state = required_state;
+					handle->from_state = required_state;
 					goto write_bytes;
 				}
 			}
@@ -887,7 +905,20 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	uint_fast8_t byte;
 
 	if (flags & CHARCONV_FILE_START) {
-		GET_UNICODE();
+		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16) {
+			codepoint = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE)(inbuf, inbytesleft, t3_false);
+			if (codepoint == UINT32_C(0xFEFF)) {
+				handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE);
+			} else if (codepoint == CHARCONV_ILLEGAL) {
+				codepoint = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32LE : UTF16LE)(inbuf, inbytesleft, t3_false);
+				if (codepoint == UINT32_C(0xFEFF))
+					handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32LE : UTF16LE);
+				else
+					handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE);
+			}
+		} else {
+			GET_UNICODE();
+		}
 		/* Anything, including bad input, will simply cause a reset, meaning that only
 		   the BOM will be ignored. */
 		if (codepoint != UINT32_C(0xFEFF)) {
@@ -998,152 +1029,88 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 }
 
 static int from_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->common.unicode_func.get_unicode(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
+	if (handle->common.get_unicode(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }
 
-
-#if 1
-#include <stdarg.h>
-void fatal(const char *fmt, ...) {
-	va_list args;
-
-	va_start(args, fmt);
-	vfprintf(stderr, fmt, args);
-	va_end(args);
-#ifdef DEBUG
-	abort();
-#else
-	exit(EXIT_FAILURE);
-#endif
+static void reset_cct(convertor_state_t *handle, t3_bool to) {
+	if (to) {
+		handle->to_state = 0;
+		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
+			handle->common.put_unicode = get_put_unicode(handle->common.utf_type);
+	} else {
+		handle->from_state = 0;
+		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
+			handle->common.get_unicode = get_get_unicode(handle->common.utf_type);
+	}
 }
-#endif
 
-#if 0
-int main(int argc, char *argv[]) {
-	flags_t flags;
-	uint8_t bytes[256];
-	int i, twobits, fourbits;
+void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) {
+	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
+	convertor_state_t *retval;
+	convertor_t *ptr;
+	char *file_name;
 
-	flags.flags = bytes;
-	flags.default_flags = 0;
-
-	for (i = 0; i < 256; i++)
-		bytes[i] = i;
-
-	for (i = 0; i < 256 * 4; i++) {
-		twobits = i >> 2;
-		twobits >>= 2 * (i & 3);
-		twobits &= 3;
-		if (get_flags_1(&flags, i) != twobits)
-			fatal("%d: get_flags_1: %02x, expected: %02x\n", i, get_flags_1(&flags, i), twobits);
-		if (get_flags_2(&flags, i) != (twobits << 2))
-			fatal("%d: get_flags_2: %02x, expected: %02x\n", i, get_flags_2(&flags, i), (twobits << 2));
-		if (get_flags_4(&flags, i) != (twobits << 4))
-			fatal("%d: get_flags_4: %02x, expected: %02x\n", i, get_flags_4(&flags, i), (twobits << 4));
-		if (get_flags_8(&flags, i) != (twobits << 6))
-			fatal("%d: get_flags_8: %02x, expected: %02x\n", i, get_flags_8(&flags, i), (twobits << 6));
+	if ((file_name = malloc(len)) == NULL) {
+		if (error != NULL)
+			*error = T3_ERR_OUT_OF_MEMORY;
+		return NULL;
 	}
 
-	for (i = 0; i < 256 * 2; i++) {
-		fourbits = i >> 1;
-		fourbits >>= 4 * (i & 1);
-		fourbits &= 15;
-		if (get_flags_3(&flags, i) != fourbits)
-			fatal("%d: get_flags_3: %02x, expected: %02x\n", i, get_flags_3(&flags, i), fourbits);
-		if (get_flags_6(&flags, i) != (fourbits << 2))
-			fatal("%d: get_flags_6: %02x, expected: %02x\n", i, get_flags_6(&flags, i), (fourbits << 2));
-		if (get_flags_12(&flags, i) != (fourbits << 4))
-			fatal("%d: get_flags_12: %02x, expected: %02x\n", i, get_flags_12(&flags, i), (fourbits << 4));
-		fourbits = ((fourbits & 0xc) << 2) | (fourbits & 3);
-		if (get_flags_5(&flags, i) != fourbits)
-			fatal("%d: get_flags_5: %02x, expected: %02x\n", i, get_flags_5(&flags, i), fourbits);
-		if (get_flags_10(&flags, i) != (fourbits << 2))
-			fatal("%d: get_flags_10: %02x, expected: %02x\n", i, get_flags_10(&flags, i), (fourbits << 2));
-		fourbits = ((fourbits & 0x30) << 2) | (fourbits & 3);
-		if (get_flags_9(&flags, i) != fourbits)
-			fatal("%d: get_flags_9: %02x, expected: %02x\n", i, get_flags_9(&flags, i), fourbits);
+	strcpy(file_name, DB_DIRECTORY);
+	strcat(file_name, "/");
+	strcat(file_name, name);
+	strcat(file_name, ".cct");
+
+	pthread_mutex_lock(&cct_list_mutex);
+	for (ptr = cct_head; ptr != NULL; ptr = ptr->next) {
+		if (strcmp(ptr->name, file_name) == 0)
+			break;
 	}
 
-	for (i = 0; i < 256; i++) {
-		if (get_flags_15(&flags, i) != i)
-			fatal("%d: get_flags_15: %02x, expected: %02x\n", i, get_flags_15(&flags, i), i);
+	if (ptr == NULL) {
+		ptr = load_cct_convertor(file_name, error);
+		if (ptr == NULL) {
+			pthread_mutex_unlock(&cct_list_mutex);
+			return NULL;
+		}
+		ptr->next = cct_head;
+		cct_head = ptr;
 	}
+	free(file_name);
 
-	return 0;
+	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+		if (ptr->refcount == 0)
+			unload_cct_convertor(ptr);
+		if (error != NULL)
+			*error = T3_ERR_OUT_OF_MEMORY;
+		pthread_mutex_unlock(&cct_list_mutex);
+		return NULL;
+	}
+	pthread_mutex_unlock(&cct_list_mutex);
+
+	retval->convertor = ptr;
+	retval->from_state = 0;
+	retval->to_state = 0;
+
+	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.skip_from = (skip_func_t) from_unicode_skip;
+	retval->common.get_unicode = get_get_unicode(utf_type);
+	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
+	retval->common.skip_to = (skip_func_t) to_unicode_skip;
+	retval->common.put_unicode = get_put_unicode(utf_type);
+	retval->common.reset = (reset_func_t) reset_cct;
+	retval->common.flags = flags;
+	retval->common.utf_type = utf_type;
+	retval->common.close = (close_func_t) close_cct_convertor;
+	return retval;
 }
-#endif
-#if 0
-int main(int argc, char *argv[]) {
-	int error;
-	convertor_t *conv;
-	convertor_state_t conv_state;
-	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
-	size_t result;
-	size_t fill, outleft;
 
-	if (argc != 2)
-		fatal("Usage: cct_convertor <cct file>\n");
-
-	if ((conv = _t3_load_convertor(argv[1], &error)) == NULL)
-		fatal("Error opening convertor: %d\n", error);
-
-	conv_state.common.convert = (conversion_func_t) to_unicode_conversion;
-	conv_state.common.skip = (skip_func_t) to_unicode_skip;
-	conv_state.common.reset = NULL;
-	conv_state.common.unicode_func.put_unicode = get_put_unicode(UTF16);
-	conv_state.common.flags = 0;
-	conv_state.convertor = conv;
-	conv_state.state = 0;
-
-	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
-		inbuf_ptr = inbuf;
-		outbuf_ptr = outbuf;
-		fill += result;
-		outleft = 1024;
-		if ((error = to_unicode_conversion(&conv_state, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
-			fatal("conversion result: %d\n", error);
-		fwrite(outbuf, 1, 1024 - outleft, stdout);
-	}
-
-	return 0;
+static void close_cct_convertor(convertor_state_t *handle) {
+	pthread_mutex_lock(&cct_list_mutex);
+	if (handle->convertor->refcount == 1)
+		unload_cct_convertor(handle->convertor);
+	pthread_mutex_unlock(&cct_list_mutex);
+	free(handle);
 }
-#endif
-#if 1
-int main(int argc, char *argv[]) {
-	int error;
-	convertor_t *conv;
-	convertor_state_t conv_state;
-	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
-	size_t result;
-	size_t fill, outleft, i;
-
-	if (argc != 2)
-		fatal("Usage: cct_convertor <cct file>\n");
-
-	if ((conv = _t3_load_convertor(argv[1], &error)) == NULL)
-		fatal("Error opening convertor: %d\n", error);
-
-	conv_state.common.convert = (conversion_func_t) from_unicode_conversion;
-	conv_state.common.skip = (skip_func_t) from_unicode_skip;
-	conv_state.common.reset = NULL;
-	conv_state.common.unicode_func.get_unicode = get_get_unicode(UTF16BE);
-	conv_state.common.flags = 0;
-	conv_state.convertor = conv;
-	conv_state.state = 0;
-
-	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
-		inbuf_ptr = inbuf;
-		outbuf_ptr = outbuf;
-		fill += result;
-		outleft = 1024;
-		if ((error = from_unicode_conversion(&conv_state, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
-			fatal("conversion result: %d\n", error);
-		for (i = 0; i < 1024 - outleft; i++)
-			printf("\\x%02X", (uint8_t) outbuf[i]);
-	}
-	putchar('\n');
-	return 0;
-}
-#endif

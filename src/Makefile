@@ -11,11 +11,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-LCFILES.libt3charconv.la := cct_convertor.c utf.c
-CFILES.cct_convertor := cct_convertor.c utf.c
+LCFILES.libcharconv.la := cct_convertor.c utf.c charconv.c
+CFILES.test := test.c
+LDFLAGS.test := -L.libs
+LDLIBS.test := -lcharconv
 
-#~ TARGETS := libt3charconv.la
-TARGETS := cct_convertor
+TARGETS := libcharconv.la test
 
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
@@ -24,3 +25,7 @@ include ../../makesys/rules.mk
 #================================================#
 T3NAME := charconv
 include ../../t3shared/rules.mk
+
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\"
+
+test: | libcharconv.la

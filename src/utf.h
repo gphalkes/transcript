@@ -16,13 +16,17 @@
 
 enum {
 	UTF8,
+	UTF8_BOM,
 	UTF8_STRICT,
+	UTF8_STRICT_BOM,
 	UTF16,
 	UTF16BE,
 	UTF16LE,
+	UTF16ME, /* Machine endian version */
 	UTF32,
 	UTF32BE,
-	UTF32LE
+	UTF32LE,
+	UTF32ME /* Machine endian version */
 };
 put_unicode_func_t get_put_unicode(int type);
 get_unicode_func_t get_get_unicode(int type);

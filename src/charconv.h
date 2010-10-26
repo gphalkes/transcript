@@ -14,24 +14,29 @@
 #ifndef CHARCONV_H
 #define CHARCONV_H
 
+#include <stdlib.h>
+#include <stdint.h>
 #include "charconv_api.h"
 
 //FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
 typedef int (*conversion_func_t)(void *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 typedef int (*skip_func_t)(void *handle, char **inbuf, size_t *inbytesleft);
-typedef int (*reset_func_t)(void *handle);
+typedef int (*reset_func_t)(void *handle, t3_bool to);
 typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
+typedef void (*close_func_t)(void *handle);
 typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, t3_bool skip);
 
 typedef struct {
-	conversion_func_t convert;
-	skip_func_t skip;
+	conversion_func_t convert_to;
+	conversion_func_t convert_from;
+	skip_func_t skip_to;
+	skip_func_t skip_from;
+	put_unicode_func_t put_unicode;
+	get_unicode_func_t get_unicode;
 	reset_func_t reset;
-	union {
-		put_unicode_func_t put_unicode;
-		get_unicode_func_t get_unicode;
-	} unicode_func;
+	close_func_t close;
 	int flags;
+	int utf_type;
 } charconv_common_t;
 
 enum {
@@ -62,4 +67,13 @@ enum {
 #define CHARCONV_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define CHARCONV_UTF_INCOMPLETE UINT32_C(0xfffffffe)
 
+
+#ifndef DB_DIRECTORY
+#define DB_DIRECTORY "/usr/local/share/libcharconv"
+#endif
+
+
+void *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
+void charconv_close_convertor(void *handle);
+int charconv_to_unicode(void *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 #endif
