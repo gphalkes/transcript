@@ -133,7 +133,7 @@ typedef struct {
 } convertor_state_t;
 
 static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
-static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t *range);
+static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx);
 static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
@@ -196,8 +196,10 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 	READ_BYTE(convertor->nr_shift_states);
 	READ_BYTE(convertor->nr_codepage_states);
 	READ_WORD(convertor->nr_codepage_entries);
+	READ_DWORD(convertor->codepage_range);
 	READ_BYTE(convertor->nr_unicode_states);
 	READ_WORD(convertor->nr_unicode_entries);
+	READ_DWORD(convertor->unicode_range);
 	READ_BYTE(convertor->codepage_flags.default_flags);
 	READ_BYTE(convertor->unicode_flags.default_flags);
 	READ_BYTE(convertor->single_size);
@@ -227,9 +229,9 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 			convertor->nr_unicode_entries, error))
 		goto end_error;
 
-	if (!validate_states(convertor->codepage_states, convertor->nr_codepage_states, convertor->flags, &convertor->codepage_range))
+	if (!validate_states(convertor->codepage_states, convertor->nr_codepage_states, convertor->flags, convertor->codepage_range))
 		ERROR(T3_ERR_INVALID_FORMAT);
-	if (!validate_states(convertor->unicode_states, convertor->nr_unicode_states, 0, &convertor->unicode_range))
+	if (!validate_states(convertor->unicode_states, convertor->nr_unicode_states, 0, convertor->unicode_range))
 		ERROR(T3_ERR_INVALID_FORMAT);
 
 	if ((convertor->codepage_mappings = malloc(convertor->codepage_range * sizeof(uint16_t))) == NULL)
@@ -328,8 +330,8 @@ end_error:
 	return t3_false;
 }
 
-static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t *range) {
-	uint_fast32_t i, j;
+static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range) {
+	uint_fast32_t i, j, calculated_range;
 	int next_is_initial;
 
 	nr_states++;
@@ -346,13 +348,17 @@ static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t
 		}
 	}
 
-	*range = 0;
+	calculated_range = 0;
 	update_state_attributes(states, 0);
-	*range = states[0].range;
+	calculated_range = states[0].range;
 	if (flags & MULTIBYTE_START_STATE_1) {
 		update_state_attributes(states, 1);
-		*range += states[1].range;
+		calculated_range += states[1].range;
 	}
+
+	if (calculated_range != range)
+		return t3_false;
+
 	return t3_true;
 }
 

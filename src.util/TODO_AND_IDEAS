@@ -1,6 +1,3 @@
-- add trie storage for flags, as they contain large blocks of similar data.
-  This should reduce file size significantly. Even a single level trie would
-  help greatly.
 - if we use zlib/lzo for compression, then we can optimize our tables for
   in-memory size. This makes the state machine minimization easier. On the
   other hand, that would introduce a dependency which we may want to avoid, and
@@ -8,3 +5,14 @@
 - perhaps it is a good idea to save the data such that we can simply use a
   read-only mmap and a small set of pointers into the file.
 - allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also set
+
+Conversion issues:
+- fullwidth to half-width fallbacks and vice-versa
+- what to do with the mu versus micro sign? In latin-1 the character is the mu
+  sign, but when then converting to code page 437 we have a problem (if we consider
+  that the mu in there is the greek letter).
+  See the wikipedia page on code page 437: http://en.wikipedia.org/wiki/Codepage_437
+  especially the section on "Multiple-meaning character glyphs". In case of the
+  micro sign, I think choosing the micro sign is best because it maps best to
+  latin-1, and everyone else is doing that as well. The others are less relevant.
+  We could add 03B5 -> E6 as fallback.

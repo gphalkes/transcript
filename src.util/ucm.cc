@@ -108,7 +108,7 @@ bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 #define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0)
 void Ucm::process_header(void) {
 	if (tag_values[UCONV_CLASS] == NULL)
-		fatal("<uconv_class> unspecified\n");
+		fatal("%s: <uconv_class> unspecified\n", file_name);
 
 	if (strcmp(tag_values[UCONV_CLASS], "SBCS") == 0)
 		uconv_class = CLASS_SBCS;
@@ -122,11 +122,11 @@ void Ucm::process_header(void) {
 		fatal("%s:%d: <uconv_class> specifies an unknown class\n", file_name, line_number);
 
 	if (tag_values[MB_MAX] == NULL)
-		fatal("<mb_cur_max> unspecified\n");
+		fatal("%s: <mb_cur_max> unspecified\n", file_name);
 	if (tag_values[MB_MIN] == NULL)
-		fatal("<mb_cur_min> unspecified\n");
+		fatal("%s: <mb_cur_min> unspecified\n", file_name);
 	if (tag_values[SUBCHAR] == NULL)
-		fatal("<subchar> unspecified\n");
+		fatal("%s: <subchar> unspecified\n", file_name);
 
 	if (tag_values[SUBCHAR1] != NULL)
 		flags |= SUBCHAR1_VALID;
@@ -178,7 +178,7 @@ void Ucm::process_header(void) {
 
 void Ucm::set_default_codepage_states(void) {
 	if (uconv_class == 0 || uconv_class == CLASS_MBCS)
-		fatal("No states specified and no implicit states defined through <uconv_class> either\n");
+		fatal("%s: No states specified and no implicit states defined through <uconv_class> either\n", file_name);
 
 	if (uconv_class == CLASS_SBCS) {
 		new_codepage_state();
@@ -264,17 +264,17 @@ void Ucm::validate_states(void) {
 	for (i = 0; i < codepage_states.size(); i++) {
 		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
 			if (codepage_states[i]->entries[j].next_state >= (int) codepage_states.size())
-				fatal("State %zd:%x-%x designates a non-existant state as next state\n", i,
+				fatal("%s: State %zd:%x-%x designates a non-existant state as next state\n", file_name, i,
 					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 
 			if (codepage_states[i]->entries[j].action == ACTION_VALID) {
 				if (codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL)
-					fatal("State %d:%x-%x designates an initial state as next state for non-final transition\n", i,
-						codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+					fatal("%s: State %d:%x-%x designates an initial state as next state for non-final transition\n",
+						file_name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 			} else {
 				if (!(codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL))
-					fatal("State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
-						i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+					fatal("%s: State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
+						file_name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 			}
 		}
 	}
@@ -283,9 +283,9 @@ void Ucm::validate_states(void) {
 	mb_cur_min = atoi(tag_values[MB_MIN]);
 
 	if (mb_cur_max > 4 || mb_cur_max < 1)
-		fatal("<mb_cur_max> is out of range\n");
+		fatal("%s: <mb_cur_max> is out of range\n", file_name);
 	if (mb_cur_min > mb_cur_max || mb_cur_min < 1)
-		fatal("<mb_cur_min> is out of range\n");
+		fatal("%s: <mb_cur_min> is out of range\n", file_name);
 
 	for (i = 0; i < codepage_states.size(); i++) {
 		if (!(codepage_states[i]->flags & State::INITIAL))
@@ -294,9 +294,9 @@ void Ucm::validate_states(void) {
 		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
 			int depth = calculate_depth(&codepage_states[i]->entries[j]);
 			if (depth > 0 && depth > mb_cur_max)
-				fatal("State machine specifies byte sequences longer than <mb_cur_max>\n");
+				fatal("%s: State machine specifies byte sequences longer than <mb_cur_max>\n", file_name);
 			if (depth > 0 && depth < mb_cur_min)
-				fatal("State machine specifies byte sequences shorter than <mb_cur_min>\n");
+				fatal("%s: State machine specifies byte sequences shorter than <mb_cur_min>\n", file_name);
 		}
 	}
 
@@ -521,7 +521,7 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepointsSimple(*iter, *(iter - 1)) == 0) {
 				if ((*iter)->precision > 1 || (*(iter - 1))->precision > 1)
 					continue;
-				fprintf(stderr, "Duplicate mapping defined for ");
+				fprintf(stderr, "%s: Duplicate mapping defined for ", file_name);
 				for (vector<uint32_t>::iterator codepoint_iter = (*iter)->codepoints.begin();
 						codepoint_iter != (*iter)->codepoints.end(); codepoint_iter++)
 					fprintf(stderr,  "<U%04" PRIX32 ">", *codepoint_iter);
@@ -534,7 +534,7 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepageBytesSimple(*iter, *(iter - 1)) == 0) {
 				if (reorder_precision[(*iter)->precision] > 1 || reorder_precision[(*(iter - 1))->precision] > 1)
 					continue;
-				fprintf(stderr, "Duplicate mapping defined for ");
+				fprintf(stderr, "%s: Duplicate mapping defined for ", file_name);
 				for (vector<uint8_t>::iterator codepage_byte_iter = (*iter)->codepage_bytes.begin();
 						codepage_byte_iter != (*iter)->codepage_bytes.end(); codepage_byte_iter++)
 					fprintf(stderr,  "\\x%02" PRIX32, *codepage_byte_iter);
@@ -591,7 +591,7 @@ void Ucm::ensure_ascii_controls(void) {
 	}
 	if (seen != 7)
 		return;
-	fprintf(stderr, "WARNING: mappings define IBM specific control code mappings. Correcting.\n");
+	fprintf(stderr, "%s: WARNING: mappings define IBM specific control code mappings. Correcting.\n", file_name);
 
 	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		switch ((*iter)->codepage_bytes[0]) {
@@ -755,10 +755,10 @@ void Ucm::find_shift_sequences(void) {
 	}
 }
 
-#define WRITE(count, bytes) do { if (fwrite(bytes, 1, count, output) != (size_t) count) fatal("Error writing file\n"); } while (0)
-#define WRITE_BYTE(value) do { uint8_t _write_value = value; if (fwrite(&_write_value, 1, 1, output) != 1) fatal("Error writing file\n"); } while (0)
-#define WRITE_WORD(value) do { uint16_t _write_value = htons(value); if (fwrite(&_write_value, 1, 2, output) != 2) fatal("Error writing file\n"); } while (0)
-#define WRITE_DWORD(value) do { uint32_t _write_value = htonl(value); if (fwrite(&_write_value, 1, 4, output) != 4) fatal("Error writing file\n"); } while (0)
+#define WRITE(count, bytes) do { if (fwrite(bytes, 1, count, output) != (size_t) count) fatal("%s: Error writing file\n", file_name); } while (0)
+#define WRITE_BYTE(value) do { uint8_t _write_value = value; WRITE(1, &_write_value); } while (0)
+#define WRITE_WORD(value) do { uint16_t _write_value = htons(value); WRITE(2, &_write_value); } while (0)
+#define WRITE_DWORD(value) do { uint32_t _write_value = htonl(value); WRITE(4, &_write_value); } while (0)
 
 void Ucm::write_table(FILE *output) {
 	const char magic[] = "T3CM";
@@ -783,12 +783,14 @@ void Ucm::write_table(FILE *output) {
 			state_iter != codepage_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
 	WRITE_WORD(total_entries - 1); // total nr of entries (code page) (2)
+	WRITE_DWORD(codepage_range);
 	WRITE_BYTE(unicode_states.size() - 1); // nr of states in unicode state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = unicode_states.begin();
 			state_iter != unicode_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
 	WRITE_WORD(total_entries - 1); // total nr of entries (unicode) (2)
+	WRITE_DWORD(unicode_range);
 	WRITE_BYTE(to_unicode_flags); // default to-unicode flags (1)
 	WRITE_BYTE(from_unicode_flags); // default from-unicode flags (1)
 	WRITE_BYTE(single_bytes); // Final codepage action size (1)
