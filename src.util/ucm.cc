@@ -756,117 +756,120 @@ void Ucm::find_shift_sequences(void) {
 	}
 }
 
-#define WRITE(file, count, bytes) do { if (fwrite(bytes, 1, count, file) != (size_t) count) fatal("Error writing file\n"); } while (0)
-#define WRITE_BYTE(file, value) do { uint8_t _write_value = value; if (fwrite(&_write_value, 1, 1, file) != 1) fatal("Error writing file\n"); } while (0)
-#define WRITE_WORD(file, value) do { uint16_t _write_value = htons(value); if (fwrite(&_write_value, 1, 2, file) != 2) fatal("Error writing file\n"); } while (0)
-#define WRITE_DWORD(file, value) do { uint32_t _write_value = htons(value); if (fwrite(&_write_value, 1, 4, file) != 4) fatal("Error writing file\n"); } while (0)
+#define WRITE(count, bytes) do { if (fwrite(bytes, 1, count, output) != (size_t) count) fatal("Error writing file\n"); } while (0)
+#define WRITE_BYTE(value) do { uint8_t _write_value = value; if (fwrite(&_write_value, 1, 1, output) != 1) fatal("Error writing file\n"); } while (0)
+#define WRITE_WORD(value) do { uint16_t _write_value = htons(value); if (fwrite(&_write_value, 1, 2, output) != 2) fatal("Error writing file\n"); } while (0)
+#define WRITE_DWORD(value) do { uint32_t _write_value = htonl(value); if (fwrite(&_write_value, 1, 4, output) != 4) fatal("Error writing file\n"); } while (0)
 
 void Ucm::write_table(FILE *output) {
 	const char magic[] = "T3CM";
 	size_t total_entries;
 	size_t i;
 
-	WRITE(output, 4, magic); // magic (4)
-	WRITE_DWORD(output, 0); // version (4)
-	WRITE_BYTE(output, flags); // flags (1)
+	WRITE(4, magic); // magic (4)
+	WRITE_DWORD(0); // version (4)
+	WRITE_BYTE(flags); // flags (1)
 	vector<uint8_t> subchar;
 	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
-	WRITE_BYTE(output, subchar.size()); // subchar length (1)
+	WRITE_BYTE(subchar.size()); // subchar length (1)
 	for (i = 0; i < subchar.size(); i++)
-		WRITE_BYTE(output, subchar[i]); // subchar byte (1)
+		WRITE_BYTE(subchar[i]); // subchar byte (1)
 	for (; i < 4; i++)
-		WRITE_BYTE(output, 0);
-	WRITE_BYTE(output, tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
-	WRITE_BYTE(output, shift_sequences.size()); //FIXME: nr of shift sequences
-	WRITE_BYTE(output, codepage_states.size() - 1); // nr of states in codepage state machine (1)
+		WRITE_BYTE(0);
+	WRITE_BYTE(tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0); // subchar1 (1)
+	WRITE_BYTE(shift_sequences.size()); //FIXME: nr of shift sequences
+	WRITE_BYTE(codepage_states.size() - 1); // nr of states in codepage state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
 			state_iter != codepage_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
-	WRITE_WORD(output, total_entries - 1); // total nr of entries (code page) (2)
-	WRITE_BYTE(output, unicode_states.size() - 1); // nr of states in unicode state machine (1)
+	WRITE_WORD(total_entries - 1); // total nr of entries (code page) (2)
+	WRITE_BYTE(unicode_states.size() - 1); // nr of states in unicode state machine (1)
 	total_entries = 0;
 	for (vector<State *>::iterator state_iter = unicode_states.begin();
 			state_iter != unicode_states.end(); state_iter++)
 		total_entries += (*state_iter)->entries.size();
-	WRITE_WORD(output, total_entries - 1); // total nr of entries (unicode) (2)
-	WRITE_BYTE(output, to_unicode_flags); // default to-unicode flags (1)
-	WRITE_BYTE(output, from_unicode_flags); // default from-unicode flags (1)
-	WRITE_BYTE(output, single_bytes); // Final codepage action size (1)
+	WRITE_WORD(total_entries - 1); // total nr of entries (unicode) (2)
+	WRITE_BYTE(to_unicode_flags); // default to-unicode flags (1)
+	WRITE_BYTE(from_unicode_flags); // default from-unicode flags (1)
+	WRITE_BYTE(single_bytes); // Final codepage action size (1)
 	for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
 			shift_iter != shift_sequences.end(); shift_iter++)
 	{
-		WRITE_BYTE(output, shift_iter->from_state);
-		WRITE_BYTE(output, shift_iter->to_state);
-		WRITE_BYTE(output, shift_iter->bytes.size());
+		WRITE_BYTE(shift_iter->from_state);
+		WRITE_BYTE(shift_iter->to_state);
+		WRITE_BYTE(shift_iter->bytes.size());
 
 		for (i = 0; i < shift_iter->bytes.size(); i++)
-			WRITE_BYTE(output, shift_iter->bytes[i]);
+			WRITE_BYTE(shift_iter->bytes[i]);
 		for (; i < 4; i++)
-			WRITE_BYTE(output, 0);
+			WRITE_BYTE(0);
 	}
 
 	for (vector<State *>::iterator state_iter = codepage_states.begin();
 			state_iter != codepage_states.end(); state_iter++)
 	{
-		WRITE_BYTE(output, (*state_iter)->entries.size() - 1);
+		WRITE_BYTE((*state_iter)->entries.size() - 1);
 		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
 				entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
-			WRITE_BYTE(output, entry_iter->low);
-			WRITE_BYTE(output, entry_iter->next_state);
-			WRITE_BYTE(output, entry_iter->action);
+			WRITE_BYTE(entry_iter->low);
+			WRITE_BYTE(entry_iter->next_state);
+			WRITE_BYTE(entry_iter->action);
 		}
 	}
 
 	for (vector<State *>::iterator state_iter = unicode_states.begin();
 		state_iter != unicode_states.end(); state_iter++)
 	{
-		WRITE_BYTE(output, (*state_iter)->entries.size() - 1);
+		WRITE_BYTE((*state_iter)->entries.size() - 1);
 		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
 			entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
-			WRITE_BYTE(output, entry_iter->low);
-			WRITE_BYTE(output, entry_iter->next_state);
-			WRITE_BYTE(output, entry_iter->action);
+			WRITE_BYTE(entry_iter->low);
+			WRITE_BYTE(entry_iter->next_state);
+			WRITE_BYTE(entry_iter->action);
 		}
 	}
 
 	write_to_unicode_table(output);
 	write_from_unicode_table(output);
+
 	if (to_unicode_flags_save != 0)
 		write_to_unicode_flags(output);
 	if (from_unicode_flags_save != 0)
 		write_from_unicode_flags(output);
 
-	sort(multi_mappings.begin(), multi_mappings.end(), compareCodepageBytes);
-	WRITE_DWORD(output, multi_mappings.size());
-	for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
-			multi_iter != multi_mappings.end(); multi_iter++)
-	{
-		vector<uint32_t>::iterator codepoint_iter;
-		uint8_t count = 0;
-		for (codepoint_iter = (*multi_iter)->codepoints.begin();
-				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
-			count += 1 + ((*codepoint_iter) > UINT32_C(0x10000));
-
-		WRITE_BYTE(output, count);
-		for (codepoint_iter = (*multi_iter)->codepoints.begin();
-				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+	if (multi_mappings.size() > 0) {
+		//sort(multi_mappings.begin(), multi_mappings.end(), compareCodepageBytes);
+		WRITE_DWORD(multi_mappings.size());
+		for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
+				multi_iter != multi_mappings.end(); multi_iter++)
 		{
-			if (*codepoint_iter < UINT32_C(0x10000)) {
-				WRITE_WORD(output, *codepoint_iter);
-			} else {
-				uint32_t codepoint = (*codepoint_iter) - 0x10000;
-				WRITE_WORD(output, UINT32_C(0xd800) + (codepoint >> 10));
-				WRITE_WORD(output, UINT32_C(0xdc00) + (codepoint & 0x3ff));
-			}
-		}
+			vector<uint32_t>::iterator codepoint_iter;
+			uint8_t count = 0;
+			for (codepoint_iter = (*multi_iter)->codepoints.begin();
+					codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+				count += 1 + ((*codepoint_iter) >= UINT32_C(0x10000));
 
-		WRITE_BYTE(output, (*multi_iter)->codepage_bytes.size());
-		for (vector<uint8_t>::iterator byte_iter = (*multi_iter)->codepage_bytes.begin();
-				byte_iter != (*multi_iter)->codepage_bytes.end(); byte_iter++)
-			WRITE_BYTE(output, *byte_iter);
+			WRITE_BYTE(count);
+			for (codepoint_iter = (*multi_iter)->codepoints.begin();
+					codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+			{
+				if (*codepoint_iter < UINT32_C(0x10000)) {
+					WRITE_WORD(*codepoint_iter);
+				} else {
+					uint32_t codepoint = (*codepoint_iter) - 0x10000;
+					WRITE_WORD(UINT32_C(0xd800) + (codepoint >> 10));
+					WRITE_WORD(UINT32_C(0xdc00) + (codepoint & 0x3ff));
+				}
+			}
+
+			WRITE_BYTE((*multi_iter)->codepage_bytes.size());
+			for (vector<uint8_t>::iterator byte_iter = (*multi_iter)->codepage_bytes.begin();
+					byte_iter != (*multi_iter)->codepage_bytes.end(); byte_iter++)
+				WRITE_BYTE(*byte_iter);
+		}
 	}
 }
 
@@ -895,7 +898,7 @@ void Ucm::write_to_unicode_table(FILE *output) {
 	}
 
 	for (idx = 0; idx < codepage_range; idx++)
-		WRITE_WORD(output, codepoints[idx]);
+		WRITE_WORD(codepoints[idx]);
 
 	free(codepoints);
 }
@@ -918,7 +921,7 @@ void Ucm::write_from_unicode_table(FILE *output) {
 		copy((*iter)->codepage_bytes.begin(), (*iter)->codepage_bytes.end(), codepage_bytes + idx * single_bytes);
 	}
 
-	WRITE(output, unicode_range * single_bytes, codepage_bytes);
+	WRITE(unicode_range * single_bytes, codepage_bytes);
 	free(codepage_bytes);
 }
 
@@ -985,14 +988,14 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 		fprintf(stderr, "Trie info: %d, %zd\n", nr_of_blocks * 2 + saved_blocks * BLOCKSIZE, store_idx);
 
 	if (nr_of_blocks * 2 + saved_blocks * BLOCKSIZE > store_idx) {
-		WRITE_BYTE(output, flags_save);
-		WRITE(output, store_idx, data);
+		WRITE_BYTE(flags_save);
+		WRITE(store_idx, data);
 	} else {
-		WRITE_BYTE(output, flags_save | 0x80);
-		WRITE_WORD(output, saved_blocks - 1);
+		WRITE_BYTE(flags_save | 0x80);
 		for (i = 0; i < nr_of_blocks; i++)
-			WRITE_WORD(output, indices[i]);
-		WRITE(output, saved_blocks * BLOCKSIZE, blocks);
+			WRITE_WORD(indices[i]);
+		WRITE_WORD(saved_blocks - 1);
+		WRITE(saved_blocks * BLOCKSIZE, blocks);
 	}
 	free(indices);
 	free(blocks);

@@ -238,29 +238,34 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 		READ_WORD(convertor->codepage_mappings[i]);
 	READ(convertor->unicode_range * convertor->single_size, convertor->unicode_mappings);
 
-	//FIXME: only read flags if they are present!!!
-	if (!read_flags(file, &convertor->codepage_flags, convertor->codepage_range, error))
+	if ((convertor->flags & TO_UNICODE_FLAGS_TABLE_INCLUDED) &&
+			!read_flags(file, &convertor->codepage_flags, convertor->codepage_range, error))
 		goto end_error;
-	if (!read_flags(file, &convertor->unicode_flags, convertor->unicode_range, error))
+	if ((convertor->flags & FROM_UNICODE_FLAGS_TABLE_INCLUDED) &&
+			!read_flags(file, &convertor->unicode_flags, convertor->unicode_range, error))
 		goto end_error;
 
-	READ_DWORD(convertor->nr_multi_mappings);
+	if (convertor->flags & MULTI_MAPPINGS_AVAILABLE) {
+		READ_DWORD(convertor->nr_multi_mappings);
 
-	if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
-		goto end_error;
-	/* if ((convertor->multi_mappings_codepoint_sort = malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-		goto end_error; */
-
-	for (i = 0; i < convertor->nr_multi_mappings; i++) {
-		/* convertor->multi_mappings_codepoint_sort[i] = &convertor->multi_mappings[i]; */
-		READ_BYTE(convertor->multi_mappings[i].codepoints_length);
-		for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
-			READ_WORD(convertor->multi_mappings[i].codepoints[j]);
-		READ_BYTE(convertor->multi_mappings[i].bytes_length);
-		READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
+		if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
+			goto end_error;
+		/* if ((convertor->multi_mappings_codepoint_sort = malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
+			goto end_error; */
+		for (i = 0; i < convertor->nr_multi_mappings; i++) {
+			/* convertor->multi_mappings_codepoint_sort[i] = &convertor->multi_mappings[i]; */
+			READ_BYTE(convertor->multi_mappings[i].codepoints_length);
+			for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
+				READ_WORD(convertor->multi_mappings[i].codepoints[j]);
+			READ_BYTE(convertor->multi_mappings[i].bytes_length);
+			READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
+		}
+		/* qsort(convertor->multi_mappings_codepoint_sort, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
+			(compare_func_t) multi_codepoint_compare); */
 	}
-	/* qsort(convertor->multi_mappings_codepoint_sort, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
-		(compare_func_t) multi_codepoint_compare); */
+
+	if (fread(magic, 1, 1, file) != 0 || !feof(file))
+		ERROR(T3_ERR_INVALID_FORMAT);
 
 	return convertor;
 
