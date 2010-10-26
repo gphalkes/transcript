@@ -27,4 +27,5 @@ enum {
 put_unicode_func_t get_put_unicode(int type);
 get_unicode_func_t get_get_unicode(int type);
 
+int put_utf16(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
 #endif

@@ -69,7 +69,7 @@ static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft
 	return CHARCONV_SUCCESS;
 }
 
-static int put_utf16(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+int put_utf16(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	uint16_t *_outbuf = (uint16_t *) *outbuf;
 
 	CHECK_CODEPOINT_RANGE();
@@ -334,6 +334,12 @@ static uint_fast32_t get_utf16(char **inbuf, size_t *inbytesleft, t3_bool skip) 
 		codepoint -= UINT32_C(0xd800);
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00);
+
+		if (!skip)
+			CHECK_CODEPOINT_ILLEGAL();
+		*inbuf += 4;
+		*inbytesleft -= 4;
+		return codepoint;
 	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff)) {
 		/* Codepoint is a low surrogate. */
 		return CHARCONV_UTF_ILLEGAL;
@@ -341,6 +347,9 @@ static uint_fast32_t get_utf16(char **inbuf, size_t *inbytesleft, t3_bool skip) 
 
 	if (!skip)
 		CHECK_CODEPOINT_ILLEGAL();
+
+	*inbuf += 2;
+	*inbytesleft -= 2;
 	return codepoint;
 }
 
@@ -372,6 +381,12 @@ static uint_fast32_t get_utf16swap(char **inbuf, size_t *inbytesleft, t3_bool sk
 		codepoint -= UINT32_C(0xd800);
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
+
+		if (!skip)
+			CHECK_CODEPOINT_ILLEGAL();
+		*inbuf += 4;
+		*inbytesleft -= 4;
+		return codepoint;
 	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff)) {
 		/* Codepoint is a low surrogate. */
 		return CHARCONV_UTF_ILLEGAL;
@@ -379,6 +394,9 @@ static uint_fast32_t get_utf16swap(char **inbuf, size_t *inbytesleft, t3_bool sk
 
 	if (!skip)
 		CHECK_CODEPOINT_ILLEGAL();
+
+	*inbuf += 2;
+	*inbytesleft -= 2;
 	return codepoint;
 }
 
