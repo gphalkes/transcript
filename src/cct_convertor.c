@@ -135,6 +135,7 @@ typedef struct {
 static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
 static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t *range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
+static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx);
 static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
 /* static int multi_codepoint_compare(const multi_mapping_t **a, const multi_mapping_t **b); */
@@ -184,6 +185,9 @@ void *_t3_load_convertor(const char *file_name, int *error) {
 	convertor->unicode_flags.flags = NULL;
 	convertor->unicode_flags.indices = NULL;
 	convertor->multi_mappings = NULL;
+
+	convertor->codepage_flags.get_flags = get_default_flags;
+	convertor->unicode_flags.get_flags = get_default_flags;
 
 	READ_BYTE(convertor->flags);
 	READ_BYTE(convertor->subchar_len);
@@ -385,6 +389,10 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 	states[idx].complete = t3_true;
 }
 
+static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx) {
+	(void) idx;
+	return flags->default_flags;
+}
 static uint8_t get_flags_1(flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | ((flags->flags[idx >> 2] >> (2 * (idx & 3))) & 0x3);
 }
@@ -611,6 +619,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						while (*inbytesleft > check_len)
 							if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
 								return CHARCONV_INTERNAL_ERROR;
+						idx = 0;
 						continue;
 					}
 				}
@@ -653,6 +662,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				*inbuf = (char *) _inbuf;
 				*inbytesleft = _inbytesleft;
 				handle->state = state = entry->next_state;
+				idx = 0;
 				break;
 			default:
 				return CHARCONV_INTERNAL_ERROR;
@@ -772,6 +782,9 @@ int main(int argc, char *argv[]) {
 	int error;
 	convertor_t *conv;
 	convertor_state_t conv_state;
+	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
+	size_t result;
+	size_t fill, outleft;
 
 	if (argc != 2)
 		fatal("Usage: cct_convertor <cct file>\n");
@@ -782,9 +795,20 @@ int main(int argc, char *argv[]) {
 	conv_state.common.convert = (conversion_func_t) to_unicode_conversion;
 	conv_state.common.skip = (skip_func_t) to_unicode_skip;
 	conv_state.common.reset = NULL;
-	conv_state.common.put_unicode = get_put_unicode(UTF8);
+	conv_state.common.put_unicode = get_put_unicode(UTF16);
 	conv_state.common.flags = 0;
+	conv_state.convertor = conv;
 	conv_state.state = 0;
+
+	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
+		inbuf_ptr = inbuf;
+		outbuf_ptr = outbuf;
+		fill += result;
+		outleft = 1024;
+		if ((error = to_unicode_conversion(&conv_state, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
+			fatal("conversion result: %d\n", error);
+		fwrite(outbuf, 1, 1024 - outleft, stdout);
+	}
 	return 0;
 }
 
