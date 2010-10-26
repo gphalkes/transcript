@@ -428,8 +428,7 @@ void Ucm::add_mapping(Mapping *mapping) {
 					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n", file_name, line_number - 1);
 					return;
 				} else {
-					/* When calculating which bits are required, don't include length for SUBCHAR1 flagged mappings */
-					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1;
+					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_NOT_AVAIL;
 				}
 				break;
 			case 3:
@@ -446,7 +445,7 @@ void Ucm::add_mapping(Mapping *mapping) {
 				(mapping->codepoints[0] >= UINT32_C(0xf0000) && mapping->codepoints[0] <= UINT32_C(0xffffd)) ||
 				(mapping->codepoints[0] >= UINT32_C(0x100000) && mapping->codepoints[0] <= UINT32_C(0x10fffd)))
 			mapping->to_unicode_flags |= Mapping::TO_UNICODE_PRIVATE_USE;
-		mapping->from_unicode_flags |= (mapping->codepage_bytes.size() - 1) << 2;
+		mapping->from_unicode_flags |= (mapping->codepage_bytes.size() - 1);
 		simple_mappings.push_back(mapping);
 	} else {
 		//FIXME: check for private-use or non-character codepoints

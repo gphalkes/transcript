@@ -154,11 +154,11 @@ For the from-unicode flags the following values are defined:
 
 Bit   | Meaning
 ---------------------------------------------------
-A     | The mapping is not available
-B     | Mapping is a fallback (i.e. a similar looking character)
-C     | The mapping is not available and the subchar1 character should be used
-D     | The codepoint is used as the first codepoint in a m:n conversion
-E-F   | A number representing the number of bytes in the code page sequence
+A-B   | A number representing the number of bytes in the code page sequence
+C     | The mapping is not available
+D     | Mapping is a fallback (i.e. a similar looking character)
+E     | The mapping is not available and the subchar1 character should be used
+F     | The codepoint is used as the first codepoint in a m:n conversion
 
 Note that a to-unicode fallback is different from a from-unicode fallback. A
 to-unicode fallback means that the same character is encoded in the input

@@ -261,6 +261,9 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, t3_bool
 
 	if (!skip)
 		CHECK_CODEPOINT_ILLEGAL();
+
+	*inbytesleft -= _inbuf - (uint8_t *) *inbuf;
+	*inbuf = (char *) _inbuf;
 	return codepoint;
 }
 
@@ -268,6 +271,11 @@ static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, t3_bool s
 	return get_utf8internal(inbuf, inbytesleft, skip, t3_true);
 }
 
+/** Get the next UTF-8 encoded unicode codepoint from the stream.
+
+    This version is permissive in what it accepts, in that it allows overlong
+    sequences, and allows CESU-8 encoding using surrogate pairs.
+*/
 static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, t3_bool skip) {
 	size_t _inbytesleft = *inbytesleft;
 	char *_inbuf = *inbuf;

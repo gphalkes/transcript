@@ -29,7 +29,7 @@ typedef struct {
 	reset_func_t reset;
 	union {
 		put_unicode_func_t put_unicode;
-		get_unicode_func_t get_uniocde;
+		get_unicode_func_t get_unicode;
 	} unicode_func;
 	int flags;
 } charconv_common_t;

@@ -49,11 +49,11 @@ enum {
 };
 
 enum {
-	FROM_UNICODE_NOT_AVAIL = (1<<0),
-	FROM_UNICODE_FALLBACK = (1<<1),
-	FROM_UNICODE_SUBCHAR1 = (1<<2),
-	FROM_UNICODE_MULTI_START = (1<<3),
-	FROM_UNICODE_LENGTH_MASK = (3<<4)
+	FROM_UNICODE_LENGTH_MASK = (3<<0),
+	FROM_UNICODE_NOT_AVAIL = (1<<2),
+	FROM_UNICODE_FALLBACK = (1<<3),
+	FROM_UNICODE_SUBCHAR1 = (1<<4),
+	FROM_UNICODE_MULTI_START = (1<<5),
 };
 
 enum {
@@ -551,7 +551,7 @@ end_error:
 #define PUT_UNICODE(codepoint) do { int result; \
 	if ((result = handle->common.unicode_func.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
 		return result; \
-	} while (0)
+} while (0)
 
 static inline size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
@@ -565,12 +565,13 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	uint_fast8_t state = handle->state;
 	uint_fast32_t idx = 0;
 	uint_fast32_t codepoint;
+	entry_t *entry;
 
 	if (flags & CHARCONV_FILE_START)
 		PUT_UNICODE(UINT32_C(0xFEFF));
 
 	while (_inbytesleft > 0) {
-		entry_t *entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
+		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
 
 		idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
 		_inbuf++;
@@ -694,9 +695,10 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 	size_t _inbytesleft = *inbytesleft;
 	uint_fast8_t state = handle->state;
 	uint_fast32_t idx = 0;
+	entry_t *entry;
 
 	while (_inbytesleft > 0) {
-		entry_t *entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
+		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
 
 		idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
 		_inbuf++;
@@ -721,6 +723,124 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 	}
 
 	return CHARCONV_INCOMPLETE;
+}
+
+#define GET_UNICODE() do { \
+	if ((codepoint = handle->common.unicode_func.get_unicode((char **) &_inbuf, &_inbytesleft, t3_false)) == CHARCONV_UTF_INCOMPLETE) \
+		return CHARCONV_INCOMPLETE; \
+} while (0)
+#define PUT_BYTES(count, buffer) do { size_t _count = count; \
+	if (*outbytesleft < _count) return CHARCONV_NO_SPACE; \
+	memcpy(*outbuf, buffer, _count); \
+	*outbuf += _count; *outbytesleft -= _count; \
+} while (0)
+
+
+static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+		char **outbuf, size_t *outbytesleft, int flags)
+{
+	uint8_t *_inbuf = (uint8_t *) *inbuf;
+	size_t _inbytesleft = *inbytesleft;
+	uint_fast8_t state = handle->state;
+	uint_fast32_t idx = 0;
+	uint_fast32_t codepoint;
+	entry_t *entry;
+	int_fast16_t i;
+	uint_fast8_t byte;
+
+	if (flags & CHARCONV_FILE_START) {
+		GET_UNICODE();
+		if (codepoint != UINT32_C(0xFEFF)) {
+			_inbuf = (uint8_t *) *inbuf;
+			_inbytesleft = *inbytesleft;
+		}
+	}
+
+	while (_inbytesleft > 0) {
+		GET_UNICODE();
+		if (codepoint == CHARCONV_UTF_ILLEGAL) {
+			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+				return CHARCONV_ILLEGAL;
+			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+			*inbuf = (char *) _inbuf;
+			*inbytesleft = _inbytesleft;
+			continue;
+		}
+
+		for (i = 16; i >=0 ; i -= 8) {
+			byte = (codepoint >> i) & 0xff;
+			entry = &handle->convertor->unicode_states[state].entries[handle->convertor->unicode_states[state].map[byte]];
+
+			idx += entry->base + (byte - entry->low) * entry->mul;
+
+			switch (entry->action) {
+				case ACTION_FINAL:
+				case ACTION_FINAL_PAIR:
+					flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
+					if (flags & FROM_UNICODE_MULTI_START) {
+					}
+
+					if ((flags & FROM_UNICODE_FALLBACK) && !(handle->common.flags & CHARCONV_ALLOW_FALLBACK))
+						return CHARCONV_FALLBACK;
+
+					if (flags & FROM_UNICODE_NOT_AVAIL) {
+						if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+							return CHARCONV_UNASSIGNED;
+						if (flags & FROM_UNICODE_SUBCHAR1)
+							PUT_BYTES(1, &handle->convertor->subchar1);
+						else
+							PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+					} else {
+						PUT_BYTES((flags & FROM_UNICODE_LENGTH_MASK) + 1,
+							&handle->convertor->unicode_mappings[idx * handle->convertor->single_size]);
+					}
+					goto sequence_done;
+				case ACTION_VALID:
+					state = entry->next_state;
+					break;
+				case ACTION_ILLEGAL:
+					if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+						return CHARCONV_ILLEGAL;
+					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+					goto sequence_done;
+				case ACTION_UNASSIGNED:
+					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+						return CHARCONV_UNASSIGNED;
+					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+					/* FALLTHROUGH */
+				sequence_done:
+					*inbuf = (char *) _inbuf;
+					*inbytesleft = _inbytesleft;
+					handle->state = state = entry->next_state; /* Should always be 0! */
+					idx = 0;
+					if (flags & CHARCONV_SINGLE_CONVERSION)
+						return CHARCONV_SUCCESS;
+					break;
+				case ACTION_SHIFT:
+				default:
+					return CHARCONV_INTERNAL_ERROR;
+			}
+		}
+	}
+
+	if (*inbytesleft != 0) {
+		if (flags & CHARCONV_END_OF_TEXT) {
+			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+				return CHARCONV_ILLEGAL_END;
+			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+			*inbuf += *inbytesleft;
+			*inbytesleft = 0;
+		} else {
+			return CHARCONV_INCOMPLETE;
+		}
+	}
+	return CHARCONV_SUCCESS;
+}
+
+static int from_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
+	if (handle->common.unicode_func.get_unicode(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
+		return CHARCONV_INCOMPLETE;
+	return CHARCONV_SUCCESS;
 }
 
 
@@ -794,7 +914,7 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 #endif
-
+#if 0
 int main(int argc, char *argv[]) {
 	int error;
 	convertor_t *conv;
@@ -826,6 +946,44 @@ int main(int argc, char *argv[]) {
 			fatal("conversion result: %d\n", error);
 		fwrite(outbuf, 1, 1024 - outleft, stdout);
 	}
+
+	return 0;
+}
+#endif
+
+int main(int argc, char *argv[]) {
+	int error;
+	convertor_t *conv;
+	convertor_state_t conv_state;
+	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
+	size_t result;
+	size_t fill, outleft, i;
+
+	if (argc != 2)
+		fatal("Usage: cct_convertor <cct file>\n");
+
+	if ((conv = _t3_load_convertor(argv[1], &error)) == NULL)
+		fatal("Error opening convertor: %d\n", error);
+
+	conv_state.common.convert = (conversion_func_t) from_unicode_conversion;
+	conv_state.common.skip = (skip_func_t) from_unicode_skip;
+	conv_state.common.reset = NULL;
+	conv_state.common.unicode_func.get_unicode = get_get_unicode(UTF8_STRICT);
+	conv_state.common.flags = 0;
+	conv_state.convertor = conv;
+	conv_state.state = 0;
+
+	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
+		inbuf_ptr = inbuf;
+		outbuf_ptr = outbuf;
+		fill += result;
+		outleft = 1024;
+		if ((error = from_unicode_conversion(&conv_state, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
+			fatal("conversion result: %d\n", error);
+		for (i = 0; i < 1024 - outleft; i++)
+			printf("\\x%02X", (uint8_t) outbuf[i]);
+	}
+	putchar('\n');
 	return 0;
 }
 

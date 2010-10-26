@@ -64,11 +64,11 @@ class Mapping {
 			precision;
 
 		enum {
-			FROM_UNICODE_NOT_AVAIL = (1<<0),
-			FROM_UNICODE_FALLBACK = (1<<1),
-			FROM_UNICODE_SUBCHAR1 = (1<<2),
-			FROM_UNICODE_MULTI_START = (1<<3),
-			FROM_UNICODE_LENGTH_MASK = (3<<4)
+			FROM_UNICODE_LENGTH_MASK = (3<<0),
+			FROM_UNICODE_NOT_AVAIL = (1<<2),
+			FROM_UNICODE_FALLBACK = (1<<3),
+			FROM_UNICODE_SUBCHAR1 = (1<<4),
+			FROM_UNICODE_MULTI_START = (1<<5),
 		};
 
 		enum {
