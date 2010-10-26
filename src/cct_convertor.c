@@ -549,7 +549,7 @@ end_error:
 } */
 
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
+	if ((result = handle->common.unicode_func.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
 		return result; \
 	} while (0)
 
@@ -593,7 +593,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 							continue;
 
 						if (check_len != handle->convertor->multi_mappings[i].bytes_length && !(flags & CHARCONV_END_OF_TEXT))
-							return CHARCONV_SUCCESS;
+							return CHARCONV_INCOMPLETE;
 
 						outbuf_tmp = *outbuf;
 						outbytesleft_tmp = *outbytesleft;
@@ -606,7 +606,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 								codepoint += handle->convertor->multi_mappings[i].codepoints[j] - UINT32_C(0xDC00);
 								codepoint += 0x10000;
 							}
-							if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
+							if ((result = handle->common.unicode_func.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
 								return result;
 						}
 						*outbuf = outbuf_tmp;
@@ -624,15 +624,19 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 					}
 				}
 
-				if ((flags & TO_UNICODE_PRIVATE_USE) && !(handle->common.flags & CHARCONV_ALLOW_PRIVATE_USE))
-					return CHARCONV_PRIVATE_USE;
+				if ((flags & TO_UNICODE_PRIVATE_USE) && !(handle->common.flags & CHARCONV_ALLOW_PRIVATE_USE)) {
+					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+						return CHARCONV_PRIVATE_USE;
+					PUT_UNICODE(UINT32_C(0xFFFD));
+					goto sequence_done;
+				}
 				if ((flags & TO_UNICODE_FALLBACK) && !(handle->common.flags & CHARCONV_ALLOW_FALLBACK))
 					return CHARCONV_FALLBACK;
 
 				codepoint = handle->convertor->codepage_mappings[idx];
 				if (codepoint == UINT32_C(0xFFFF)) {
 					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
-						return CHARCONV_UNMAPPED;
+						return CHARCONV_UNASSIGNED;
 					PUT_UNICODE(UINT32_C(0xFFFD));
 				} else {
 					if (entry->action == ACTION_FINAL_PAIR && codepoint >= UINT32_C(0xD800) && codepoint <= UINT32_C(0xD8FF)) {
@@ -654,7 +658,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				goto sequence_done;
 			case ACTION_UNASSIGNED:
 				if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
-					return CHARCONV_UNMAPPED;
+					return CHARCONV_UNASSIGNED;
 				PUT_UNICODE(UINT32_C(0xFFFD));
 				/* FALLTHROUGH */
 			case ACTION_SHIFT:
@@ -663,12 +667,25 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				*inbytesleft = _inbytesleft;
 				handle->state = state = entry->next_state;
 				idx = 0;
+				if (flags & CHARCONV_SINGLE_CONVERSION)
+					return CHARCONV_SUCCESS;
 				break;
 			default:
 				return CHARCONV_INTERNAL_ERROR;
 		}
 	}
 
+	if (*inbytesleft != 0) {
+		if (flags & CHARCONV_END_OF_TEXT) {
+			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+				return CHARCONV_ILLEGAL_END;
+			PUT_UNICODE(UINT32_C(0xFFFD));
+			*inbuf += *inbytesleft;
+			*inbytesleft = 0;
+		} else {
+			return CHARCONV_INCOMPLETE;
+		}
+	}
 	return CHARCONV_SUCCESS;
 }
 
@@ -795,7 +812,7 @@ int main(int argc, char *argv[]) {
 	conv_state.common.convert = (conversion_func_t) to_unicode_conversion;
 	conv_state.common.skip = (skip_func_t) to_unicode_skip;
 	conv_state.common.reset = NULL;
-	conv_state.common.put_unicode = get_put_unicode(UTF16);
+	conv_state.common.unicode_func.put_unicode = get_put_unicode(UTF16);
 	conv_state.common.flags = 0;
 	conv_state.convertor = conv;
 	conv_state.state = 0;

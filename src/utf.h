@@ -16,6 +16,7 @@
 
 enum {
 	UTF8,
+	UTF8_STRICT,
 	UTF16,
 	UTF16BE,
 	UTF16LE,
@@ -24,5 +25,6 @@ enum {
 	UTF32LE
 };
 put_unicode_func_t get_put_unicode(int type);
+get_unicode_func_t get_get_unicode(int type);
 
 #endif
