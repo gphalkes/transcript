@@ -600,8 +600,6 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		}
 	}
 
-	flags |= handle->common.flags & 0xff;
-
 	while (_inbytesleft > 0) {
 		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
 
@@ -950,8 +948,6 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 			_inbytesleft = *inbytesleft;
 		}
 	}
-
-	flags |= handle->common.flags & 0xff;
 
 	while (_inbytesleft > 0) {
 		GET_UNICODE();

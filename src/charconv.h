@@ -78,7 +78,7 @@ enum {
 #define DB_DIRECTORY "/usr/local/share/libcharconv"
 #endif
 
-void *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
+charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
 void charconv_close_convertor(charconv_t *handle);
 int charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 int charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
