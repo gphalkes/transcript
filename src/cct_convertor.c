@@ -909,8 +909,8 @@ check_next_mapping: ;
 static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	uint8_t *_inbuf;
+	size_t _inbytesleft;
 	uint_fast8_t state = 0;
 	uint_fast32_t idx = 0;
 	uint_fast32_t codepoint;
@@ -918,6 +918,15 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	int_fast16_t i;
 	uint_fast8_t byte;
 	uint_fast8_t conv_flags;
+
+	if (inbuf == NULL || *inbuf == NULL) {
+		if (handle->from_state != 0)
+			PUT_BYTES(0, NULL);
+		return CHARCONV_SUCCESS;
+	}
+
+	_inbuf = (uint8_t *) *inbuf;
+	_inbytesleft = *inbytesleft;
 
 	if (flags & CHARCONV_FILE_START) {
 		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16) {

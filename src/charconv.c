@@ -86,6 +86,8 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 		ERROR(ENOMEM);
 		return (cc_iconv_t) -1;
 	}
+	retval->from = NULL;
+	retval->to = NULL;
 
 	if ((retval->from = charconv_open_convertor(fromcode, UTF32ME, 0, &error)) == NULL) {
 		if (error == T3_ERR_OUT_OF_MEMORY)
@@ -102,6 +104,7 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
+	return retval;
 
 end_error:
 	if (retval == NULL)
@@ -125,8 +128,8 @@ int cc_iconv_close(cc_iconv_t cd) {
 size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
 	size_t result = 0;
 
-	char *_inbuf = *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	char *_inbuf;
+	size_t _inbytesleft;
 	char saved_state[charconv_get_saved_state_size()];
 
 	uint32_t codepoint;
@@ -134,6 +137,17 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	size_t codepoint_bytesleft;
 	t3_bool fallback;
 
+	if (inbuf == NULL || *inbuf == NULL) {
+		charconv_to_unicode_reset(cd->from);
+		if (outbuf == NULL || *outbuf == NULL)
+			charconv_from_unicode_reset(cd->to);
+		else
+			charconv_from_unicode(cd->to, NULL, NULL, outbuf, outbytesleft, 0);
+		return 0;
+	}
+
+	_inbuf = *inbuf;
+	_inbytesleft = *inbytesleft;
 
 	while (*inbytesleft > 0) {
 		charconv_save_state(cd->from, saved_state);

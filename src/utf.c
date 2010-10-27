@@ -139,21 +139,25 @@ static int put_utf32swap(uint_fast32_t codepoint, char **outbuf, size_t *outbyte
 
 put_unicode_func_t get_put_unicode(int type) {
 	switch (type) {
+		case UTF8_BOM:
+		case UTF8_STRICT_BOM:
 		case UTF8_STRICT:
 		case UTF8:
 			return put_utf8;
 		case UTF16:
-			return put_utf16;
 		case UTF16BE:
 			return htons(1) == 1 ? put_utf16 : put_utf16swap;
 		case UTF16LE:
 			return htons(1) == 1 ? put_utf16swap : put_utf16;
+		case UTF16ME:
+			return put_utf16;
 		case UTF32:
-			return put_utf32;
 		case UTF32BE:
 			return htons(1) == 1 ? put_utf32 : put_utf32swap;
 		case UTF32LE:
 			return htons(1) == 1 ? put_utf32swap : put_utf32;
+		case UTF32ME:
+			return put_utf32;
 		default:
 			/* Can't return NULL, because that will screw up later calls. */
 			return put_utf8;
