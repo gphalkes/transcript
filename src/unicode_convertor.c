@@ -30,7 +30,7 @@ typedef struct {
 	int utf_type;
 } convertor_state_t;
 
-static void close_unicode_convertor(convertor_state_t *handle);
+static void close_convertor(convertor_state_t *handle);
 
 static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags, get_unicode_func_t get_unicode, put_unicode_func_t put_unicode)
@@ -188,7 +188,7 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
-	retval->common.close = (close_func_t) close_unicode_convertor;
+	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_load_nop;
 	retval->common.load = (load_func_t) save_load_nop;
 	if (map[i].utfcode == UTF16) {
@@ -205,7 +205,7 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	return retval;
 }
 
-static void close_unicode_convertor(convertor_state_t *handle) {
+static void close_convertor(convertor_state_t *handle) {
 	free(handle);
 }
 

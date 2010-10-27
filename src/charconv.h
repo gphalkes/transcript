@@ -108,4 +108,11 @@ typedef cc_iconv_t iconv_t;
 #endif
 #endif
 
+
+#warning FIXME: these should not be replicated here!!!
+#define T3_ERR_INVALID_FORMAT (-32)
+#define T3_ERR_TRUNCATED_DB (-29)
+#define T3_ERR_READ_ERROR (-28)
+#define T3_ERR_WRONG_VERSION (-27)
+
 #endif

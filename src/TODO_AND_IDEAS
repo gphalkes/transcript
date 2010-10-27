@@ -7,5 +7,4 @@
 - implementation: a copy of the state should be made after each full conversion
 	such that when we decide we need more data from the user, we can simply
 	revert to the saved state
-- utf-8, utf-7, utf-16be/le, utf-32be/le, [bocu-1 PATENTED], latin-1/windows-1251, lmb,
-	scsu, iso-2022-*
+- utf-7, [bocu-1 PATENTED], lmb, scsu, iso-2022-*, gb-18030

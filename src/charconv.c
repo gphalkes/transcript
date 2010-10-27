@@ -19,11 +19,7 @@
 #include "charconv_errors.h"
 #include "utf.h"
 
-//FIXME: move these to a separate header
-void *open_cct_convertor(const char *name, int flags, int *error);
-size_t get_cct_saved_state_size(void);
-void *open_unicode_convertor(const char *name, int flags, int *error);
-size_t get_unicode_saved_state_size(void);
+#include "convertors.h"
 
 typedef struct {
 	const char *squashed_name;
@@ -36,6 +32,7 @@ static name_mapping convertors[] = {
 	{ "ibm437", "ibm-437_p100-1995", open_cct_convertor },
 	{ "ibm437p100", "ibm-437_p100-1995", open_cct_convertor },
 	{ "ibm437p1001995", "ibm-437_p100-1995", open_cct_convertor },
+	{ "iso88591", "ISO-8859-1", open_iso8859_1_convertor },
 	{ "utf8", "UTF-8", open_unicode_convertor },
 	{ "utf8bom", "UTF-8_BOM", open_unicode_convertor },
 	{ "utf16", "UTF-16", open_unicode_convertor },
