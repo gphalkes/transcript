@@ -587,19 +587,6 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	entry_t *entry;
 	uint_fast8_t conv_flags;
 
-	if (flags & CHARCONV_FILE_START) {
-		switch (handle->common.utf_type) {
-			case UTF32:
-			case UTF16:
-			case UTF8_BOM:
-			case UTF8_STRICT_BOM:
-				PUT_UNICODE(UINT32_C(0xFEFF));
-				break;
-			default:
-				break;
-		}
-	}
-
 	while (_inbytesleft > 0) {
 		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
 
@@ -762,8 +749,6 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 
 static void to_unicode_reset(convertor_state_t *handle) {
 	handle->to_state = 0;
-	if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
-		handle->common.put_unicode = get_put_unicode(handle->common.utf_type);
 }
 
 
@@ -926,29 +911,6 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	_inbuf = (uint8_t *) *inbuf;
 	_inbytesleft = *inbytesleft;
 
-	if (flags & CHARCONV_FILE_START) {
-		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16) {
-			codepoint = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE)(inbuf, inbytesleft, t3_false);
-			if (codepoint == UINT32_C(0xFEFF)) {
-				handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE);
-			} else if (codepoint == CHARCONV_ILLEGAL) {
-				codepoint = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32LE : UTF16LE)(inbuf, inbytesleft, t3_false);
-				if (codepoint == UINT32_C(0xFEFF))
-					handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32LE : UTF16LE);
-				else
-					handle->common.get_unicode = get_get_unicode(handle->common.utf_type == UTF32 ? UTF32BE : UTF16BE);
-			}
-		} else {
-			GET_UNICODE();
-		}
-		/* Anything, including bad input, will simply cause a reset, meaning that only
-		   the BOM will be ignored. */
-		if (codepoint != UINT32_C(0xFEFF)) {
-			_inbuf = (uint8_t *) *inbuf;
-			_inbytesleft = *inbytesleft;
-		}
-	}
-
 	while (_inbytesleft > 0) {
 		GET_UNICODE();
 		if (codepoint == CHARCONV_UTF_INCOMPLETE)
@@ -1052,8 +1014,6 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 
 static void from_unicode_reset(convertor_state_t *handle) {
 	handle->from_state = 0;
-	if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
-		handle->common.get_unicode = get_get_unicode(handle->common.utf_type);
 }
 
 static void save_cct_state(convertor_state_t *handle, save_state_t *save) {
@@ -1066,7 +1026,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	handle->from_state = save->from_state;
 }
 
-void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) {
+void *open_cct_convertor(const char *name, int flags, int *error) {
 	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
 	convertor_t *ptr;
@@ -1116,14 +1076,11 @@ void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) 
 	retval->to_state = 0;
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->common.get_unicode = get_get_unicode(utf_type);
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
-	retval->common.put_unicode = get_put_unicode(utf_type);
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
-	retval->common.utf_type = utf_type;
 	retval->common.close = (close_func_t) close_cct_convertor;
 	retval->common.save = (save_func_t) save_cct_state;
 	retval->common.load = (load_func_t) load_cct_state;

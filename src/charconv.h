@@ -23,10 +23,10 @@ typedef struct charconv_common_t charconv_t;
 //FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
 typedef int (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 typedef int (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-typedef int (*reset_func_t)(charconv_t *handle);
 typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef void (*close_func_t)(charconv_t *handle);
 typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, t3_bool skip);
+typedef int (*reset_func_t)(charconv_t *handle);
+typedef void (*close_func_t)(charconv_t *handle);
 typedef void (*save_func_t)(charconv_t *handle, void *state);
 typedef void (*load_func_t)(charconv_t *handle, void *state);
 

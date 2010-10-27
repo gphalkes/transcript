@@ -139,28 +139,26 @@ static int put_utf32swap(uint_fast32_t codepoint, char **outbuf, size_t *outbyte
 
 put_unicode_func_t get_put_unicode(int type) {
 	switch (type) {
-		case UTF8_BOM:
-		case UTF8_STRICT_BOM:
-		case UTF8_STRICT:
 		case UTF8:
+		case UTF8_LOOSE:
+		case UTF8_BOM:
 			return put_utf8;
 		case UTF16:
+			return put_utf16;
+		case UTF32:
+			return put_utf32;
+
 		case UTF16BE:
 			return htons(1) == 1 ? put_utf16 : put_utf16swap;
 		case UTF16LE:
 			return htons(1) == 1 ? put_utf16swap : put_utf16;
-		case UTF16ME:
-			return put_utf16;
-		case UTF32:
 		case UTF32BE:
 			return htons(1) == 1 ? put_utf32 : put_utf32swap;
 		case UTF32LE:
 			return htons(1) == 1 ? put_utf32swap : put_utf32;
-		case UTF32ME:
-			return put_utf32;
+
 		default:
-			/* Can't return NULL, because that will screw up later calls. */
-			return put_utf8;
+			return NULL;
 	}
 }
 
@@ -442,27 +440,26 @@ static uint_fast32_t get_utf32swap(char **inbuf, size_t *inbytesleft, t3_bool sk
 get_unicode_func_t get_get_unicode(int type) {
 	switch (type) {
 		case UTF8:
-		case UTF8_BOM:
-			return get_utf8;
-		case UTF8_STRICT:
-		case UTF8_STRICT_BOM:
 			return get_utf8strict;
 		case UTF16:
+			return get_utf16;
+		case UTF32:
+			return get_utf32;
+
+		case UTF8_LOOSE:
+		case UTF8_BOM:
+			return get_utf8;
+
 		case UTF16BE:
 			return htons(1) == 1 ? get_utf16 : get_utf16swap;
 		case UTF16LE:
 			return htons(1) == 1 ? get_utf16swap : get_utf16;
-		case UTF16ME:
-			return get_utf16;
-		case UTF32:
 		case UTF32BE:
 			return htons(1) == 1 ? get_utf32 : get_utf32swap;
 		case UTF32LE:
 			return htons(1) == 1 ? get_utf32swap : get_utf32;
-		case UTF32ME:
-			return get_utf32;
+
 		default:
-			/* Can't return NULL, because that will screw up later calls. */
-			return get_utf8;
+			return NULL;
 	}
 }

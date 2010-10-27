@@ -31,7 +31,7 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	retval->from = NULL;
 	retval->to = NULL;
 
-	if ((retval->from = charconv_open_convertor(fromcode, UTF32ME, 0, &error)) == NULL) {
+	if ((retval->from = charconv_open_convertor(fromcode, UTF32, 0, &error)) == NULL) {
 		if (error == T3_ERR_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
 		else if (error == T3_ERR_ERRNO)
@@ -39,7 +39,7 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 		ERROR(EINVAL);
 	}
 
-	if ((retval->to = charconv_open_convertor(tocode, UTF32ME, 0, &error)) == NULL) {
+	if ((retval->to = charconv_open_convertor(tocode, UTF32, 0, &error)) == NULL) {
 		if (error == T3_ERR_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
 		else if (error == T3_ERR_ERRNO)

@@ -20,15 +20,15 @@
 #include "utf.h"
 
 //FIXME: move these to a separate header
-void *open_cct_convertor(const char *name, int utf_type, int flags, int *error);
+void *open_cct_convertor(const char *name, int flags, int *error);
 size_t get_cct_saved_state_size(void);
-void *open_unicode_convertor(const char *name, int utf_type, int flags, int *error);
+void *open_unicode_convertor(const char *name, int flags, int *error);
 size_t get_unicode_saved_state_size(void);
 
 typedef struct {
 	const char *squashed_name;
 	const char *convertor_name;
-	void *(*open)(const char *name, int utf_type, int flags, int *error);
+	void *(*open)(const char *name, int flags, int *error);
 } name_mapping;
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
@@ -37,7 +37,7 @@ static name_mapping convertors[] = {
 	{ "ibm437p100", "ibm-437_p100-1995", open_cct_convertor },
 	{ "ibm437p1001995", "ibm-437_p100-1995", open_cct_convertor },
 	{ "utf8", "UTF-8", open_unicode_convertor },
-	{ "utf8bom", "UTF-8BOM", open_unicode_convertor },
+	{ "utf8bom", "UTF-8_BOM", open_unicode_convertor },
 	{ "utf16", "UTF-16", open_unicode_convertor },
 	{ "utf16be", "UTF-16BE", open_unicode_convertor },
 	{ "utf16le", "UTF-16LE", open_unicode_convertor },
@@ -52,6 +52,13 @@ static name_mapping convertors[] = {
 	{ "ucs4le", "UTF-32LE", open_unicode_convertor }};
 
 
+static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
+	if (handle == NULL)
+		return NULL;
+	handle->get_unicode = get_get_unicode(utf_type);
+	handle->put_unicode = get_put_unicode(utf_type);
+	return handle;
+}
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
 	char name_buffer[128];
@@ -59,7 +66,7 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 	size_t i, store_idx;
 	t3_bool last_was_digit = t3_false;
 
-	if (utf_type < 0 || utf_type >= UTFMAX) {
+	if (utf_type < 0 || utf_type > UTF32) {
 		if (error != NULL)
 			*error = T3_ERR_BAD_ARG;
 		return NULL;
@@ -82,12 +89,12 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 	for (i = 0; i < sizeof(convertors) / sizeof(convertors[0]); i++) {
 		if (strcmp(name_buffer, convertors[i].squashed_name) == 0) {
 			if (convertors[i].open != NULL)
-				return convertors[i].open(convertors[i].convertor_name, utf_type, flags, error);
+				return fill_utf(convertors[i].open(convertors[i].convertor_name, flags, error), utf_type);
 			name = convertors[i].convertor_name;
 		}
 	}
 
-	return open_cct_convertor(name, utf_type, flags, error);
+	return fill_utf(open_cct_convertor(name, flags, error), utf_type);
 }
 
 void charconv_close_convertor(charconv_t *handle) {
