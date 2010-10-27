@@ -87,7 +87,7 @@ typedef struct {
 typedef struct flags_t {
 	uint8_t *flags;
 	uint16_t *indices;
-	uint8_t (*get_flags)(struct flags_t *flags, uint_fast32_t idx);
+	uint8_t (*get_flags)(const struct flags_t *flags, uint_fast32_t idx);
 	uint8_t default_flags;
 } flags_t;
 
@@ -137,11 +137,15 @@ typedef struct {
 	uint8_t to_state, from_state;
 } convertor_state_t;
 
+typedef struct {
+	uint8_t to_state, from_state;
+} save_state_t;
+
 static void unload_cct_convertor(convertor_t *convertor);
 static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
 static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
-static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx);
+static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
 static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
 static void close_cct_convertor(convertor_state_t *handle);
@@ -152,7 +156,7 @@ static void close_cct_convertor(convertor_state_t *handle);
 #define READ_WORD(store) do { uint16_t value; if (fread(&value, 1, 2, file) != (size_t) 2) ERROR(T3_ERR_READ_ERROR); store = ntohs(value); } while (0)
 #define READ_DWORD(store) do { uint32_t value; if (fread(&value, 1, 4, file) != (size_t) 4) ERROR(T3_ERR_READ_ERROR); store = ntohl(value); } while (0)
 
-static int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
+static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static convertor_t *cct_head = NULL;
 
@@ -418,82 +422,82 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 	states[idx].complete = t3_true;
 }
 
-static uint8_t get_default_flags(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx) {
 	(void) idx;
 	return flags->default_flags;
 }
-static uint8_t get_flags_1(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_1(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | ((flags->flags[idx >> 2] >> (2 * (idx & 3))) & 0x3);
 }
-static uint8_t get_flags_2(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_2(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | (((flags->flags[idx >> 2] >> (2 * (idx & 3))) & 0x3) << 2);
 }
-static uint8_t get_flags_3(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_3(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | ((flags->flags[idx >> 1] >> (4 * (idx & 1))) & 0xf);
 }
-static uint8_t get_flags_4(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_4(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | (((flags->flags[idx >> 2] >> (2 * (idx & 3))) & 0x3) << 4);
 }
-static uint8_t get_flags_5(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_5(const flags_t *flags, uint_fast32_t idx) {
 	uint8_t bits = flags->flags[idx >> 1] >> (4 * (idx & 1));
 	return flags->default_flags | (bits & 0x3) | ((bits & 0xc) << 2);
 }
-static uint8_t get_flags_6(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_6(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | (((flags->flags[idx >> 1] >> (4 * (idx & 1))) & 0xf) << 2);
 }
-static uint8_t get_flags_8(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_8(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | (((flags->flags[idx >> 2] >> (2 * (idx & 3))) & 0x3) << 6);
 }
-static uint8_t get_flags_9(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_9(const flags_t *flags, uint_fast32_t idx) {
 	uint8_t bits = flags->flags[idx >> 1] >> (4 * (idx & 1));
 	return flags->default_flags | (bits & 0x3) | ((bits & 0xc) << 4);
 }
-static uint8_t get_flags_10(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_10(const flags_t *flags, uint_fast32_t idx) {
 	uint8_t bits = flags->flags[idx >> 1] >> (4 * (idx & 1));
 	return flags->default_flags | ((bits & 0x3) << 2) | ((bits & 0xc) << 4);
 }
-static uint8_t get_flags_12(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_12(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | (((flags->flags[idx >> 1] >> (4 * (idx & 1))) & 0xf) << 4);
 }
-static uint8_t get_flags_15(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_15(const flags_t *flags, uint_fast32_t idx) {
 	return flags->default_flags | flags->flags[idx];
 }
 
-static uint8_t get_flags_1_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_1_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_1(flags, (idx & 63) + (flags->indices[idx >> 6] << 6));
 }
-static uint8_t get_flags_2_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_2_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_2(flags, (idx & 63) + (flags->indices[idx >> 6] << 6));
 }
-static uint8_t get_flags_3_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_3_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_3(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_4_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_4_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_4(flags, (idx & 63) + (flags->indices[idx >> 6] << 6));
 }
-static uint8_t get_flags_5_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_5_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_5(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_6_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_6_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_6(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_8_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_8_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_8(flags, (idx & 63) + (flags->indices[idx >> 6] << 6));
 }
-static uint8_t get_flags_9_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_9_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_9(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_10_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_10_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_10(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_12_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_12_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_12(flags, (idx & 31) + (flags->indices[idx >> 5] << 5));
 }
-static uint8_t get_flags_15_trie(flags_t *flags, uint_fast32_t idx) {
+static uint8_t get_flags_15_trie(const flags_t *flags, uint_fast32_t idx) {
 	return get_flags_15(flags, (idx & 15) + (flags->indices[idx >> 4] << 4));
 }
 
-static uint8_t (*get_flags[16])(flags_t *flags, uint_fast32_t idx) = {
+static uint8_t (* const get_flags[16])(const flags_t *flags, uint_fast32_t idx) = {
 	NULL,
 	get_flags_1,
 	get_flags_2,
@@ -512,7 +516,7 @@ static uint8_t (*get_flags[16])(flags_t *flags, uint_fast32_t idx) = {
 	get_flags_15
 };
 
-static uint8_t (*get_flags_trie[16])(flags_t *flags, uint_fast32_t idx) = {
+static uint8_t (* const get_flags_trie[16])(const flags_t *flags, uint_fast32_t idx) = {
 	NULL,
 	get_flags_1_trie,
 	get_flags_2_trie,
@@ -581,6 +585,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	uint_fast32_t idx = handle->convertor->codepage_states[handle->to_state].base;
 	uint_fast32_t codepoint;
 	entry_t *entry;
+	uint_fast8_t conv_flags;
 
 	if (flags & CHARCONV_FILE_START) {
 		switch (handle->common.utf_type) {
@@ -595,6 +600,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		}
 	}
 
+	flags |= handle->common.flags & 0xff;
+
 	while (_inbytesleft > 0) {
 		entry = &handle->convertor->codepage_states[state].entries[handle->convertor->codepage_states[state].map[*_inbuf]];
 
@@ -605,8 +612,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		switch (entry->action) {
 			case ACTION_FINAL:
 			case ACTION_FINAL_PAIR:
-				flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
-				if (flags & TO_UNICODE_MULTI_START) {
+				conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
+				if (conv_flags & TO_UNICODE_MULTI_START) {
 					size_t outbytesleft_tmp, check_len;
 					uint_fast32_t i, j;
 					char *outbuf_tmp;
@@ -655,18 +662,18 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						continue;
 				}
 
-				if ((flags & TO_UNICODE_PRIVATE_USE) && !(handle->common.flags & CHARCONV_ALLOW_PRIVATE_USE)) {
-					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+				if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
+					if (!(flags & CHARCONV_SUBSTITUTE))
 						return CHARCONV_PRIVATE_USE;
 					PUT_UNICODE(UINT32_C(0xFFFD));
 					goto sequence_done;
 				}
-				if ((flags & TO_UNICODE_FALLBACK) && !(handle->common.flags & CHARCONV_ALLOW_FALLBACK))
+				if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
 					return CHARCONV_FALLBACK;
 
 				codepoint = handle->convertor->codepage_mappings[idx];
 				if (codepoint == UINT32_C(0xFFFF)) {
-					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+					if (!(flags & CHARCONV_SUBSTITUTE))
 						return CHARCONV_UNASSIGNED;
 					PUT_UNICODE(UINT32_C(0xFFFD));
 				} else {
@@ -683,12 +690,12 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				state = entry->next_state;
 				break;
 			case ACTION_ILLEGAL:
-				if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+				if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 					return CHARCONV_ILLEGAL;
 				PUT_UNICODE(UINT32_C(0xFFFD));
 				goto sequence_done;
 			case ACTION_UNASSIGNED:
-				if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+				if (!(flags & CHARCONV_SUBSTITUTE))
 					return CHARCONV_UNASSIGNED;
 				PUT_UNICODE(UINT32_C(0xFFFD));
 				/* FALLTHROUGH */
@@ -708,7 +715,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 
 	if (*inbytesleft != 0) {
 		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 				return CHARCONV_ILLEGAL_END;
 			PUT_UNICODE(UINT32_C(0xFFFD));
 			*inbuf += *inbytesleft;
@@ -754,6 +761,13 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 
 	return CHARCONV_INCOMPLETE;
 }
+
+static void to_unicode_reset(convertor_state_t *handle) {
+	handle->to_state = 0;
+	if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
+		handle->common.put_unicode = get_put_unicode(handle->common.utf_type);
+}
+
 
 #define GET_UNICODE() do { \
 	codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, t3_false); \
@@ -903,6 +917,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	entry_t *entry;
 	int_fast16_t i;
 	uint_fast8_t byte;
+	uint_fast8_t conv_flags;
 
 	if (flags & CHARCONV_FILE_START) {
 		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16) {
@@ -927,13 +942,15 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 		}
 	}
 
+	flags |= handle->common.flags & 0xff;
+
 	while (_inbytesleft > 0) {
 		GET_UNICODE();
 		if (codepoint == CHARCONV_UTF_INCOMPLETE)
 			break;
 
 		if (codepoint == CHARCONV_UTF_ILLEGAL) {
-			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 				return CHARCONV_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf = (char *) _inbuf;
@@ -950,8 +967,8 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 			switch (entry->action) {
 				case ACTION_FINAL:
 				case ACTION_FINAL_PAIR:
-					flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
-					if (flags & FROM_UNICODE_MULTI_START) {
+					conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
+					if (conv_flags & FROM_UNICODE_MULTI_START) {
 						switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags)) {
 							case CHARCONV_SUCCESS:
 								_inbuf = (uint8_t *) *inbuf;
@@ -971,18 +988,18 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 						}
 					}
 
-					if ((flags & FROM_UNICODE_FALLBACK) && !(handle->common.flags & CHARCONV_ALLOW_FALLBACK))
+					if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
 						return CHARCONV_FALLBACK;
 
-					if (flags & FROM_UNICODE_NOT_AVAIL) {
-						if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+					if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
+						if (!(flags & CHARCONV_SUBSTITUTE))
 							return CHARCONV_UNASSIGNED;
-						if (flags & FROM_UNICODE_SUBCHAR1)
+						if (conv_flags & FROM_UNICODE_SUBCHAR1)
 							PUT_BYTES(1, &handle->convertor->subchar1);
 						else
 							PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					} else {
-						PUT_BYTES((flags & FROM_UNICODE_LENGTH_MASK) + 1,
+						PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1,
 							&handle->convertor->unicode_mappings[idx * handle->convertor->single_size]);
 					}
 					goto sequence_done;
@@ -990,12 +1007,12 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 					state = entry->next_state;
 					break;
 				case ACTION_ILLEGAL:
-					if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 						return CHARCONV_ILLEGAL;
 					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					goto sequence_done;
 				case ACTION_UNASSIGNED:
-					if (!(handle->common.flags & CHARCONV_SUBSTITUTE))
+					if (!(flags & CHARCONV_SUBSTITUTE))
 						return CHARCONV_UNASSIGNED;
 					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					/* FALLTHROUGH */
@@ -1016,7 +1033,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 
 	if (*inbytesleft != 0) {
 		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(handle->common.flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 				return CHARCONV_ILLEGAL_END;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf += *inbytesleft;
@@ -1028,22 +1045,20 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	return CHARCONV_SUCCESS;
 }
 
-static int from_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->common.get_unicode(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
-		return CHARCONV_INCOMPLETE;
-	return CHARCONV_SUCCESS;
+static void from_unicode_reset(convertor_state_t *handle) {
+	handle->from_state = 0;
+	if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
+		handle->common.get_unicode = get_get_unicode(handle->common.utf_type);
 }
 
-static void reset_cct(convertor_state_t *handle, t3_bool to) {
-	if (to) {
-		handle->to_state = 0;
-		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
-			handle->common.put_unicode = get_put_unicode(handle->common.utf_type);
-	} else {
-		handle->from_state = 0;
-		if (handle->common.utf_type == UTF32 || handle->common.utf_type == UTF16)
-			handle->common.get_unicode = get_get_unicode(handle->common.utf_type);
-	}
+static void save_cct_state(convertor_state_t *handle, save_state_t *save) {
+	save->to_state = handle->to_state;
+	save->from_state = handle->from_state;
+}
+
+static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
+	handle->to_state = save->to_state;
+	handle->from_state = save->from_state;
 }
 
 void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) {
@@ -1088,6 +1103,7 @@ void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) 
 		pthread_mutex_unlock(&cct_list_mutex);
 		return NULL;
 	}
+	ptr->refcount++;
 	pthread_mutex_unlock(&cct_list_mutex);
 
 	retval->convertor = ptr;
@@ -1095,15 +1111,17 @@ void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) 
 	retval->to_state = 0;
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->common.skip_from = (skip_func_t) from_unicode_skip;
 	retval->common.get_unicode = get_get_unicode(utf_type);
+	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.put_unicode = get_put_unicode(utf_type);
-	retval->common.reset = (reset_func_t) reset_cct;
+	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 	retval->common.utf_type = utf_type;
 	retval->common.close = (close_func_t) close_cct_convertor;
+	retval->common.save = (save_func_t) save_cct_state;
+	retval->common.load = (load_func_t) load_cct_state;
 	return retval;
 }
 
@@ -1111,6 +1129,12 @@ static void close_cct_convertor(convertor_state_t *handle) {
 	pthread_mutex_lock(&cct_list_mutex);
 	if (handle->convertor->refcount == 1)
 		unload_cct_convertor(handle->convertor);
+	else
+		handle->convertor->refcount--;
 	pthread_mutex_unlock(&cct_list_mutex);
 	free(handle);
+}
+
+size_t get_cct_saved_state_size(void) {
+	return sizeof(save_state_t);
 }

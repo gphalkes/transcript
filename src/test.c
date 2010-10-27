@@ -19,20 +19,22 @@ int main(int argc, char *argv[]) {
 	void *conv;
 	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
 	size_t result, i;
-	size_t fill, outleft;
+	size_t fill = 0, outleft;
 
 	if (argc != 2)
 		fatal("Usage: test <name>\n");
 
 	if ((conv = charconv_open_convertor(argv[1], UTF16BE, 0, &error)) == NULL)
 		fatal("Error opening convertor: %d\n", error);
+	//~ if (feof(stdin) || getchar() == EOF)
+		//~ fatal("WFT\n");
 
 	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
 		outleft = 1024;
-		if ((error = charconv_to_unicode(&conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
+		if ((error = charconv_to_unicode(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, 0)) != CHARCONV_SUCCESS)
 			fatal("conversion result: %d\n", error);
 		printf("fill: %zd, outleft: %zd\n", fill, outleft);
 		for (i = 0; i < 1024 - outleft; i++)
