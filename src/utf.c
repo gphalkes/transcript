@@ -40,13 +40,13 @@ static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft
 
 	CHECK_CODEPOINT_RANGE();
 
-	if (codepoint < 0x7f) {
+	if (codepoint < 0x80) {
 		count = 1;
 		base_byte = 0;
-	} else if (codepoint < 0x7ff) {
+	} else if (codepoint < 0x800) {
 		count = 2;
 		base_byte = 0xc0;
-	} else if (codepoint < 0xffff) {
+	} else if (codepoint < 0x10000) {
 		count = 3;
 		base_byte = 0xe0;
 	} else {
