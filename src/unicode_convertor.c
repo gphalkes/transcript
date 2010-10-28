@@ -83,7 +83,7 @@ static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, siz
 
 static t3_bool is_direct(uint_fast32_t c) {
 	static const uint32_t is_direct_table[128 / 32] = {
-		UINT32_C(0x2600), UINT32_C(0x87fff381), UINT32_C(0x7fffffe), UINT32_C(0x7fffffe) };
+		UINT32_C(0x2600), UINT32_C(0x87fff381), UINT32_C(0x07fffffe), UINT32_C(0x07fffffe) };
 	return c < 128 && ((is_direct_table[c >> 5] & (1 << (c & 31))) != 0);
 }
 
@@ -95,7 +95,7 @@ static t3_bool is_base64(uint_fast8_t c) {
 
 static t3_bool is_optionally_direct(uint_fast8_t c) {
 	static const uint32_t is_od_table[256 / 32] = {
-		UINT32_C(0x2600), UINT32_C(0xffff7ff), UINT32_C(0xeffffff), UINT32_C(0x3ffffff), 0, 0, 0, 0 };
+		UINT32_C(0x2600), UINT32_C(0xfffff7ff), UINT32_C(0xefffffff), UINT32_C(0x3fffffff), 0, 0, 0, 0 };
 	return (is_od_table[c >> 5] & (1 << (c & 31))) != 0;
 }
 
