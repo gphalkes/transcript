@@ -121,5 +121,4 @@ extern convertor_t *cct_head;
 
 convertor_t *load_cct_convertor(const char *file_name, int *error);
 void unload_cct_convertor(convertor_t *convertor);
-void *open_cct_convertor_internal(const char *name, int flags, int *error, t3_bool internal_use);
 #endif

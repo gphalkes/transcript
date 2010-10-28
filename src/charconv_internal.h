@@ -15,6 +15,8 @@
 #define CHARCONV_INTERNAL_H
 
 #define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
+
+charconv_t *fill_utf(charconv_t *handle, int utf_type);
 int element_strcmp(const void *a, const void *b);
 
 #endif

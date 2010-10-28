@@ -16,6 +16,7 @@
 
 #include "charconv.h"
 #include "charconv_errors.h"
+#include "charconv_internal.h"
 #include "cct_convertor.h"
 #include "utf.h"
 
@@ -494,7 +495,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	handle->from_state = save->from_state;
 }
 
-void *open_cct_convertor_internal(const char *name, int flags, int *error, t3_bool internal_use) {
+void *open_cct_convertor_internal(const char *name, int utf_type, int flags, int *error, t3_bool internal_use) {
 	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
 	convertor_t *ptr;
@@ -555,11 +556,12 @@ void *open_cct_convertor_internal(const char *name, int flags, int *error, t3_bo
 	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_cct_state;
 	retval->common.load = (load_func_t) load_cct_state;
+	fill_utf((charconv_t *) retval, utf_type);
 	return retval;
 }
 
-void *open_cct_convertor(const char *name, int flags, int *error) {
-	return open_cct_convertor_internal(name, flags, error, t3_false);
+void *open_cct_convertor(const char *name, int utf_type, int flags, int *error) {
+	return open_cct_convertor_internal(name, utf_type, flags, error, t3_false);
 }
 
 

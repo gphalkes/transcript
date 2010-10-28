@@ -19,6 +19,7 @@
 #include "charconv.h"
 #include "charconv_errors.h"
 #include "charconv_internal.h"
+#include "convertors.h"
 #include "utf.h"
 
 
@@ -49,6 +50,7 @@ struct convertor_state_t {
 
 	state_t state;
 
+	charconv_t *gb18030_cct;
 	int utf_type;
 };
 
@@ -589,7 +591,7 @@ static void load_state(convertor_state_t *handle, void *state) {
 	memcpy(&handle->state, state, sizeof(state_t));
 }
 
-void *open_unicode_convertor(const char *name, int flags, int *error) {
+void *open_unicode_convertor(const char *name, int utf_type, int flags, int *error) {
 	static const name_to_utfcode map[] = {
 		{ "UTF-8", UTF8_LOOSE },
 		{ "UTF-8_BOM", UTF8_BOM },
@@ -651,6 +653,11 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	}
 	switch (ptr->utfcode) {
 		case GB18030:
+			if ((retval->gb18030_cct = open_cct_convertor_internal("gb18030", utf_type, flags, error, t3_true)) == NULL) {
+				free(retval);
+				return NULL;
+			}
+			break;
 		case SCSU:
 			break;
 		case UTF7:
@@ -667,6 +674,7 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	}
 
 	retval->utf_type = ptr->utfcode;
+	fill_utf((charconv_t *) retval, utf_type);
 	return retval;
 }
 

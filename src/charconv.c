@@ -26,7 +26,7 @@
 typedef struct {
 	const char *squashed_name;
 	const char *convertor_name;
-	void *(*open)(const char *name, int flags, int *error);
+	void *(*open)(const char *name, int utf_type, int flags, int *error);
 } name_mapping;
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
@@ -52,8 +52,6 @@ static name_mapping convertors[] = {
 	{ "cesu8", "CESU-8", open_unicode_convertor },
 	{ "utf7", "UTF-7", open_unicode_convertor }
 };
-
-static charconv_t *fill_utf(charconv_t *handle, int utf_type);
 
 /*================ API functions ===============*/
 
@@ -86,11 +84,11 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 
 	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), element_strcmp)) != NULL) {
 		if (convertor->open != NULL)
-			return fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
+			return convertor->open(convertor->convertor_name, utf_type, flags, error);
 		name = convertor->convertor_name;
 	}
 
-	return fill_utf(open_cct_convertor(name, flags, error), utf_type);
+	return open_cct_convertor(name, utf_type, flags, error);
 }
 
 void charconv_close_convertor(charconv_t *handle) {
@@ -144,7 +142,7 @@ void charconv_load_state(charconv_t *handle, void *state) {
 
 /*================ Internal functions ===============*/
 
-static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
+charconv_t *fill_utf(charconv_t *handle, int utf_type) {
 	if (handle == NULL)
 		return NULL;
 	handle->get_unicode = get_get_unicode(utf_type);
