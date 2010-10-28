@@ -38,6 +38,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
+	int result;
 
 	while (*inbytesleft > 0) {
 		codepoint = get_unicode((char **) &_inbuf, &_inbytesleft, t3_false);
@@ -48,8 +49,8 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 				if (flags & CHARCONV_END_OF_TEXT) {
 					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 						return CHARCONV_ILLEGAL_END;
-					if (handle->common.put_unicode(UINT32_C(0xfffd), outbuf, outbytesleft) == CHARCONV_NO_SPACE)
-						return CHARCONV_NO_SPACE;
+					if ((result = put_unicode(UINT32_C(0xfffd), outbuf, outbytesleft)) != 0)
+						return result;
 					*inbuf -= *inbytesleft;
 					*inbytesleft = 0;
 					return CHARCONV_SUCCESS;
@@ -58,8 +59,8 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 			default:
 				break;
 		}
-		if (put_unicode(codepoint, outbuf, outbytesleft) == CHARCONV_NO_SPACE)
-			return CHARCONV_NO_SPACE;
+		if ((result = put_unicode(codepoint, outbuf, outbytesleft)) != 0)
+			return result;
 		*inbuf = (char *) _inbuf;
 		*inbytesleft = _inbytesleft;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
