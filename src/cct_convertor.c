@@ -67,7 +67,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			case ACTION_FINAL:
 			case ACTION_FINAL_PAIR:
 				conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
-				if (conv_flags & TO_UNICODE_MULTI_START) {
+				if ((conv_flags & TO_UNICODE_MULTI_START) && !(flags & CHARCONV_NO_MN_CONVERSION)) {
 					size_t outbytesleft_tmp, check_len;
 					uint_fast32_t i, j;
 					char *outbuf_tmp;
@@ -371,12 +371,6 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	uint_fast8_t byte;
 	uint_fast8_t conv_flags;
 
-	if (inbuf == NULL || *inbuf == NULL) {
-		if (handle->from_state != 0)
-			PUT_BYTES(0, NULL);
-		return CHARCONV_SUCCESS;
-	}
-
 	_inbuf = (uint8_t *) *inbuf;
 	_inbytesleft = *inbytesleft;
 
@@ -404,7 +398,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 				case ACTION_FINAL:
 				case ACTION_FINAL_PAIR:
 					conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
-					if (conv_flags & FROM_UNICODE_MULTI_START) {
+					if ((conv_flags & FROM_UNICODE_MULTI_START) && !(flags & CHARCONV_NO_MN_CONVERSION)) {
 						switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags)) {
 							case CHARCONV_SUCCESS:
 								_inbuf = (uint8_t *) *inbuf;
@@ -477,6 +471,9 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 		} else {
 			return CHARCONV_INCOMPLETE;
 		}
+	} else if (flags & CHARCONV_END_OF_TEXT) {
+		if (handle->from_state != 0)
+			PUT_BYTES(0, NULL);
 	}
 	return CHARCONV_SUCCESS;
 }

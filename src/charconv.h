@@ -55,7 +55,8 @@ enum {
 	/* These are only valid as argument to charconv_from_unicode and charconv_to_unicode. */
 	CHARCONV_FILE_START = (1<<8), /* The begining of the input buffer is the begining of a file and a BOM should be expected/generated */
 	CHARCONV_END_OF_TEXT = (1<<9), /* The end of the input buffer is the end of the text */
-	CHARCONV_SINGLE_CONVERSION = (1<<10) /* Only convert the next character, then return (useful for handling fallback/unassigned characters etc.) */
+	CHARCONV_SINGLE_CONVERSION = (1<<10), /* Only convert the next character, then return (useful for handling fallback/unassigned characters etc.) */
+	CHARCONV_NO_MN_CONVERSION = (1<<11) /* Do not use M:N conversions. */
 };
 
 enum {
@@ -109,7 +110,7 @@ typedef cc_iconv_t iconv_t;
 #endif
 
 
-#warning FIXME: these should not be replicated here!!!
+//#warning FIXME: these should not be replicated here!!!
 #define T3_ERR_INVALID_FORMAT (-32)
 #define T3_ERR_TRUNCATED_DB (-29)
 #define T3_ERR_READ_ERROR (-28)

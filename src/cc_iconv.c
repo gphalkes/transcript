@@ -83,12 +83,29 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	t3_bool fallback;
 
 	if (inbuf == NULL || *inbuf == NULL) {
+		/* There is no need to convert the input buffer, because even if it had an incomplete
+		   seqeunce at the end, that would have been reported on the previous call. A reset
+		   is necessary however. */
 		charconv_to_unicode_reset(cd->from);
-		if (outbuf == NULL || *outbuf == NULL)
+
+		if (outbuf == NULL || *outbuf == NULL) {
+			/* If the user only asks for a reset, make it so. */
 			charconv_from_unicode_reset(cd->to);
-		else
-			charconv_from_unicode(cd->to, NULL, NULL, outbuf, outbytesleft, 0);
-		return 0;
+			return 0;
+		}
+
+		codepoint_ptr = (char *) &codepoint;
+		codepoint_bytesleft = 0;
+		switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
+				CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_END_OF_TEXT))
+		{
+			case CHARCONV_SUCCESS:
+				break;
+			case CHARCONV_NO_SPACE:
+				ERROR(E2BIG);
+			default:
+				ERROR(EBADF);
+		}
 	}
 
 	_inbuf = *inbuf;
@@ -100,14 +117,14 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 		codepoint_ptr = (char *) &codepoint;
 		codepoint_bytesleft = 4;
 		switch (charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr,
-				&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_END_OF_TEXT))
+				&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
 		{
 			case CHARCONV_ILLEGAL_END:
 			case CHARCONV_INCOMPLETE:
 				ERROR(EINVAL);
 			case CHARCONV_FALLBACK:
 				charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_END_OF_TEXT | CHARCONV_ALLOW_FALLBACK);
+						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
 				fallback = t3_true;
 				break;
 			case CHARCONV_PRIVATE_USE:
@@ -131,32 +148,27 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 		codepoint_ptr = (char *) &codepoint;
 		codepoint_bytesleft = 4;
 		switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-				outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_END_OF_TEXT))
+				outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
 		{
 			case CHARCONV_SUCCESS:
 				break;
 			case CHARCONV_FALLBACK:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_END_OF_TEXT | CHARCONV_ALLOW_FALLBACK);
+						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
 				fallback = t3_true;
 				break;
 			case CHARCONV_UNASSIGNED:
 			case CHARCONV_PRIVATE_USE:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_END_OF_TEXT | CHARCONV_SUBSTITUTE | CHARCONV_SUBSTITUTE_ALL);
+						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBSTITUTE | CHARCONV_SUBSTITUTE_ALL);
 				fallback = t3_true;
 				break;
-			/* None of these should happen, as we feed it only valid codepoints. So
-			   we handle all of them as internal errors. */
-			case CHARCONV_ILLEGAL:
-			case CHARCONV_ILLEGAL_END:
-			case CHARCONV_INTERNAL_ERROR:
-			case CHARCONV_INCOMPLETE:
-			default:
-				ERROR(EBADF);
-
 			case CHARCONV_NO_SPACE:
 				ERROR(E2BIG);
+			/* None of the other errors should happen, as we feed it only valid codepoints. So
+			   we handle all of them as internal errors. */
+			default:
+				ERROR(EBADF);
 		}
 
 		if (fallback)
