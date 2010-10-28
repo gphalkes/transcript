@@ -160,7 +160,8 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 		{ "UTF-16LE", UTF16LE },
 		{ "UTF-32", UTF32 },
 		{ "UTF-32BE", UTF32BE },
-		{ "UTF-32LE", UTF32LE }
+		{ "UTF-32LE", UTF32LE },
+		{ "CESU-8", CESU8 }
 	};
 
 	convertor_state_t *retval;

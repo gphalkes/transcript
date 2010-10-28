@@ -46,7 +46,9 @@ static name_mapping convertors[] = {
 	{ "utf32le", "UTF-32LE", open_unicode_convertor },
 	{ "ucs4", "UTF-32", open_unicode_convertor },
 	{ "ucs4be", "UTF-32BE", open_unicode_convertor },
-	{ "ucs4le", "UTF-32LE", open_unicode_convertor }};
+	{ "ucs4le", "UTF-32LE", open_unicode_convertor },
+	{ "cesu8", "CESU-8", open_unicode_convertor }
+};
 
 
 static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
