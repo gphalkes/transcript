@@ -14,26 +14,55 @@
 
 /* This convertor is a wrapper around the functions in utf.c. */
 #include <string.h>
+#include <search.h>
+
 #include "charconv.h"
 #include "charconv_errors.h"
+#include "charconv_internal.h"
 #include "utf.h"
+
+typedef struct convertor_state_t convertor_state_t;
+
+typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
+typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip);
 
 typedef struct {
 	const char *name;
 	int utfcode;
 } name_to_utfcode;
 
-typedef struct {
+struct convertor_state_t {
 	charconv_common_t common;
 	put_unicode_func_t from_unicode_put;
 	get_unicode_func_t to_unicode_get;
+
+	put_func_t from_put;
+	get_func_t to_get;
+
 	int utf_type;
-} convertor_state_t;
+};
 
 static void close_convertor(convertor_state_t *handle);
 
+
+static int put_common(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+	return handle->common.put_unicode(codepoint, outbuf, outbytesleft);
+}
+
+static uint_fast32_t get_common(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip) {
+	return handle->common.get_unicode(inbuf, inbytesleft, skip);
+}
+
+static int put_from_unicode(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+	return handle->from_unicode_put(codepoint, outbuf, outbytesleft);
+}
+
+static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip) {
+	return handle->to_unicode_get(inbuf, inbytesleft, skip);
+}
+
 static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags, get_unicode_func_t get_unicode, put_unicode_func_t put_unicode)
+		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode)
 {
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
@@ -41,7 +70,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 	int result;
 
 	while (*inbytesleft > 0) {
-		codepoint = get_unicode((char **) &_inbuf, &_inbytesleft, t3_false);
+		codepoint = get_unicode(handle, (char **) &_inbuf, &_inbytesleft, t3_false);
 		switch (codepoint) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
@@ -49,7 +78,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 				if (flags & CHARCONV_END_OF_TEXT) {
 					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
 						return CHARCONV_ILLEGAL_END;
-					if ((result = put_unicode(UINT32_C(0xfffd), outbuf, outbytesleft)) != 0)
+					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbytesleft)) != 0)
 						return result;
 					*inbuf -= *inbytesleft;
 					*inbytesleft = 0;
@@ -59,7 +88,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 			default:
 				break;
 		}
-		if ((result = put_unicode(codepoint, outbuf, outbytesleft)) != 0)
+		if ((result = put_unicode(handle, codepoint, outbuf, outbytesleft)) != 0)
 			return result;
 		*inbuf = (char *) _inbuf;
 		*inbytesleft = _inbytesleft;
@@ -103,7 +132,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	}
 
 	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
-		handle->to_unicode_get, handle->common.put_unicode);
+		handle->to_get, put_common);
 }
 
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
@@ -139,7 +168,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	}
 
 	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
-		handle->common.get_unicode, handle->from_unicode_put);
+		get_common, handle->from_put);
 }
 
 static void from_unicode_reset(convertor_state_t *handle) {
@@ -161,18 +190,17 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 		{ "UTF-32", UTF32 },
 		{ "UTF-32BE", UTF32BE },
 		{ "UTF-32LE", UTF32LE },
-		{ "CESU-8", CESU8 }
+		{ "CESU-8", CESU8 },
+		{ "GB-18030", GB18030 },
+		{ "SCSU", SCSU },
+		{ "UTF-7", UTF7 }
 	};
 
 	convertor_state_t *retval;
-	size_t i;
+	name_to_utfcode *ptr;
+	size_t array_size = ARRAY_SIZE(map);
 
-	for (i = 0; i < sizeof(map) / sizeof(map[0]); i++) {
-		if (strcmp(name, map[i].name) == 0)
-			break;
-	}
-
-	if (i == sizeof(map) / sizeof(map[0])) {
+	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utfcode), element_strcmp)) == NULL) {
 		if (error != NULL)
 			*error = T3_ERR_TERMINFODB_NOT_FOUND;
 		return NULL;
@@ -193,17 +221,37 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_load_nop;
 	retval->common.load = (load_func_t) save_load_nop;
-	if (map[i].utfcode == UTF16) {
-		retval->to_unicode_get = get_get_unicode(UTF16BE);
-		retval->from_unicode_put = get_put_unicode(UTF16BE);
-	} else if (map[i].utfcode == UTF32) {
-		retval->to_unicode_get = get_get_unicode(UTF32BE);
-		retval->from_unicode_put = get_put_unicode(UTF32BE);
-	} else {
-		retval->to_unicode_get = get_get_unicode(map[i].utfcode);
-		retval->from_unicode_put = get_put_unicode(map[i].utfcode);
+
+	switch (ptr->utfcode) {
+		case UTF16:
+			retval->to_unicode_get = get_get_unicode(UTF16BE);
+			retval->from_unicode_put = get_put_unicode(UTF16BE);
+			break;
+		case UTF32:
+			retval->to_unicode_get = get_get_unicode(UTF32BE);
+			retval->from_unicode_put = get_put_unicode(UTF32BE);
+			break;
+		case GB18030:
+		case SCSU:
+		case UTF7:
+			break;
+		default:
+			retval->to_unicode_get = get_get_unicode(ptr->utfcode);
+			retval->from_unicode_put = get_put_unicode(ptr->utfcode);
+			break;
 	}
-	retval->utf_type = map[i].utfcode;
+	switch (ptr->utfcode) {
+		case GB18030:
+		case SCSU:
+		case UTF7:
+			break;
+		default:
+			retval->to_get = get_to_unicode;
+			retval->from_put = put_from_unicode;
+			break;
+	}
+
+	retval->utf_type = ptr->utfcode;
 	return retval;
 }
 

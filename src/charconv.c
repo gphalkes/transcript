@@ -14,9 +14,11 @@
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
+#include <search.h>
 
 #include "charconv.h"
 #include "charconv_errors.h"
+#include "charconv_internal.h"
 #include "utf.h"
 
 #include "convertors.h"
@@ -50,20 +52,17 @@ static name_mapping convertors[] = {
 	{ "cesu8", "CESU-8", open_unicode_convertor }
 };
 
+static charconv_t *fill_utf(charconv_t *handle, int utf_type);
 
-static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
-	if (handle == NULL)
-		return NULL;
-	handle->get_unicode = get_get_unicode(utf_type);
-	handle->put_unicode = get_put_unicode(utf_type);
-	return handle;
-}
+/*================ API functions ===============*/
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
-	char name_buffer[128];
-	const char *ptr;
-	size_t i, store_idx = 0;
 	t3_bool last_was_digit = t3_false;
+	name_mapping *convertor;
+	char name_buffer[128];
+	size_t store_idx = 0;
+	size_t array_size = ARRAY_SIZE(convertors);
+	const char *ptr;
 
 	if (utf_type < 0 || utf_type > UTF32LE) {
 		if (error != NULL)
@@ -84,13 +83,10 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 	}
 	name_buffer[store_idx] = 0;
 
-	//FIXME use sorted list instead!!
-	for (i = 0; i < sizeof(convertors) / sizeof(convertors[0]); i++) {
-		if (strcmp(name_buffer, convertors[i].squashed_name) == 0) {
-			if (convertors[i].open != NULL)
-				return fill_utf(convertors[i].open(convertors[i].convertor_name, flags, error), utf_type);
-			name = convertors[i].convertor_name;
-		}
+	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), element_strcmp)) != NULL) {
+		if (convertor->open != NULL)
+			return fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
+		name = convertor->convertor_name;
 	}
 
 	return fill_utf(open_cct_convertor(name, flags, error), utf_type);
@@ -140,3 +136,16 @@ void charconv_load_state(charconv_t *handle, void *state) {
 	handle->save(handle, state);
 }
 
+/*================ Internal functions ===============*/
+
+static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
+	if (handle == NULL)
+		return NULL;
+	handle->get_unicode = get_get_unicode(utf_type);
+	handle->put_unicode = get_put_unicode(utf_type);
+	return handle;
+}
+
+int element_strcmp(const void *a, const void *b) {
+	return strcmp((const char *) a, *(char * const *) b);
+}

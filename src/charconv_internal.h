@@ -11,26 +11,10 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef UTF_H
-#define UTF_H
+#ifndef CHARCONV_INTERNAL_H
+#define CHARCONV_INTERNAL_H
 
-enum {
-	UTF8,
-	UTF16,
-	UTF32,
-	UTF16BE,
-	UTF16LE,
-	UTF32BE,
-	UTF32LE,
-
-	UTF8_LOOSE,
-	UTF8_BOM,
-	CESU8,
-	GB18030,
-	SCSU,
-	UTF7
-};
-put_unicode_func_t get_put_unicode(int type);
-get_unicode_func_t get_get_unicode(int type);
+#define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
+int element_strcmp(const void *a, const void *b);
 
 #endif

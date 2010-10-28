@@ -115,5 +115,4 @@ typedef cc_iconv_t iconv_t;
 #define T3_ERR_TRUNCATED_DB (-29)
 #define T3_ERR_READ_ERROR (-28)
 #define T3_ERR_WRONG_VERSION (-27)
-
 #endif
