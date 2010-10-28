@@ -34,7 +34,7 @@ static void close_convertor(convertor_state_t *handle);
 
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 convertor_t *cct_head = NULL;
-
+static put_unicode_func_t put_utf16;
 
 #define PUT_UNICODE(codepoint) do { int result; \
 	if ((result = handle->common.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
@@ -513,6 +513,9 @@ void *open_cct_convertor(const char *name, int flags, int *error) {
 	strcat(file_name, ".cct");
 
 	pthread_mutex_lock(&cct_list_mutex);
+	if (put_utf16 == NULL)
+		put_utf16 = get_put_unicode(UTF16);
+
 	for (ptr = cct_head; ptr != NULL; ptr = ptr->next) {
 		if (strcmp(ptr->name, file_name) == 0)
 			break;

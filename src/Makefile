@@ -30,6 +30,6 @@ include ../../makesys/rules.mk
 T3NAME := charconv
 include ../../t3shared/rules.mk
 
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\"
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\" -DUSE_ENDIAN
 
 test: | libcharconv.la
