@@ -178,6 +178,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			return CHARCONV_INCOMPLETE;
 		}
 	}
+	if (flags & CHARCONV_END_OF_TEXT)
+		handle->to_state = 0;
 	return CHARCONV_SUCCESS;
 }
 
