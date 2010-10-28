@@ -130,7 +130,8 @@ class Ucm {
 			TO_UNICODE_FLAGS_TABLE_INCLUDED = (1<<1),
 			MULTI_MAPPINGS_AVAILABLE = (1<<2),
 			SUBCHAR1_VALID = (1<<3),
-			MULTIBYTE_START_STATE_1 = (1<<4)
+			MULTIBYTE_START_STATE_1 = (1<<4),
+			INTERNAL_TABLE = (1<<5)
 		};
 
 	private:
@@ -207,7 +208,7 @@ extern "C" void fatal(const char *fmt, ...);
 #define PANIC() fatal("Program logic error at line: %s:%d\n", __FILE__, __LINE__)
 #define OOM() fatal("Out of memory\n")
 
-extern bool option_verbose;
+extern bool option_verbose, option_internal_table;
 
 Ucm::tag_t string_to_tag(const char *str);
 void parse_byte_sequence(char *charseq, vector<uint8_t> &store);

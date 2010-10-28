@@ -21,7 +21,7 @@ Field                        | Bytes
 Magic                        | 4 (54h 33h 43h 4Dh, T3CM)
 Format version               | 4
 -----------------------------------------------------------------
-Flags                        | 1 (See defined flag values below)
+Flags                        | 2 (See defined flag values below)
 Subchar                      | string
 Subchar initial state        | 1
 Subchar1                     | 1
@@ -46,7 +46,8 @@ Bit   | Meaning
 2     | A table with m:n mappings is available
 3     | Subchar1 is valid
 4     | Code page is of MBCS type (state 1 is also intial state)
-5-7   | Reserved (must be 0)
+5     | Conversion information is for internal converter use only
+6-15  | Reserved (must be 0)
 
 After the header follow the definitions of the shift sequences, followed by the
 definitions of the states. The lookup tables are stored at the end of the file.

@@ -66,7 +66,9 @@ void State::new_entry(Entry entry) {
 }
 
 
-Ucm::Ucm(void) : flags(0), from_unicode_flags(0), to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0) {
+Ucm::Ucm(void) : flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0),
+		to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0)
+{
 	for (int i = 0; i < LAST_TAG; i++)
 		tag_values[i] = NULL;
 }
@@ -767,7 +769,7 @@ void Ucm::write_table(FILE *output) {
 
 	WRITE(4, magic); // magic (4)
 	WRITE_DWORD(0); // version (4)
-	WRITE_BYTE(flags); // flags (1)
+	WRITE_WORD(flags); // flags (1)
 	vector<uint8_t> subchar;
 	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
 	WRITE_BYTE(subchar.size()); // subchar length (1)

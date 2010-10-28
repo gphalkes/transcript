@@ -494,7 +494,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	handle->from_state = save->from_state;
 }
 
-void *open_cct_convertor(const char *name, int flags, int *error) {
+void *open_cct_convertor_internal(const char *name, int flags, int *error, t3_bool internal_use) {
 	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
 	convertor_t *ptr;
@@ -531,11 +531,11 @@ void *open_cct_convertor(const char *name, int flags, int *error) {
 	}
 	free(file_name);
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+	if ((!internal_use && (ptr->flags & INTERNAL_TABLE)) || (retval = malloc(sizeof(convertor_state_t))) == NULL) {
 		if (ptr->refcount == 0)
 			unload_cct_convertor(ptr);
 		if (error != NULL)
-			*error = T3_ERR_OUT_OF_MEMORY;
+			*error = !internal_use && (ptr->flags & INTERNAL_TABLE) ? T3_ERR_INVALID_FORMAT : T3_ERR_OUT_OF_MEMORY;
 		pthread_mutex_unlock(&cct_list_mutex);
 		return NULL;
 	}
@@ -557,6 +557,11 @@ void *open_cct_convertor(const char *name, int flags, int *error) {
 	retval->common.load = (load_func_t) load_cct_state;
 	return retval;
 }
+
+void *open_cct_convertor(const char *name, int flags, int *error) {
+	return open_cct_convertor_internal(name, flags, error, t3_false);
+}
+
 
 static void close_convertor(convertor_state_t *handle) {
 	pthread_mutex_lock(&cct_list_mutex);

@@ -23,7 +23,8 @@ enum {
 	TO_UNICODE_FLAGS_TABLE_INCLUDED = (1<<1),
 	MULTI_MAPPINGS_AVAILABLE = (1<<2),
 	SUBCHAR1_VALID = (1<<3),
-	MULTIBYTE_START_STATE_1 = (1<<4)
+	MULTIBYTE_START_STATE_1 = (1<<4),
+	INTERNAL_TABLE = (1<<5)
 };
 
 enum {
@@ -120,4 +121,5 @@ extern convertor_t *cct_head;
 
 convertor_t *load_cct_convertor(const char *file_name, int *error);
 void unload_cct_convertor(convertor_t *convertor);
+void *open_cct_convertor_internal(const char *name, int flags, int *error, t3_bool internal_use);
 #endif

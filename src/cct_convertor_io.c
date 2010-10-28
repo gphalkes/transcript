@@ -74,7 +74,7 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 	convertor->codepage_flags.get_flags = get_default_flags;
 	convertor->unicode_flags.get_flags = get_default_flags;
 
-	READ_BYTE(convertor->flags);
+	READ_WORD(convertor->flags);
 	READ_BYTE(convertor->subchar_len);
 	READ(MAX_CHAR_BYTES, convertor->subchar);
 	READ_BYTE(convertor->subchar1);

@@ -22,7 +22,7 @@
 #include "ucm2cct.h"
 #include "ucmparser.h"
 
-bool option_verbose = false;
+bool option_verbose = false, option_internal_table = false;
 const char *option_output_name = NULL;
 char *output_name;
 extern FILE *yyin;
@@ -233,10 +233,13 @@ int main(int argc, char *argv[]) {
 	Ucm *ucm;
 	int c;
 
-	while ((c = getopt(argc, argv, "ho:v")) != -1) {
+	while ((c = getopt(argc, argv, "hio:v")) != -1) {
 		switch (c) {
 			case 'h':
 				print_usage();
+			case 'i':
+				option_internal_table = true;
+				break;
 			case 'o':
 				option_output_name = optarg;
 				break;
