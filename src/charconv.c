@@ -49,7 +49,8 @@ static name_mapping convertors[] = {
 	{ "ucs4", "UTF-32", open_unicode_convertor },
 	{ "ucs4be", "UTF-32BE", open_unicode_convertor },
 	{ "ucs4le", "UTF-32LE", open_unicode_convertor },
-	{ "cesu8", "CESU-8", open_unicode_convertor }
+	{ "cesu8", "CESU-8", open_unicode_convertor },
+	{ "utf7", "UTF-7", open_unicode_convertor }
 };
 
 static charconv_t *fill_utf(charconv_t *handle, int utf_type);
@@ -124,8 +125,13 @@ void charconv_from_unicode_reset(charconv_t *handle) {
 }
 
 size_t charconv_get_saved_state_size(void) {
-	//FIXME: return max of all possible values (and cache)
-	return get_cct_saved_state_size();
+	static size_t cached = 0;
+	if (cached == 0) {
+		cached = get_unicode_saved_state_size();
+		if (get_cct_saved_state_size() > cached)
+			cached = get_cct_saved_state_size();
+	}
+	return cached;
 }
 
 void charconv_save_state(charconv_t *handle, void *state) {
