@@ -29,9 +29,9 @@ typedef struct {
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
 static name_mapping convertors[] = {
-	{ "ibm437", "ibm-437_p100-1995", open_cct_convertor },
-	{ "ibm437p100", "ibm-437_p100-1995", open_cct_convertor },
-	{ "ibm437p1001995", "ibm-437_p100-1995", open_cct_convertor },
+	{ "ibm437", "ibm-437_P100-1995", open_cct_convertor },
+	{ "ibm437p100", "ibm-437_P100-1995", open_cct_convertor },
+	{ "ibm437p1001995", "ibm-437_P100-1995", open_cct_convertor },
 	{ "iso88591", "ISO-8859-1", open_iso8859_1_convertor },
 	{ "utf8", "UTF-8", open_unicode_convertor },
 	{ "utf8bom", "UTF-8_BOM", open_unicode_convertor },
@@ -60,7 +60,7 @@ static charconv_t *fill_utf(charconv_t *handle, int utf_type) {
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
 	char name_buffer[128];
 	const char *ptr;
-	size_t i, store_idx;
+	size_t i, store_idx = 0;
 	t3_bool last_was_digit = t3_false;
 
 	if (utf_type < 0 || utf_type > UTF32LE) {
