@@ -169,15 +169,13 @@ end_error:
 }
 
 void unload_cct_convertor(convertor_t *convertor) {
-	if (convertor->next != NULL) {
-		if (cct_head == convertor) {
-			cct_head = cct_head->next;
-		} else {
-			convertor_t *ptr;
-			for (ptr = cct_head; ptr != NULL && ptr->next != convertor; ptr = ptr->next) {}
-			if (ptr != NULL)
-				ptr->next = ptr->next->next;
-		}
+	if (cct_head == convertor) {
+		cct_head = cct_head->next;
+	} else {
+		convertor_t *ptr;
+		for (ptr = cct_head; ptr != NULL && ptr->next != convertor; ptr = ptr->next) {}
+		if (ptr != NULL)
+			ptr->next = ptr->next->next;
 	}
 	free(convertor->shift_states);
 	free(convertor->codepage_states);
