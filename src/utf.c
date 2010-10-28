@@ -339,6 +339,8 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, t3_bool skip) {
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
 	}
+	*inbuf = (char *) _inbuf;
+	*inbytesleft = _inbytesleft;
 	return codepoint;
 }
 
