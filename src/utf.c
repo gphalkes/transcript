@@ -33,39 +33,62 @@ static inline uint16_t swaps(uint16_t value) {
 	return (value << 8) | (value >> 8);
 }
 
-static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
-	uint8_t *_outbuf = (uint8_t *) *outbuf;
-	size_t count;
-	uint8_t base_byte;
+#define CHECK_OUTBYTESLEFT(_x) if (*outbytesleft < (_x)) return CHARCONV_NO_SPACE; *outbytesleft -= (_x);
 
+static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
-		count = 1;
-		base_byte = 0;
+		CHECK_OUTBYTESLEFT(1);
+		*(*outbuf)++ = codepoint;
 	} else if (codepoint < 0x800) {
-		count = 2;
-		base_byte = 0xc0;
+		CHECK_OUTBYTESLEFT(2);
+		*(*outbuf)++ = (codepoint >> 6) | 0xc0;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	} else if (codepoint < 0x10000) {
-		count = 3;
-		base_byte = 0xe0;
+		CHECK_OUTBYTESLEFT(3);
+		*(*outbuf)++ = (codepoint >> 12) | 0xe0;
+		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	} else {
-		count = 4;
-		base_byte = 0xf0;
+		CHECK_OUTBYTESLEFT(4);
+		*(*outbuf)++ = (codepoint >> 18) | 0xf0;
+		*(*outbuf)++ = ((codepoint >> 12) & 0x3f) | 0x80;
+		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	}
+	return CHARCONV_SUCCESS;
+}
 
-	if (*outbytesleft < count)
-		return CHARCONV_NO_SPACE;
+static int put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+	CHECK_CODEPOINT_RANGE();
 
-	*outbuf += count;
-	*outbytesleft -= count;
+	if (codepoint < 0x80) {
+		CHECK_OUTBYTESLEFT(1);
+		*(*outbuf)++ = codepoint;
+	} else if (codepoint < 0x800) {
+		CHECK_OUTBYTESLEFT(2);
+		*(*outbuf)++ = (codepoint >> 6) | 0xc0;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
+	} else if (codepoint < 0x10000) {
+		CHECK_OUTBYTESLEFT(3);
+		*(*outbuf)++ = (codepoint >> 12) | 0xe0;
+		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
+	} else {
+		uint_fast32_t high_surrogate;
+		CHECK_OUTBYTESLEFT(6);
+		codepoint -= UINT32_C(0x10000);
+		high_surrogate = (codepoint >> 10) + UINT32_C(0xd800);
+		*(*outbuf)++ = (high_surrogate >> 12) | 0xe0;
+		*(*outbuf)++ = ((high_surrogate >> 6) & 0x3f) | 0x80;
+		*(*outbuf)++ = (high_surrogate & 0x3f) | 0x80;
 
-	for (; count-- > 1;) {
-		_outbuf[count] = 0x80 | (codepoint & 0x3f);
-		codepoint >>= 6;
+		codepoint = (codepoint & 0x3ff) + UINT32_C(0xdc00);
+		*(*outbuf)++ = (codepoint >> 12) | 0xe0;
+		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
+		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	}
-	*_outbuf = base_byte | codepoint;
-
 	return CHARCONV_SUCCESS;
 }
 
@@ -74,19 +97,15 @@ int put_utf16(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 
 	CHECK_CODEPOINT_RANGE();
 	if (codepoint < UINT32_C(0xffff)) {
-		if (*outbytesleft < 2)
-			return CHARCONV_NO_SPACE;
+		CHECK_OUTBYTESLEFT(2);
 		*_outbuf = codepoint;
 		*outbuf += 2;
-		*outbytesleft -= 2;
 	} else {
-		if (*outbytesleft < 4)
-			return CHARCONV_NO_SPACE;
+		CHECK_OUTBYTESLEFT(4);
 		codepoint -= UINT32_C(0x10000);
 		*_outbuf++ = UINT32_C(0xd800) + (codepoint >> 10);
 		*_outbuf = UINT32_C(0xdc00) + (codepoint & 0x3ff);
 		*outbuf += 4;
-		*outbytesleft -= 4;
 	}
 	return CHARCONV_SUCCESS;
 }
@@ -96,19 +115,15 @@ static int put_utf16swap(uint_fast32_t codepoint, char **outbuf, size_t *outbyte
 
 	CHECK_CODEPOINT_RANGE();
 	if (codepoint < UINT32_C(0xffff)) {
-		if (*outbytesleft < 2)
-			return CHARCONV_NO_SPACE;
+		CHECK_OUTBYTESLEFT(2);
 		*_outbuf = swaps(codepoint);
 		*outbuf += 2;
-		*outbytesleft -= 2;
 	} else {
-		if (*outbytesleft < 4)
-			return CHARCONV_NO_SPACE;
+		CHECK_OUTBYTESLEFT(4);
 		codepoint -= UINT32_C(0x10000);
 		*_outbuf++ = swaps(UINT32_C(0xd800) + (codepoint >> 10));
 		*_outbuf = swaps(UINT32_C(0xdc00) + (codepoint & 0x3ff));
 		*outbuf += 4;
-		*outbytesleft -= 4;
 	}
 	return CHARCONV_SUCCESS;
 }
@@ -117,8 +132,7 @@ static int put_utf32(uint_fast32_t codepoint, char **outbuf, size_t *outbyteslef
 	uint32_t *_outbuf = (uint32_t *) *outbuf;
 	CHECK_CODEPOINT_RANGE();
 
-	if (*outbytesleft < 4)
-		return CHARCONV_NO_SPACE;
+	CHECK_OUTBYTESLEFT(4);
 	*_outbuf = codepoint;
 	*outbuf += 4;
 	*outbytesleft += 4;
@@ -129,11 +143,9 @@ static int put_utf32swap(uint_fast32_t codepoint, char **outbuf, size_t *outbyte
 	uint32_t *_outbuf = (uint32_t *) *outbuf;
 	CHECK_CODEPOINT_RANGE();
 
-	if (*outbytesleft < 4)
-		return CHARCONV_NO_SPACE;
+	CHECK_OUTBYTESLEFT(4);
 	*_outbuf = swapl(codepoint);
 	*outbuf += 4;
-	*outbytesleft += 4;
 	return CHARCONV_SUCCESS;
 }
 
@@ -157,6 +169,8 @@ put_unicode_func_t get_put_unicode(int type) {
 		case UTF32LE:
 			return htons(1) == 1 ? put_utf32swap : put_utf32;
 
+		case CESU8:
+			return put_cesu8;
 		default:
 			return NULL;
 	}
@@ -448,6 +462,7 @@ get_unicode_func_t get_get_unicode(int type) {
 
 		case UTF8_LOOSE:
 		case UTF8_BOM:
+		case CESU8:
 			return get_utf8;
 
 		case UTF16BE:

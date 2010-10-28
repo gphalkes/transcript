@@ -18,13 +18,14 @@ enum {
 	UTF8,
 	UTF16,
 	UTF32,
-
-	UTF8_LOOSE,
-	UTF8_BOM,
 	UTF16BE,
 	UTF16LE,
 	UTF32BE,
 	UTF32LE,
+
+	UTF8_LOOSE,
+	UTF8_BOM,
+	CESU8
 };
 put_unicode_func_t get_put_unicode(int type);
 get_unicode_func_t get_get_unicode(int type);
