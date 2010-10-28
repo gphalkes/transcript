@@ -106,6 +106,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			default:
 				ERROR(EBADF);
 		}
+		return 0;
 	}
 
 	_inbuf = *inbuf;
