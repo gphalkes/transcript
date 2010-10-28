@@ -63,7 +63,7 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 	size_t i, store_idx;
 	t3_bool last_was_digit = t3_false;
 
-	if (utf_type < 0 || utf_type > UTF32) {
+	if (utf_type < 0 || utf_type > UTF32LE) {
 		if (error != NULL)
 			*error = T3_ERR_BAD_ARG;
 		return NULL;
