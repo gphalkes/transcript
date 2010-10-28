@@ -1,10 +1,12 @@
 - interface should have flags for
-	- allowing fallbacks, including (and perhaps separately) fullwidth to halfwidth fallbacks
-- a skip function to skip the next character which has been replaced manually
+	- allowing fallbacks, including (and perhaps separately) fullwidth to
+	  halfwidth fallbacks
+- perhaps an iconv like A to B convertor with better semantics and better
+  performance (through multiple conversions at a time) should be provided as
+  well
+
 - minimum buffer sizes should be specified for M:N conversions
-- flags must be present to indicate desire for BOM/acceptance of BOM and
-	to indicate the end of the buffer
-- implementation: a copy of the state should be made after each full conversion
-	such that when we decide we need more data from the user, we can simply
-	revert to the saved state
-- utf-7, [bocu-1 PATENTED], lmb, scsu, iso-2022-*, gb-18030
+- [bocu-1 PATENTED], lmb, scsu, iso-2022-*, gb-18030
+
+- proper testing of all the convertors!!! This means both correct and
+  incorrect input!
