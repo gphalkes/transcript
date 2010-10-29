@@ -197,7 +197,7 @@ put_unicode_func_t get_put_unicode(int type) {
 }
 
 #define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint > UINT32_C(0x10ffff) || \
-	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfff8) || \
+	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfffe) || \
 	(codepoint >= UINT32_C(0xfdd0) && codepoint <= UINT32_C(0xfdef))) return CHARCONV_UTF_ILLEGAL; } while (0)
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return CHARCONV_UTF_ILLEGAL; } while (0)
@@ -359,7 +359,7 @@ static uint_fast32_t get_utf16_a(char **inbuf, size_t *inbytesleft, t3_bool skip
 			return CHARCONV_UTF_INCOMPLETE;
 
 		next_codepoint = swaps_a(((uint16_t *) *inbuf)[1]);
-		if (!(codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff))) {
+		if (!(next_codepoint >= UINT32_C(0xdc00) && next_codepoint <= UINT32_C(0xdfff))) {
 			/* Next codepoint is not a low surrogate. */
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
@@ -378,7 +378,7 @@ static uint_fast32_t get_utf16_a(char **inbuf, size_t *inbytesleft, t3_bool skip
 		*inbuf += 4;
 		*inbytesleft -= 4;
 		return codepoint;
-	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff)) {
+	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdfff)) {
 		/* Codepoint is a low surrogate. */
 		return CHARCONV_UTF_ILLEGAL;
 	}
@@ -406,7 +406,7 @@ static uint_fast32_t get_utf16_b(char **inbuf, size_t *inbytesleft, t3_bool skip
 			return CHARCONV_UTF_INCOMPLETE;
 
 		next_codepoint = swaps_b(((uint16_t *) *inbuf)[1]);
-		if (!(codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff))) {
+		if (!(next_codepoint >= UINT32_C(0xdc00) && next_codepoint <= UINT32_C(0xdfff))) {
 			/* Next codepoint is not a low surrogate. */
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
@@ -425,7 +425,7 @@ static uint_fast32_t get_utf16_b(char **inbuf, size_t *inbytesleft, t3_bool skip
 		*inbuf += 4;
 		*inbytesleft -= 4;
 		return codepoint;
-	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdffff)) {
+	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdfff)) {
 		/* Codepoint is a low surrogate. */
 		return CHARCONV_UTF_ILLEGAL;
 	}
