@@ -104,8 +104,8 @@ typedef struct convertor_t {
 
 	uint16_t nr_codepage_entries;
 	uint16_t nr_unicode_entries;
+	uint16_t flags;
 
-	uint8_t flags;
 	uint8_t subchar_len;
 	uint8_t subchar[MAX_CHAR_BYTES];
 	uint8_t subchar1;
