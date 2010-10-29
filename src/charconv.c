@@ -50,7 +50,8 @@ static name_mapping convertors[] = {
 	{ "ucs4be", "UTF-32BE", open_unicode_convertor },
 	{ "ucs4le", "UTF-32LE", open_unicode_convertor },
 	{ "cesu8", "CESU-8", open_unicode_convertor },
-	{ "utf7", "UTF-7", open_unicode_convertor }
+	{ "utf7", "UTF-7", open_unicode_convertor },
+	{ "gb18030", "GB-18030", open_unicode_convertor }
 };
 
 /*================ API functions ===============*/
