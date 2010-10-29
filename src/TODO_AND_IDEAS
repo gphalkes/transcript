@@ -6,7 +6,9 @@
   well
 
 - minimum buffer sizes should be specified for M:N conversions
-- [bocu-1 PATENTED], lmb, scsu, iso-2022-*, gb-18030
+- iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
 - proper testing of all the convertors!!! This means both correct and
   incorrect input!
+- proper API definition with macros etc, and using a leading underscore
+  for internal symbols

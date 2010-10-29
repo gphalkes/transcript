@@ -12,7 +12,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* This convertor is a wrapper around the functions in utf.c. */
+/* This convertor is a wrapper around the functions in utf.c and other get/put
+   functions for unicode encodings, such as UTF-7 and GB-18030. */
 #include <string.h>
 #include <search.h>
 

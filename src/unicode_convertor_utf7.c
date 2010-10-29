@@ -12,6 +12,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* Get/put routines for UTF-7. */
+
 #include "charconv.h"
 #include "unicode_convertor.h"
 

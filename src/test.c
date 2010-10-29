@@ -24,10 +24,8 @@ int main(int argc, char *argv[]) {
 	if (argc != 2)
 		fatal("Usage: test <name>\n");
 
-	if ((conv = charconv_open_convertor(argv[1], UTF8, 0, &error)) == NULL)
+	if ((conv = charconv_open_convertor(argv[1], UTF16BE, 0, &error)) == NULL)
 		fatal("Error opening convertor: %d\n", error);
-	//~ if (feof(stdin) || getchar() == EOF)
-		//~ fatal("WFT\n");
 
 	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;
@@ -39,7 +37,7 @@ int main(int argc, char *argv[]) {
 		printf("fill: %zd, outleft: %zd\n", fill, outleft);
 		for (i = 0; i < 1024 - outleft; i++)
 			printf("\\x%02X", (uint8_t) outbuf[i]);
-		printf("\n%.*s", (int) i, outbuf);
+		//~ printf("\n%.*s", (int) i, outbuf);
 	}
 	printf("\nEnd\n");
 	return 0;

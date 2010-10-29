@@ -12,6 +12,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/* Get and put routines for GB-18030. This uses the internal gb18030.cct tables. */
+
 #include "charconv.h"
 #include "charconv_internal.h"
 #include "unicode_convertor.h"

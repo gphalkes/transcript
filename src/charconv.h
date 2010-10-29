@@ -94,6 +94,10 @@ size_t charconv_get_saved_state_size(void);
 void charconv_save_state(charconv_t *handle, void *state);
 void charconv_load_state(charconv_t *handle, void *state);
 
+#define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
+#define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)
+#define CHARCONV_MIN_BUFFER_SIZE CHARCONV_MIN_UNICODE_BUFFER_SIZE
+
 #if defined(CHARCONV_ICONV_API) || defined(CHARCONV_ICONV)
 
 typedef struct {
