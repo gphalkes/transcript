@@ -287,7 +287,10 @@ int main(int argc, char *argv[]) {
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);
 	} else {
-		size_t len = strlen(file_name);
+		size_t len;
+		if (strrchr(file_name, '/') != NULL)
+			file_name = strrchr(file_name, '/') + 1;
+		len = strlen(file_name);
 		if (len < 4 || strcmp(file_name + len - 4, ".ucm") != 0)
 			fatal("Input file does not end in .ucm. Please use explicit output name (-o)\n");
 		output_name = safe_strdup(file_name);
