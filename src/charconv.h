@@ -73,6 +73,9 @@ enum {
 
 #define CHARCONV_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define CHARCONV_UTF_INCOMPLETE UINT32_C(0xfffffffe)
+/* CHARCONV_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
+   from UTF-7/GB-18030/SCSU/BOCU-1 decoders. */
+#define CHARCONV_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
 
 
 #ifndef DB_DIRECTORY

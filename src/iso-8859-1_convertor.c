@@ -16,7 +16,6 @@
 #include <string.h>
 #include "charconv.h"
 #include "charconv_errors.h"
-#include "charconv_internal.h"
 #include "utf.h"
 
 static void close_convertor(charconv_common_t *handle);
@@ -101,7 +100,7 @@ static void save_load_nop(charconv_common_t *handle, void *state) {
 	(void) state;
 }
 
-void *open_iso8859_1_convertor(const char *name, int utf_type, int flags, int *error) {
+void *open_iso8859_1_convertor(const char *name, int flags, int *error) {
 	charconv_common_t *retval;
 
 	(void) name;
@@ -121,7 +120,6 @@ void *open_iso8859_1_convertor(const char *name, int utf_type, int flags, int *e
 	retval->close = (close_func_t) close_convertor;
 	retval->save = (save_func_t) save_load_nop;
 	retval->load = (load_func_t) save_load_nop;
-	fill_utf(retval, utf_type);
 	return retval;
 }
 

@@ -400,8 +400,7 @@ static uint_fast32_t get_utf7(convertor_state_t *handle, char **inbuf, size_t *i
 				*inbuf = (char *) _inbuf;
 				return codepoint;
 			default:
-				//FIXME: should we add an internal error return value here?
-				break;
+				return CHARCONV_UTF_INTERNAL_ERROR;
 		}
 	}
 	return CHARCONV_UTF_INCOMPLETE;
@@ -422,6 +421,92 @@ skip_non_base64:
 	return CHARCONV_UTF_ILLEGAL;
 }
 
+typedef struct {
+	uint_fast32_t low, high, unicode_low, unicode_high;
+} gb_range_map_t;
+
+static gb_range_map_t gb_range_map[] = {
+	{ 0x0334, 0x1ef1, 0x0452, 0x200f },
+	{ 0x2403, 0x2c40, 0x2643, 0x2e80 },
+	{ 0x32ad, 0x35a9, 0x361b, 0x3917 },
+	{ 0x396a, 0x3cde, 0x3ce1, 0x4055 },
+	{ 0x3de7, 0x3fbd, 0x4160, 0x4336 },
+	{ 0x4159, 0x42cd, 0x44d7, 0x464b },
+	{ 0x440a, 0x45c2, 0x478e, 0x4946 },
+	{ 0x4629, 0x48e7, 0x49b8, 0x4c76 },
+	{ 0x4a63, 0x82bc, 0x9fa6, 0xd7ff },
+	{ 0x830e, 0x93d4, 0xe865, 0xf92b },
+	{ 0x94be, 0x98c3, 0xfa2a, 0xfe2f },
+	{ 0x99e2, 0x99fb, 0xffe6, 0xffff },
+	{ 0x2e248, 0x12e247, 0x10000, 0x10ffff }};
+
+#define UPDATE_INBUF() do { *inbuf = (char *) _inbuf; *inbytesleft = _inbytesleft; } while (0)
+
+static uint_fast32_t get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip) {
+	size_t _inbytesleft = *inbytesleft;
+	uint8_t *_inbuf = (uint8_t *) *inbuf;
+	uint_fast32_t codepoint;
+	char *codepoint_ptr = (char *) &codepoint;
+	size_t codepoint_bytesleft = 4;
+	size_t low, mid, high;
+
+	switch (charconv_to_unicode(handle->gb18030_cct, (char **) &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
+			CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE))
+	{
+		case CHARCONV_SUCCESS:
+			UPDATE_INBUF();
+			return codepoint;
+		case CHARCONV_ILLEGAL:
+			if (skip)
+				UPDATE_INBUF();
+			return CHARCONV_UTF_ILLEGAL;
+
+		/* CHARCONV_FALLBACK
+		   CHARCONV_ILLEGAL_END
+		   CHARCONV_INTERNAL_ERROR
+		   CHARCONV_PRIVATE_USE - Should not happen because we told the convertor that private use mappings are alright.
+		   CHARCONV_NO_SPACE */
+		default:
+			return CHARCONV_UTF_INTERNAL_ERROR;
+
+		case CHARCONV_INCOMPLETE:
+			if (skip)
+				UPDATE_INBUF();
+			return CHARCONV_UTF_INCOMPLETE;
+		case CHARCONV_UNASSIGNED:
+			break;
+	}
+
+	if (*inbytesleft - _inbytesleft != 4) {
+		if (skip)
+			UPDATE_INBUF();
+		return CHARCONV_UTF_ILLEGAL;
+	}
+
+	codepoint = _inbuf[-4] - 0x81;
+	codepoint = codepoint * (0x3a - 0x30) + _inbuf[-3] - 0x30;
+	codepoint = codepoint * (0xff - 0x81) + _inbuf[-2] - 0x81;
+	codepoint = codepoint * (0x3a - 0x30) + _inbuf[-1] - 0x30;
+
+	low = 0;
+	high = ARRAY_SIZE(gb_range_map);
+
+	do {
+		mid = low + ((high - low) / 2);
+		if (gb_range_map[mid].high <= codepoint)
+			low = mid + 1;
+		else
+			high = mid;
+	} while (low < high);
+
+	if (low == ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].high || codepoint < gb_range_map[low].low) {
+		if (skip)
+			UPDATE_INBUF();
+		return CHARCONV_UTF_ILLEGAL;
+	}
+	UPDATE_INBUF();
+	return codepoint - gb_range_map[low].low + gb_range_map[low].unicode_low;
+}
 
 static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode, flush_func_t flush)
@@ -434,6 +519,8 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 	while (*inbytesleft > 0) {
 		codepoint = get_unicode(handle, (char **) &_inbuf, &_inbytesleft, t3_false);
 		switch (codepoint) {
+			case CHARCONV_UTF_INTERNAL_ERROR:
+				return CHARCONV_INTERNAL_ERROR;
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
 			case CHARCONV_UTF_INCOMPLETE:
@@ -591,7 +678,7 @@ static void load_state(convertor_state_t *handle, void *state) {
 	memcpy(&handle->state, state, sizeof(state_t));
 }
 
-void *open_unicode_convertor(const char *name, int utf_type, int flags, int *error) {
+void *open_unicode_convertor(const char *name, int flags, int *error) {
 	static const name_to_utfcode map[] = {
 		{ "UTF-8", UTF8_LOOSE },
 		{ "UTF-8_BOM", UTF8_BOM },
@@ -653,7 +740,7 @@ void *open_unicode_convertor(const char *name, int utf_type, int flags, int *err
 	}
 	switch (ptr->utfcode) {
 		case GB18030:
-			if ((retval->gb18030_cct = open_cct_convertor_internal("gb18030", utf_type, flags, error, t3_true)) == NULL) {
+			if ((retval->gb18030_cct = fill_utf(open_cct_convertor_internal("gb18030", flags, error, t3_true), UTF32)) == NULL) {
 				free(retval);
 				return NULL;
 			}
@@ -674,7 +761,6 @@ void *open_unicode_convertor(const char *name, int utf_type, int flags, int *err
 	}
 
 	retval->utf_type = ptr->utfcode;
-	fill_utf((charconv_t *) retval, utf_type);
 	return retval;
 }
 

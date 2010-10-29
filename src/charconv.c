@@ -26,7 +26,7 @@
 typedef struct {
 	const char *squashed_name;
 	const char *convertor_name;
-	void *(*open)(const char *name, int utf_type, int flags, int *error);
+	void *(*open)(const char *name, int flags, int *error);
 } name_mapping;
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
@@ -84,11 +84,11 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 
 	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), element_strcmp)) != NULL) {
 		if (convertor->open != NULL)
-			return convertor->open(convertor->convertor_name, utf_type, flags, error);
+			return fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
 		name = convertor->convertor_name;
 	}
 
-	return open_cct_convertor(name, utf_type, flags, error);
+	return fill_utf(open_cct_convertor(name, flags, error), utf_type);
 }
 
 void charconv_close_convertor(charconv_t *handle) {
