@@ -645,20 +645,20 @@ void Ucm::calculate_item_costs(void) {
 		are unassigned mappings, because that will be calculated based on the costs calculated here.
 		Chicken, egg, etc. */
 	from_unicode_flags &= ~(Mapping::FROM_UNICODE_NOT_AVAIL | Mapping::FROM_UNICODE_FALLBACK);
-	from_unicode_flags_save = 1;
+	from_unicode_flags_save = 2;
 	if (option_verbose)
 		fprintf(stderr, "- from unicode not available/fallback flags\n");
 	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START)) {
 		from_flag_costs += 0.25;
 		from_unicode_flags &= ~(Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START);
-		from_unicode_flags_save |= 2;
+		from_unicode_flags_save |= 4;
 		if (option_verbose)
 			fprintf(stderr, "- from unicode M:N mappings/subchar1 flags\n");
 	}
 	if (used_from_unicode_flags & Mapping::FROM_UNICODE_LENGTH_MASK) {
 		from_flag_costs += 0.25;
 		from_unicode_flags &= ~Mapping::FROM_UNICODE_LENGTH_MASK;
-		from_unicode_flags_save |= 4;
+		from_unicode_flags_save |= 1;
 		if (option_verbose)
 			fprintf(stderr, "- from unicode length\n");
 	}
@@ -769,7 +769,7 @@ void Ucm::write_table(FILE *output) {
 
 	WRITE(4, magic); // magic (4)
 	WRITE_DWORD(0); // version (4)
-	WRITE_WORD(flags); // flags (1)
+	WRITE_WORD(flags); // flags (2)
 	vector<uint8_t> subchar;
 	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
 	WRITE_BYTE(subchar.size()); // subchar length (1)
