@@ -15,6 +15,7 @@
 
 #define CHARCONV_ICONV_API
 #include "charconv.h"
+#include "charconv_internal.h"
 #include "utf.h"
 
 /* iconv compatible interface */

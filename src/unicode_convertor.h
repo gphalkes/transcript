@@ -14,6 +14,8 @@
 #ifndef UNICODE_CONVERTOR_H
 #define UNICODE_CONVERTOR_H
 
+#include "charconv_internal.h"
+
 typedef struct convertor_state_t convertor_state_t;
 
 typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);

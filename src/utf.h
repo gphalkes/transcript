@@ -14,6 +14,8 @@
 #ifndef UTF_H
 #define UTF_H
 
+#include "charconv_internal.h"
+
 #define CHARCONV_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define CHARCONV_UTF_INCOMPLETE UINT32_C(0xfffffffe)
 /* CHARCONV_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only

@@ -15,6 +15,7 @@
 /* This convertor implements the ISO-8859-1 codepage. */
 #include <string.h>
 #include "charconv.h"
+#include "charconv_internal.h"
 #include "utf.h"
 
 static void close_convertor(charconv_common_t *handle);

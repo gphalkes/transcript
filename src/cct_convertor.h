@@ -15,6 +15,7 @@
 #define CCT_CONVERTOR_H
 
 #include <stdint.h>
+#include "charconv_internal.h"
 
 #define MAX_CHAR_BYTES 4
 

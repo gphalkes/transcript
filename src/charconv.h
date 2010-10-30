@@ -16,35 +16,33 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-#include "charconv_api.h"
+
+#if defined _WIN32 || defined __CYGWIN__
+	#define CHARCONV_EXPORT __declspec(dllexport)
+	#define CHARCONV_IMPORT __declspec(dllimport)
+	#define CHARCONV_LOCAL
+#else
+	#if __GNUC__ >= 4
+		#define CHARCONV_EXPORT __attribute__((visibility("default")))
+		#define CHARCONV_IMPORT __attribute__((visibility("default")))
+		#define CHARCONV_LOCAL __attribute__((visibility("hidden")))
+	#else
+		#define CHARCONV_EXPORT
+		#define CHARCONV_IMPORT
+		#define CHARCONV_LOCAL
+	#endif
+#endif
+
+#ifdef CHARCONV_BUILD_DSO
+	#define CHARCONV_API CHARCONV_EXPORT
+#else
+	#define CHARCONV_API CHARCONV_IMPORT
+#endif
+#define CHARCONV_STATIC CHARCONV_LOCAL
 
 typedef struct charconv_common_t charconv_t;
 
 //FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
-typedef int (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-typedef int (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, cc_bool skip);
-typedef int (*reset_func_t)(charconv_t *handle);
-typedef void (*close_func_t)(charconv_t *handle);
-typedef void (*save_func_t)(charconv_t *handle, void *state);
-typedef void (*load_func_t)(charconv_t *handle, void *state);
-
-typedef struct charconv_common_t {
-	conversion_func_t convert_to;
-	conversion_func_t convert_from;
-	skip_func_t skip_to;
-	/* skip_func_t skip_from; */ // The same for all convertors!
-	put_unicode_func_t put_unicode;
-	get_unicode_func_t get_unicode;
-	reset_func_t reset_to;
-	reset_func_t reset_from;
-	close_func_t close;
-	save_func_t save;
-	load_func_t load;
-	int flags;
-	int utf_type;
-} charconv_common_t;
 
 enum {
 	CHARCONV_ALLOW_FALLBACK = (1<<0), /* Include fallback characters in the conversion */
@@ -77,18 +75,19 @@ enum charconv_error_t {
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
 };
 
-charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
-void charconv_close_convertor(charconv_t *handle);
-int charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-int charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-void charconv_to_unicode_reset(charconv_t *handle);
-void charconv_from_unicode_reset(charconv_t *handle);
+CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
+CHARCONV_API void charconv_close_convertor(charconv_t *handle);
+CHARCONV_API int charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+CHARCONV_API int charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+CHARCONV_API int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+CHARCONV_API int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
+CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 // FIXME: use a macro instead!
-size_t charconv_get_saved_state_size(void);
-void charconv_save_state(charconv_t *handle, void *state);
-void charconv_load_state(charconv_t *handle, void *state);
+CHARCONV_API size_t charconv_get_saved_state_size(void);
+CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
+CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
+//FIXME: add a listing mechanism!
 
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)
@@ -96,13 +95,11 @@ void charconv_load_state(charconv_t *handle, void *state);
 
 #if defined(CHARCONV_ICONV_API) || defined(CHARCONV_ICONV)
 
-typedef struct {
-	charconv_t *from, *to;
-} *cc_iconv_t;
+typedef struct _cc_iconv_t *cc_iconv_t;
 
-cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
-int cc_iconv_close(cc_iconv_t cd);
-size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
+CHARCONV_API cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
+CHARCONV_API int cc_iconv_close(cc_iconv_t cd);
+CHARCONV_API size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
 
 #ifdef CHARCONV_ICONV
 typedef cc_iconv_t iconv_t;

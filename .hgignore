@@ -1,8 +1,6 @@
 syntax: glob
 src/test
 src/cct_convertor
-src/charconv_errors.h
-src/charconv_api.h
 src/libcharconv.la
 src.util/ucm2cct
 

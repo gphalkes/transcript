@@ -15,6 +15,7 @@
 #include <pthread.h>
 
 #include "charconv.h"
+#include "charconv_internal.h"
 #include "cct_convertor.h"
 #include "utf.h"
 
