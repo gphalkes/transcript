@@ -106,6 +106,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 							if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
 								return CHARCONV_INTERNAL_ERROR;
 						idx = handle->convertor->codepage_states[handle->state.to].base;
+						if (flags & CHARCONV_SINGLE_CONVERSION)
+							return CHARCONV_SUCCESS;
 						break;
 					}
 					if (i != handle->convertor->nr_multi_mappings)
@@ -403,6 +405,8 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 								_inbytesleft = *inbytesleft;
 								state = 0;
 								idx = 0;
+								if (flags & CHARCONV_SINGLE_CONVERSION)
+									return CHARCONV_SUCCESS;
 								continue;
 							case CHARCONV_INCOMPLETE:
 								return CHARCONV_INCOMPLETE;
