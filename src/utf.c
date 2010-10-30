@@ -330,3 +330,13 @@ get_unicode_func_t get_get_unicode(int type) {
 			return NULL;
 	}
 }
+
+uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, t3_bool skip) {
+	uint_fast32_t codepoint = *(uint32_t *) *inbuf;
+
+	(void) skip;
+
+	*inbuf += 4;
+	*inbytesleft -= 4;
+	return codepoint;
+}

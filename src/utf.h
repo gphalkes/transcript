@@ -32,5 +32,5 @@ enum {
 };
 put_unicode_func_t get_put_unicode(int type);
 get_unicode_func_t get_get_unicode(int type);
-
+uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, t3_bool skip);
 #endif

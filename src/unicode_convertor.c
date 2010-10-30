@@ -25,6 +25,12 @@
 #include "utf.h"
 
 
+typedef struct {
+	const char *name;
+	int utf_type;
+} name_to_utftype;
+
+
 static int to_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
 static int from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
 static void close_convertor(convertor_state_t *handle);
@@ -207,7 +213,7 @@ static void load_state(convertor_state_t *handle, void *state) {
 }
 
 void *open_unicode_convertor(const char *name, int flags, int *error) {
-	static const name_to_utfcode map[] = {
+	static const name_to_utftype map[] = {
 		{ "UTF-8", UTF8_LOOSE },
 		{ "UTF-8_BOM", UTF8_BOM },
 		{ "UTF-16", UTF16 },
@@ -223,10 +229,10 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	};
 
 	convertor_state_t *retval;
-	name_to_utfcode *ptr;
+	name_to_utftype *ptr;
 	size_t array_size = ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utfcode), element_strcmp)) == NULL) {
+	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utftype), element_strcmp)) == NULL) {
 		if (error != NULL)
 			*error = T3_ERR_TERMINFODB_NOT_FOUND;
 		return NULL;
@@ -248,7 +254,8 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	retval->common.save = (save_func_t) save_state;
 	retval->common.load = (load_func_t) load_state;
 
-	switch (ptr->utfcode) {
+	retval->utf_type = ptr->utf_type;
+	switch (retval->utf_type) {
 		case UTF16:
 			retval->to_unicode_get = get_get_unicode(UTF16BE);
 			retval->from_unicode_put = get_put_unicode(UTF16BE);
@@ -262,16 +269,17 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 		case UTF7:
 			break;
 		default:
-			retval->to_unicode_get = get_get_unicode(ptr->utfcode);
-			retval->from_unicode_put = get_put_unicode(ptr->utfcode);
+			retval->to_unicode_get = get_get_unicode(retval->utf_type);
+			retval->from_unicode_put = get_put_unicode(retval->utf_type);
 			break;
 	}
-	switch (ptr->utfcode) {
+	switch (retval->utf_type) {
 		case GB18030:
 			if ((retval->gb18030_cct = fill_utf(open_cct_convertor_internal("gb18030", flags, error, t3_true), UTF32)) == NULL) {
 				free(retval);
 				return NULL;
 			}
+			retval->gb18030_cct->get_unicode = get_utf32_no_check;
 			retval->to_get = get_gb18030;
 			retval->from_put = put_gb18030;
 			break;
@@ -290,7 +298,6 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 			break;
 	}
 
-	retval->utf_type = ptr->utfcode;
 	return retval;
 }
 

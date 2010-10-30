@@ -46,6 +46,10 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
+	/* Because we don't use the M:N conversions, we don't have to perform any checks
+	   when retrieving the UTF-32 character in the from_unicode conversion. */
+	retval->to->get_unicode = get_utf32_no_check;
+
 	return retval;
 
 end_error:
@@ -65,7 +69,6 @@ int cc_iconv_close(cc_iconv_t cd) {
 	free(cd);
 	return 0;
 }
-
 
 size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
 	/* To implement a compatible interface, we have to convert

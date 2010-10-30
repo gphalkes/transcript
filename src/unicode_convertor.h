@@ -21,11 +21,6 @@ typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, char **inbuf, siz
 typedef int (*flush_func_t)(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
 
 typedef struct {
-	const char *name;
-	int utfcode;
-} name_to_utfcode;
-
-typedef struct {
 	uint_fast32_t utf7_put_save;
 	uint_fast8_t utf7_get_mode;
 	uint_fast8_t utf7_put_mode;
