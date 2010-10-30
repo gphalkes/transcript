@@ -83,7 +83,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	uint32_t codepoint;
 	char *codepoint_ptr;
 	size_t codepoint_bytesleft;
-	cc_bool fallback;
+	bool fallback;
 
 	if (inbuf == NULL || *inbuf == NULL) {
 		/* There is no need to convert the input buffer, because even if it had an incomplete
@@ -117,7 +117,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 
 	while (*inbytesleft > 0) {
 		charconv_save_state(cd->from, saved_state);
-		fallback = cc_false;
+		fallback = false;
 		codepoint_ptr = (char *) &codepoint;
 		codepoint_bytesleft = 4;
 		switch (charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr,
@@ -129,13 +129,13 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_FALLBACK:
 				charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = cc_true;
+				fallback = true;
 				break;
 			case CHARCONV_PRIVATE_USE:
 			case CHARCONV_UNASSIGNED:
 				codepoint = 0xFFFD;
 				charconv_to_unicode_skip(cd->from, &_inbuf, &_inbytesleft);
-				fallback = cc_true;
+				fallback = true;
 				break;
 			case CHARCONV_ILLEGAL:
 				ERROR(EILSEQ);
@@ -159,13 +159,13 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_FALLBACK:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = cc_true;
+				fallback = true;
 				break;
 			case CHARCONV_UNASSIGNED:
 			case CHARCONV_PRIVATE_USE:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBSTITUTE | CHARCONV_SUBSTITUTE_ALL);
-				fallback = cc_true;
+				fallback = true;
 				break;
 			case CHARCONV_NO_SPACE:
 				ERROR(E2BIG);

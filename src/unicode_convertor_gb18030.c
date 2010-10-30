@@ -101,7 +101,7 @@ int put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbu
 	return CHARCONV_SUCCESS;
 }
 
-uint_fast32_t get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, cc_bool skip) {
+uint_fast32_t get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
 	char *codepoint_ptr;
 	size_t codepoint_bytesleft;
 	size_t low, mid, high;

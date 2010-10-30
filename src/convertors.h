@@ -17,7 +17,7 @@
 
 /* CCT based convertors */
 void *open_cct_convertor(const char *name, int flags, int *error);
-void *open_cct_convertor_internal(const char *name, int flags, int *error, cc_bool internal_use);
+void *open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use);
 size_t get_cct_saved_state_size(void);
 
 /* Unicode UTF convertors */

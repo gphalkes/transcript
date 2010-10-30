@@ -20,16 +20,17 @@
 #define DB_DIRECTORY "/usr/local/share/libcharconv"
 #endif
 
-/** Boolean type that does not clash with C++ or C99 bool. */
-typedef enum {
-	cc_false, /**< False */
-	cc_true /**< True */
-} cc_bool;
+/* Define a bool type if not already defined (C++ and C99 do)*/
+#if !(defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 19990601L))
+typedef enum {false, true} bool;
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 19990601L
+#include <stdbool.h>
+#endif
 
 typedef int (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 typedef int (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, cc_bool skip);
+typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, bool skip);
 typedef int (*reset_func_t)(charconv_t *handle);
 typedef void (*close_func_t)(charconv_t *handle);
 typedef void (*save_func_t)(charconv_t *handle, void *state);

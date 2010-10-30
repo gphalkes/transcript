@@ -56,7 +56,7 @@ static name_mapping convertors[] = {
 /*================ API functions ===============*/
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
-	cc_bool last_was_digit = cc_false;
+	bool last_was_digit = false;
 	name_mapping *convertor;
 	char name_buffer[128];
 	size_t store_idx = 0;
@@ -72,7 +72,7 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 	/*FIXME: replace tolower, isalnum and isdigit by appropriate versions that are not locale dependent? */
 	for (ptr = name; *ptr != 0 && store_idx < 127; ptr++) {
 		if (!isalnum(*ptr)) {
-			last_was_digit = cc_false;
+			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *ptr == '0')
 				continue;
@@ -109,7 +109,7 @@ int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesle
 }
 
 int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->get_unicode(inbuf, inbytesleft, cc_true) == CHARCONV_UTF_INCOMPLETE)
+	if (handle->get_unicode(inbuf, inbytesleft, true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }

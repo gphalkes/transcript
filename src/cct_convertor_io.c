@@ -19,11 +19,11 @@
 #include "charconv.h"
 #include "cct_convertor.h"
 
-static cc_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
-static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
+static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
+static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
-static cc_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 #define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(CHARCONV_TRUNCATED_MAP); } while (0)
@@ -191,7 +191,7 @@ void unload_cct_convertor(convertor_t *convertor) {
 	free(convertor);
 }
 
-static cc_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
+static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
 	uint_fast32_t i, j, entries_idx = 0;
 
 	nr_states++;
@@ -222,12 +222,12 @@ static cc_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states,
 	if (entries_idx != max_entries)
 		ERROR(CHARCONV_INVALID_FORMAT);
 
-	return cc_true;
+	return true;
 end_error:
-	return cc_false;
+	return false;
 }
 
-static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range) {
+static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range) {
 	uint_fast32_t i, j, calculated_range;
 	int next_is_initial;
 
@@ -236,12 +236,12 @@ static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t
 	for (i = 0; i < nr_states; i++) {
 		for (j = 0; j < states[i].nr_entries; j++) {
 			if (states[i].entries[j].next_state >= nr_states)
-				return cc_false;
+				return false;
 
 			next_is_initial = states[i].entries[j].next_state == 0 ||
 					((flags & MULTIBYTE_START_STATE_1) && states[i].entries[j].next_state == 1);
 			if ((states[i].entries[j].action != ACTION_VALID) ^ next_is_initial)
-				return cc_false;
+				return false;
 		}
 	}
 
@@ -255,9 +255,9 @@ static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t
 	}
 
 	if (calculated_range != range)
-		return cc_false;
+		return false;
 
-	return cc_true;
+	return true;
 }
 
 static void update_state_attributes(state_t *states, uint_fast32_t idx) {
@@ -290,7 +290,7 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 		}
 	}
 	states[idx].range = sum;
-	states[idx].complete = cc_true;
+	states[idx].complete = true;
 }
 
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx) {
@@ -406,7 +406,7 @@ static uint8_t (* const get_flags_trie[16])(const flags_t *flags, uint_fast32_t 
 	get_flags_15_trie
 };
 
-static cc_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error) {
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error) {
 	uint_fast32_t nr_flag_bytes, nr_blocks, i;
 	uint8_t flag_info;
 	READ_BYTE(flag_info);
@@ -432,7 +432,7 @@ static cc_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *
 		flags->get_flags = get_flags[flag_info & 0xf];
 	}
 
-	return cc_true;
+	return true;
 end_error:
-	return cc_false;
+	return false;
 }

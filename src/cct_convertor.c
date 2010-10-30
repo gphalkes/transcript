@@ -224,7 +224,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 
 
 #define GET_UNICODE() do { \
-	codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, cc_false); \
+	codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, false); \
 } while (0)
 
 #define PUT_BYTES(count, buffer) do { \
@@ -277,7 +277,7 @@ static int from_unicode_check_multi_mappings(convertor_state_t *handle, char **i
 	size_t _inbytesleft = *inbytesleft;
 	size_t check_len;
 	size_t mapping_check_len;
-	cc_bool can_read_more = cc_true;
+	bool can_read_more = true;
 
 	GET_UNICODE();
 	if (put_utf16(codepoint, &ptr, &codepoints_left) != 0)
@@ -301,28 +301,28 @@ static int from_unicode_check_multi_mappings(convertor_state_t *handle, char **i
 
 			if (codepoint == CHARCONV_UTF_INCOMPLETE) {
 				if (flags & CHARCONV_END_OF_TEXT) {
-					can_read_more = cc_false;
+					can_read_more = false;
 					goto check_next_mapping;
 				}
 				return CHARCONV_INCOMPLETE;
 			}
 
 			if (codepoint == CHARCONV_UTF_ILLEGAL) {
-				can_read_more = cc_false;
+				can_read_more = false;
 				goto check_next_mapping;
 			}
 
 			switch (put_utf16(codepoint, &ptr, &codepoints_left)) {
 				case CHARCONV_INCOMPLETE:
 					if (flags & CHARCONV_END_OF_TEXT) {
-						can_read_more = cc_false;
+						can_read_more = false;
 						goto check_next_mapping;
 					}
 					return CHARCONV_INCOMPLETE;
 				case CHARCONV_SUCCESS:
 					break;
 				case CHARCONV_NO_SPACE:
-					can_read_more = cc_false;
+					can_read_more = false;
 					goto check_next_mapping;
 				default:
 					return CHARCONV_INTERNAL_ERROR;
@@ -494,7 +494,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	handle->from_state = save->from_state;
 }
 
-void *open_cct_convertor_internal(const char *name, int flags, int *error, cc_bool internal_use) {
+void *open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
 	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
 	convertor_t *ptr;
@@ -559,7 +559,7 @@ void *open_cct_convertor_internal(const char *name, int flags, int *error, cc_bo
 }
 
 void *open_cct_convertor(const char *name, int flags, int *error) {
-	return open_cct_convertor_internal(name, flags, error, cc_false);
+	return open_cct_convertor_internal(name, flags, error, false);
 }
 
 

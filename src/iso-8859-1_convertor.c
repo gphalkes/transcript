@@ -55,7 +55,7 @@ static int from_unicode_conversion(charconv_common_t *handle, char **inbuf, size
 	size_t _inbytesleft = *inbytesleft;
 
 	while (*inbytesleft > 0) {
-		codepoint = handle->get_unicode((char **) &_inbuf, &_inbytesleft, cc_false);
+		codepoint = handle->get_unicode((char **) &_inbuf, &_inbytesleft, false);
 		switch (codepoint) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
