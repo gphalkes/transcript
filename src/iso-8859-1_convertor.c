@@ -61,7 +61,7 @@ static int from_unicode_conversion(charconv_common_t *handle, char **inbuf, size
 				return CHARCONV_ILLEGAL;
 			case CHARCONV_UTF_INCOMPLETE:
 				if (flags & CHARCONV_END_OF_TEXT) {
-					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+					if (!(flags & CHARCONV_SUBST_ILLEGAL))
 						return CHARCONV_ILLEGAL_END;
 					codepoint = 0x1a;
 					break;
@@ -69,7 +69,7 @@ static int from_unicode_conversion(charconv_common_t *handle, char **inbuf, size
 				return CHARCONV_INCOMPLETE;
 			default:
 				if (codepoint > 0xff) {
-					if (flags & CHARCONV_SUBSTITUTE)
+					if (flags & CHARCONV_SUBST_UNASSIGNED)
 						codepoint = 0x1a;
 					else
 						return CHARCONV_UNASSIGNED;

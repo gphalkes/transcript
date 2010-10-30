@@ -66,7 +66,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 				return CHARCONV_ILLEGAL;
 			case CHARCONV_UTF_INCOMPLETE:
 				if (flags & CHARCONV_END_OF_TEXT) {
-					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+					if (!(flags & CHARCONV_SUBST_ILLEGAL))
 						return CHARCONV_ILLEGAL_END;
 					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbytesleft)) != 0)
 						return result;

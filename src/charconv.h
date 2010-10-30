@@ -45,16 +45,16 @@ typedef struct charconv_common_t charconv_t;
 //FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
 
 enum {
-	CHARCONV_ALLOW_FALLBACK = (1<<0), /* Include fallback characters in the conversion */
-	CHARCONV_SUBSTITUTE = (1<<1), /* Automatically replace unmappable characters by substitute characters */
-	CHARCONV_SUBSTITUTE_ALL = (1<<2), /* Automatically replace everything that is not a perfect transition */
-	CHARCONV_ALLOW_PRIVATE_USE = (1<<3), /* Allow private-use mappings. If not allowed, they are handled like unassigned sequences, with the exception that they return a different error. */
+	CHARCONV_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
+	CHARCONV_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
+	CHARCONV_SUBST_ILLEGAL = (1<<2), /**< Automatically insert a substitution character on illegal input. */
+	CHARCONV_ALLOW_PRIVATE_USE = (1<<3), /**< Allow private-use mappings. If not allowed, they are handled like unassigned sequences, with the exception that they return a different error.. */
 
 	/* These are only valid as argument to charconv_from_unicode and charconv_to_unicode. */
-	CHARCONV_FILE_START = (1<<8), /* The begining of the input buffer is the begining of a file and a BOM should be expected/generated */
-	CHARCONV_END_OF_TEXT = (1<<9), /* The end of the input buffer is the end of the text */
-	CHARCONV_SINGLE_CONVERSION = (1<<10), /* Only convert the next character, then return (useful for handling fallback/unassigned characters etc.) */
-	CHARCONV_NO_MN_CONVERSION = (1<<11) /* Do not use M:N conversions. */
+	CHARCONV_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
+	CHARCONV_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text. */
+	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.). */
+	CHARCONV_NO_MN_CONVERSION = (1<<11) /**< Do not use M:N conversions.. */
 };
 
 typedef enum {
@@ -97,6 +97,7 @@ CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, cha
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
+//FIXME: should we do loading (and perhaps saving) per direction?
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 //FIXME: add a listing mechanism!
 

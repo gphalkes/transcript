@@ -164,7 +164,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_UNASSIGNED:
 			case CHARCONV_PRIVATE_USE:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBSTITUTE | CHARCONV_SUBSTITUTE_ALL);
+						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL);
 				fallback = true;
 				break;
 			case CHARCONV_NO_SPACE:

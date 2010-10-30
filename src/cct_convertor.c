@@ -115,7 +115,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				}
 
 				if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
-					if (!(flags & CHARCONV_SUBSTITUTE))
+					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_PRIVATE_USE;
 					PUT_UNICODE(UINT32_C(0xFFFD));
 					goto sequence_done;
@@ -125,7 +125,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 
 				codepoint = handle->convertor->codepage_mappings[idx];
 				if (codepoint == UINT32_C(0xFFFF)) {
-					if (!(flags & CHARCONV_SUBSTITUTE))
+					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_UNASSIGNED;
 					PUT_UNICODE(UINT32_C(0xFFFD));
 				} else {
@@ -142,12 +142,12 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				state = entry->next_state;
 				break;
 			case ACTION_ILLEGAL:
-				if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+				if (!(flags & CHARCONV_SUBST_ILLEGAL))
 					return CHARCONV_ILLEGAL;
 				PUT_UNICODE(UINT32_C(0xFFFD));
 				goto sequence_done;
 			case ACTION_UNASSIGNED:
-				if (!(flags & CHARCONV_SUBSTITUTE))
+				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 					return CHARCONV_UNASSIGNED;
 				PUT_UNICODE(UINT32_C(0xFFFD));
 				/* FALLTHROUGH */
@@ -167,7 +167,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 
 	if (*inbytesleft != 0) {
 		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL_END;
 			PUT_UNICODE(UINT32_C(0xFFFD));
 			*inbuf += *inbytesleft;
@@ -380,7 +380,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 			break;
 
 		if (codepoint == CHARCONV_UTF_ILLEGAL) {
-			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf = (char *) _inbuf;
@@ -422,7 +422,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 						return CHARCONV_FALLBACK;
 
 					if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
-						if (!(flags & CHARCONV_SUBSTITUTE))
+						if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 							return CHARCONV_UNASSIGNED;
 						if (conv_flags & FROM_UNICODE_SUBCHAR1)
 							PUT_BYTES(1, &handle->convertor->subchar1);
@@ -437,12 +437,12 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 					state = entry->next_state;
 					break;
 				case ACTION_ILLEGAL:
-					if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+					if (!(flags & CHARCONV_SUBST_ILLEGAL))
 						return CHARCONV_ILLEGAL;
 					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					goto sequence_done;
 				case ACTION_UNASSIGNED:
-					if (!(flags & CHARCONV_SUBSTITUTE))
+					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_UNASSIGNED;
 					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					/* FALLTHROUGH */
@@ -463,7 +463,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 
 	if (*inbytesleft != 0) {
 		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(flags & CHARCONV_SUBSTITUTE_ALL))
+			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL_END;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf += *inbytesleft;
