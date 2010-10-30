@@ -211,7 +211,7 @@ static void load_state(convertor_state_t *handle, void *state) {
 	memcpy(&handle->state, state, sizeof(state_t));
 }
 
-void *open_unicode_convertor(const char *name, int flags, int *error) {
+void *open_unicode_convertor(const char *name, int flags, charconv_error_t *error) {
 	static const name_to_utftype map[] = {
 		{ "UTF-8", UTF8_LOOSE },
 		{ "UTF-8_BOM", UTF8_BOM },

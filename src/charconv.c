@@ -25,7 +25,7 @@
 typedef struct {
 	const char *squashed_name;
 	const char *convertor_name;
-	void *(*open)(const char *name, int flags, int *error);
+	void *(*open)(const char *name, int flags, charconv_error_t *error);
 } name_mapping;
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
@@ -55,7 +55,7 @@ static name_mapping convertors[] = {
 
 /*================ API functions ===============*/
 
-charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
+charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error) {
 	bool last_was_digit = false;
 	name_mapping *convertor;
 	char name_buffer[128];
@@ -96,19 +96,19 @@ void charconv_close_convertor(charconv_t *handle) {
 		handle->close(handle);
 }
 
-int charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
+charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
 	return handle->convert_to(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags | (handle->flags & 0xff));
 }
 
-int charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
+charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
 	return handle->convert_from(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags | (handle->flags & 0xff));
 }
 
-int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
+charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
 	return handle->skip_to(handle, inbuf, inbytesleft);
 }
 
-int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
+charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
 	if (handle->get_unicode(inbuf, inbytesleft, true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;

@@ -15,7 +15,7 @@ void fatal(const char *fmt, ...) {
 }
 
 int main(int argc, char *argv[]) {
-	int error;
+	charconv_error_t error;
 	void *conv;
 	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
 	size_t result, i;

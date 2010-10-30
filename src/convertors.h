@@ -16,16 +16,16 @@
 #include <stdlib.h>
 
 /* CCT based convertors */
-void *open_cct_convertor(const char *name, int flags, int *error);
-void *open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use);
+void *open_cct_convertor(const char *name, int flags, charconv_error_t *error);
+void *open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use);
 size_t get_cct_saved_state_size(void);
 
 /* Unicode UTF convertors */
-void *open_unicode_convertor(const char *name, int flags, int *error);
+void *open_unicode_convertor(const char *name, int flags, charconv_error_t *error);
 size_t get_unicode_saved_state_size(void);
 
 /* ISO-8859-1 convertor */
-void *open_iso8859_1_convertor(const char *name, int flags, int *error);
+void *open_iso8859_1_convertor(const char *name, int flags, charconv_error_t *error);
 size_t get_iso8859_1_saved_state_size(void);
 
 #endif

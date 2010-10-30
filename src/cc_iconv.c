@@ -22,7 +22,7 @@
 #define ERROR(err) do { errno = err; goto end_error; } while (0)
 cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	cc_iconv_t retval = NULL;
-	int error;
+	charconv_error_t error;
 
 	if ((retval = malloc(sizeof(*retval))) == NULL) {
 		ERROR(ENOMEM);

@@ -57,7 +57,7 @@ enum {
 	CHARCONV_NO_MN_CONVERSION = (1<<11) /* Do not use M:N conversions. */
 };
 
-enum charconv_error_t {
+typedef enum {
 	CHARCONV_SUCCESS, /**< All OK. */
 	CHARCONV_FALLBACK, /**< The next character to convert is a fallback mapping. */
 	CHARCONV_UNASSIGNED, /**< The next character to convert is an unassigned sequence. */
@@ -73,14 +73,14 @@ enum charconv_error_t {
 	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
 	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
-};
+} charconv_error_t;
 
-CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
+CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
-CHARCONV_API int charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-CHARCONV_API int charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-CHARCONV_API int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-CHARCONV_API int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 // FIXME: use a macro instead!
