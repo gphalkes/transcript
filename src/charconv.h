@@ -75,6 +75,19 @@ typedef enum {
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
 } charconv_error_t;
 
+struct _charconv_cct_state_t {
+	uint8_t to, from;
+};
+
+struct _charconv_unicode_state_t {
+	uint_fast32_t utf7_put_save;
+	uint_fast8_t utf7_get_mode;
+	uint_fast8_t utf7_put_mode;
+};
+
+#define _CHARCONV_MAX(a, b) ((a) > (b) ? (a) : (b))
+#define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), sizeof(struct _charconv_unicode_state_t))
+
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
 CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
@@ -83,8 +96,6 @@ CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char 
 CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
-// FIXME: use a macro instead!
-CHARCONV_API size_t charconv_get_saved_state_size(void);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 //FIXME: add a listing mechanism!

@@ -19,15 +19,13 @@
 #include "cct_convertor.h"
 #include "utf.h"
 
+typedef struct _charconv_cct_state_t save_state_t;
+
 typedef struct {
 	charconv_common_t common;
 	convertor_t *convertor;
-	uint8_t to_state, from_state;
+	save_state_t state;
 } convertor_state_t;
-
-typedef struct {
-	uint8_t to_state, from_state;
-} save_state_t;
 
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
 static void close_convertor(convertor_state_t *handle);
@@ -50,8 +48,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
-	uint_fast8_t state = handle->to_state;
-	uint_fast32_t idx = handle->convertor->codepage_states[handle->to_state].base;
+	uint_fast8_t state = handle->state.to;
+	uint_fast32_t idx = handle->convertor->codepage_states[handle->state.to].base;
 	uint_fast32_t codepoint;
 	entry_t *entry;
 	uint_fast8_t conv_flags;
@@ -102,14 +100,14 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						*outbuf = outbuf_tmp;
 						*outbytesleft = outbytesleft_tmp;
 
-						handle->to_state = state = entry->next_state;
+						handle->state.to = state = entry->next_state;
 						*inbuf = (char *) _inbuf;
 						check_len = (*inbytesleft) - check_len;
 						*inbytesleft = _inbytesleft;
 						while (*inbytesleft > check_len)
 							if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
 								return CHARCONV_INTERNAL_ERROR;
-						idx = handle->convertor->codepage_states[handle->to_state].base;
+						idx = handle->convertor->codepage_states[handle->state.to].base;
 						break;
 					}
 					if (i != handle->convertor->nr_multi_mappings)
@@ -157,8 +155,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			sequence_done:
 				*inbuf = (char *) _inbuf;
 				*inbytesleft = _inbytesleft;
-				handle->to_state = state = entry->next_state;
-				idx = handle->convertor->codepage_states[handle->to_state].base;
+				handle->state.to = state = entry->next_state;
+				idx = handle->convertor->codepage_states[handle->state.to].base;
 				if (flags & CHARCONV_SINGLE_CONVERSION)
 					return CHARCONV_SUCCESS;
 				break;
@@ -179,15 +177,15 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		}
 	}
 	if (flags & CHARCONV_END_OF_TEXT)
-		handle->to_state = 0;
+		handle->state.to = 0;
 	return CHARCONV_SUCCESS;
 }
 
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
-	uint_fast8_t state = handle->to_state;
-	uint_fast32_t idx = handle->convertor->codepage_states[handle->to_state].base;
+	uint_fast8_t state = handle->state.to;
+	uint_fast32_t idx = handle->convertor->codepage_states[handle->state.to].base;
 	entry_t *entry;
 
 	while (_inbytesleft > 0) {
@@ -208,7 +206,7 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 			case ACTION_UNASSIGNED:
 				*inbuf = (char *) _inbuf;
 				*inbytesleft = _inbytesleft;
-				handle->to_state = state = entry->next_state;
+				handle->state.to = state = entry->next_state;
 				return CHARCONV_SUCCESS;
 			default:
 				return CHARCONV_INTERNAL_ERROR;
@@ -219,7 +217,7 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 }
 
 static void to_unicode_reset(convertor_state_t *handle) {
-	handle->to_state = 0;
+	handle->state.to = 0;
 }
 
 
@@ -238,9 +236,9 @@ static int put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesl
 
 	if (handle->convertor->flags & MULTIBYTE_START_STATE_1) {
 		required_state = count > 1 ? 1 : 0;
-		if (handle->from_state != required_state) {
+		if (handle->state.from != required_state) {
 			for (i = 0; i < handle->convertor->nr_shift_states; i++) {
-				if (handle->convertor->shift_states[i].from_state == handle->from_state &&
+				if (handle->convertor->shift_states[i].from_state == handle->state.from &&
 						handle->convertor->shift_states[i].to_state == required_state)
 				{
 					if (*outbytesleft < count + handle->convertor->shift_states[i].len)
@@ -248,7 +246,7 @@ static int put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesl
 					memcpy(*outbuf, handle->convertor->shift_states[i].bytes, handle->convertor->shift_states[i].len);
 					*outbuf += handle->convertor->shift_states[i].len;
 					*outbytesleft -= handle->convertor->shift_states[i].len;
-					handle->from_state = required_state;
+					handle->state.from = required_state;
 					goto write_bytes;
 				}
 			}
@@ -474,24 +472,22 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 			return CHARCONV_INCOMPLETE;
 		}
 	} else if (flags & CHARCONV_END_OF_TEXT) {
-		if (handle->from_state != 0)
+		if (handle->state.from != 0)
 			PUT_BYTES(0, NULL);
 	}
 	return CHARCONV_SUCCESS;
 }
 
 static void from_unicode_reset(convertor_state_t *handle) {
-	handle->from_state = 0;
+	handle->state.from = 0;
 }
 
 static void save_cct_state(convertor_state_t *handle, save_state_t *save) {
-	save->to_state = handle->to_state;
-	save->from_state = handle->from_state;
+	memcpy(save, &handle->state, sizeof(save_state_t));
 }
 
 static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
-	handle->to_state = save->to_state;
-	handle->from_state = save->from_state;
+	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
 void *open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
@@ -543,8 +539,8 @@ void *open_cct_convertor_internal(const char *name, int flags, int *error, bool 
 	pthread_mutex_unlock(&cct_list_mutex);
 
 	retval->convertor = ptr;
-	retval->from_state = 0;
-	retval->to_state = 0;
+	retval->state.from = 0;
+	retval->state.to = 0;
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;

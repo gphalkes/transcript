@@ -78,7 +78,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 
 	char *_inbuf;
 	size_t _inbytesleft;
-	char saved_state[charconv_get_saved_state_size()];
+	char saved_state[CHARCONV_SAVE_STATE_SIZE];
 
 	uint32_t codepoint;
 	char *codepoint_ptr;

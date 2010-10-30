@@ -122,16 +122,6 @@ void charconv_from_unicode_reset(charconv_t *handle) {
 	handle->reset_from(handle);
 }
 
-size_t charconv_get_saved_state_size(void) {
-	static size_t cached = 0;
-	if (cached == 0) {
-		cached = get_unicode_saved_state_size();
-		if (get_cct_saved_state_size() > cached)
-			cached = get_cct_saved_state_size();
-	}
-	return cached;
-}
-
 void charconv_save_state(charconv_t *handle, void *state) {
 	handle->save(handle, state);
 }
