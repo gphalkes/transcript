@@ -19,4 +19,8 @@
 charconv_t *fill_utf(charconv_t *handle, int utf_type);
 int element_strcmp(const void *a, const void *b);
 
+#ifndef DB_DIRECTORY
+#define DB_DIRECTORY "/usr/local/share/libcharconv"
+#endif
+
 #endif

@@ -17,7 +17,6 @@
 #include <search.h>
 
 #include "charconv.h"
-#include "charconv_errors.h"
 #include "charconv_internal.h"
 #include "utf.h"
 
@@ -57,7 +56,7 @@ static name_mapping convertors[] = {
 /*================ API functions ===============*/
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error) {
-	t3_bool last_was_digit = t3_false;
+	cc_bool last_was_digit = cc_false;
 	name_mapping *convertor;
 	char name_buffer[128];
 	size_t store_idx = 0;
@@ -66,14 +65,14 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, i
 
 	if (utf_type < 0 || utf_type > UTF32LE) {
 		if (error != NULL)
-			*error = T3_ERR_BAD_ARG;
+			*error = CHARCONV_BAD_ARG;
 		return NULL;
 	}
 
 	/*FIXME: replace tolower, isalnum and isdigit by appropriate versions that are not locale dependent? */
 	for (ptr = name; *ptr != 0 && store_idx < 127; ptr++) {
 		if (!isalnum(*ptr)) {
-			last_was_digit = t3_false;
+			last_was_digit = cc_false;
 		} else {
 			if (!last_was_digit && *ptr == '0')
 				continue;
@@ -110,7 +109,7 @@ int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesle
 }
 
 int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->get_unicode(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
+	if (handle->get_unicode(inbuf, inbytesleft, cc_true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }

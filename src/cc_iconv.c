@@ -15,7 +15,6 @@
 
 #define CHARCONV_ICONV_API
 #include "charconv.h"
-#include "charconv_errors.h"
 #include "utf.h"
 
 /* iconv compatible interface */
@@ -32,17 +31,17 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	retval->to = NULL;
 
 	if ((retval->from = charconv_open_convertor(fromcode, UTF32, 0, &error)) == NULL) {
-		if (error == T3_ERR_OUT_OF_MEMORY)
+		if (error == CHARCONV_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
-		else if (error == T3_ERR_ERRNO)
+		else if (error == CHARCONV_ERRNO)
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
 
 	if ((retval->to = charconv_open_convertor(tocode, UTF32, 0, &error)) == NULL) {
-		if (error == T3_ERR_OUT_OF_MEMORY)
+		if (error == CHARCONV_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
-		else if (error == T3_ERR_ERRNO)
+		else if (error == CHARCONV_ERRNO)
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
@@ -83,7 +82,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	uint32_t codepoint;
 	char *codepoint_ptr;
 	size_t codepoint_bytesleft;
-	t3_bool fallback;
+	cc_bool fallback;
 
 	if (inbuf == NULL || *inbuf == NULL) {
 		/* There is no need to convert the input buffer, because even if it had an incomplete
@@ -117,7 +116,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 
 	while (*inbytesleft > 0) {
 		charconv_save_state(cd->from, saved_state);
-		fallback = t3_false;
+		fallback = cc_false;
 		codepoint_ptr = (char *) &codepoint;
 		codepoint_bytesleft = 4;
 		switch (charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr,
@@ -129,13 +128,13 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_FALLBACK:
 				charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = t3_true;
+				fallback = cc_true;
 				break;
 			case CHARCONV_PRIVATE_USE:
 			case CHARCONV_UNASSIGNED:
 				codepoint = 0xFFFD;
 				charconv_to_unicode_skip(cd->from, &_inbuf, &_inbytesleft);
-				fallback = t3_true;
+				fallback = cc_true;
 				break;
 			case CHARCONV_ILLEGAL:
 				ERROR(EILSEQ);
@@ -159,13 +158,13 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_FALLBACK:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = t3_true;
+				fallback = cc_true;
 				break;
 			case CHARCONV_UNASSIGNED:
 			case CHARCONV_PRIVATE_USE:
 				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBSTITUTE | CHARCONV_SUBSTITUTE_ALL);
-				fallback = t3_true;
+				fallback = cc_true;
 				break;
 			case CHARCONV_NO_SPACE:
 				ERROR(E2BIG);

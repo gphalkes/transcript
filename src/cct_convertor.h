@@ -65,7 +65,7 @@ typedef struct {
 typedef struct {
 	uint32_t base, range;
 	uint16_t nr_entries;
-	t3_bool complete;
+	cc_bool complete;
 	uint8_t map[256];
 	entry_t *entries;
 } state_t;

@@ -18,7 +18,6 @@
 #include <search.h>
 
 #include "charconv.h"
-#include "charconv_errors.h"
 #include "charconv_internal.h"
 #include "unicode_convertor.h"
 #include "convertors.h"
@@ -39,13 +38,13 @@ static void close_convertor(convertor_state_t *handle);
 static int put_common(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	return handle->common.put_unicode(codepoint, outbuf, outbytesleft);
 }
-static uint_fast32_t get_common(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip) {
+static uint_fast32_t get_common(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	return handle->common.get_unicode(inbuf, inbytesleft, skip);
 }
 static int put_from_unicode(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	return handle->from_unicode_put(codepoint, outbuf, outbytesleft);
 }
-static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, t3_bool skip) {
+static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	return handle->to_unicode_get(inbuf, inbytesleft, skip);
 }
 
@@ -59,7 +58,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 	int result;
 
 	while (*inbytesleft > 0) {
-		codepoint = get_unicode(handle, (char **) &_inbuf, &_inbytesleft, t3_false);
+		codepoint = get_unicode(handle, (char **) &_inbuf, &_inbytesleft, cc_false);
 		switch (codepoint) {
 			case CHARCONV_UTF_INTERNAL_ERROR:
 				return CHARCONV_INTERNAL_ERROR;
@@ -108,19 +107,19 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 
 		if (handle->utf_type == UTF32 || handle->utf_type == UTF16) {
 			codepoint = get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE)(
-					(char **) &_inbuf, &_inbytesleft, t3_false);
+					(char **) &_inbuf, &_inbytesleft, cc_false);
 			if (codepoint == UINT32_C(0xFEFF)) {
 				handle->to_unicode_get = get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE);
 			} else if (codepoint == CHARCONV_ILLEGAL) {
 				codepoint = get_get_unicode(handle->utf_type == UTF32 ? UTF32LE : UTF16LE)(
-						(char **) &_inbuf, &_inbytesleft, t3_false);
+						(char **) &_inbuf, &_inbytesleft, cc_false);
 				if (codepoint == UINT32_C(0xFEFF))
 					handle->to_unicode_get = get_get_unicode(handle->utf_type == UTF32 ? UTF32LE : UTF16LE);
 				else
 					handle->to_unicode_get = get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE);
 			}
 		} else {
-			codepoint = handle->to_unicode_get((char **) &_inbuf, &_inbytesleft, t3_false);
+			codepoint = handle->to_unicode_get((char **) &_inbuf, &_inbytesleft, cc_false);
 		}
 		/* Anything, including bad input, will simply not cause a pointer update,
 		   meaning that only the BOM will be ignored. */
@@ -135,7 +134,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 }
 
 static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->to_unicode_get(inbuf, inbytesleft, t3_true) == CHARCONV_UTF_INCOMPLETE)
+	if (handle->to_unicode_get(inbuf, inbytesleft, cc_true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }
@@ -234,13 +233,13 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 
 	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utftype), element_strcmp)) == NULL) {
 		if (error != NULL)
-			*error = T3_ERR_TERMINFODB_NOT_FOUND;
+			*error = CHARCONV_INTERNAL_ERROR;
 		return NULL;
 	}
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
 		if (error != NULL)
-			*error = T3_ERR_OUT_OF_MEMORY;
+			*error = CHARCONV_OUT_OF_MEMORY;
 		return NULL;
 	}
 
@@ -275,7 +274,7 @@ void *open_unicode_convertor(const char *name, int flags, int *error) {
 	}
 	switch (retval->utf_type) {
 		case GB18030:
-			if ((retval->gb18030_cct = fill_utf(open_cct_convertor_internal("gb18030", flags, error, t3_true), UTF32)) == NULL) {
+			if ((retval->gb18030_cct = fill_utf(open_cct_convertor_internal("gb18030", flags, error, cc_true), UTF32)) == NULL) {
 				free(retval);
 				return NULL;
 			}

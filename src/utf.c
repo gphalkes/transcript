@@ -118,7 +118,7 @@ static int put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t *outbyteslef
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return CHARCONV_UTF_ILLEGAL; } while (0)
 
-static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, t3_bool skip, t3_bool strict) {
+static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, cc_bool skip, cc_bool strict) {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	uint_fast32_t codepoint = *_inbuf, least;
 	size_t bytes;
@@ -219,8 +219,8 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, t3_bool
 	return codepoint;
 }
 
-static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, t3_bool skip) {
-	return get_utf8internal(inbuf, inbytesleft, skip, t3_true);
+static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, cc_bool skip) {
+	return get_utf8internal(inbuf, inbytesleft, skip, cc_true);
 }
 
 /** Get the next UTF-8 encoded unicode codepoint from the stream.
@@ -228,18 +228,18 @@ static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, t3_bool s
     This version is permissive in what it accepts, in that it allows overlong
     sequences, and allows CESU-8 encoding using surrogate pairs.
 */
-static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, t3_bool skip) {
+static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	size_t _inbytesleft = *inbytesleft;
 	char *_inbuf = *inbuf;
 	uint_fast32_t codepoint;
 
-	codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, t3_false);
+	codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, cc_false);
 	if (codepoint >= UINT32_C(0xd800) && codepoint < UINT32_C(0xdc00)) {
 		uint_fast32_t next_codepoint;
 		char *_inbuf_save = _inbuf;
 		size_t _inbytesleft_save = _inbytesleft;
 
-		next_codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, t3_false);
+		next_codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, cc_false);
 
 		if (next_codepoint > UINT32_C(0xffff0000))
 			return next_codepoint;
@@ -331,7 +331,7 @@ get_unicode_func_t get_get_unicode(int type) {
 	}
 }
 
-uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, t3_bool skip) {
+uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	uint_fast32_t codepoint = *(uint32_t *) *inbuf;
 
 	(void) skip;

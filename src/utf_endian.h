@@ -45,7 +45,7 @@ static int ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, size_t *outbyt
 	return CHARCONV_SUCCESS;
 }
 
-static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, t3_bool skip) {
+static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	uint_fast32_t codepoint;
 
 	if (*inbytesleft < 2)
@@ -92,7 +92,7 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, t3_bool s
 	return codepoint;
 }
 
-static uint_fast32_t ALT(get_utf32)(char **inbuf, size_t *inbytesleft, t3_bool skip) {
+static uint_fast32_t ALT(get_utf32)(char **inbuf, size_t *inbytesleft, cc_bool skip) {
 	uint_fast32_t codepoint;
 
 	if (*inbytesleft < 4)

@@ -15,7 +15,6 @@
 /* This convertor implements the ISO-8859-1 codepage. */
 #include <string.h>
 #include "charconv.h"
-#include "charconv_errors.h"
 #include "utf.h"
 
 static void close_convertor(charconv_common_t *handle);
@@ -55,7 +54,7 @@ static int from_unicode_conversion(charconv_common_t *handle, char **inbuf, size
 	size_t _inbytesleft = *inbytesleft;
 
 	while (*inbytesleft > 0) {
-		codepoint = handle->get_unicode((char **) &_inbuf, &_inbytesleft, t3_false);
+		codepoint = handle->get_unicode((char **) &_inbuf, &_inbytesleft, cc_false);
 		switch (codepoint) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
@@ -107,7 +106,7 @@ void *open_iso8859_1_convertor(const char *name, int flags, int *error) {
 
 	if ((retval = malloc(sizeof(charconv_common_t))) == 0) {
 		if (error != NULL)
-			*error = T3_ERR_OUT_OF_MEMORY;
+			*error = CHARCONV_OUT_OF_MEMORY;
 		return NULL;
 	}
 

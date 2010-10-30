@@ -17,20 +17,19 @@
 #include <arpa/inet.h>
 
 #include "charconv.h"
-#include "charconv_errors.h"
 #include "cct_convertor.h"
 
-static t3_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
-static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
+static cc_bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
+static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
-static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
+static cc_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
-#define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(T3_ERR_READ_ERROR); } while (0)
-#define READ_BYTE(store) do { uint8_t value; if (fread(&value, 1, 1, file) != (size_t) 1) ERROR(T3_ERR_READ_ERROR); store = value; } while (0)
-#define READ_WORD(store) do { uint16_t value; if (fread(&value, 1, 2, file) != (size_t) 2) ERROR(T3_ERR_READ_ERROR); store = ntohs(value); } while (0)
-#define READ_DWORD(store) do { uint32_t value; if (fread(&value, 1, 4, file) != (size_t) 4) ERROR(T3_ERR_READ_ERROR); store = ntohl(value); } while (0)
+#define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(CHARCONV_TRUNCATED_MAP); } while (0)
+#define READ_BYTE(store) do { uint8_t value; READ(1, &value); store = value; } while (0)
+#define READ_WORD(store) do { uint16_t value; READ(2, &value); store = ntohs(value); } while (0)
+#define READ_DWORD(store) do { uint32_t value; READ(4, &value); store = ntohl(value); } while (0)
 
 static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
 
@@ -42,17 +41,17 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 	uint_fast32_t i, j;
 
 	if ((file = fopen(file_name, "r")) == NULL)
-		ERROR(T3_ERR_ERRNO);
+		ERROR(CHARCONV_ERRNO);
 
 	READ(4, magic);
 	if (memcmp(magic, "T3CM", 4) != 0)
-		ERROR(T3_ERR_INVALID_FORMAT);
+		ERROR(CHARCONV_INVALID_FORMAT);
 	READ_DWORD(version);
 	if (version != UINT32_C(0))
-		ERROR(T3_ERR_WRONG_VERSION);
+		ERROR(CHARCONV_WRONG_VERSION);
 
 	if ((convertor = calloc(1, sizeof(convertor_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	/* Make sure all pointers are correctly initialized, even if the NULL pointer
 	   is not actually zero. */
@@ -90,15 +89,15 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 	READ_BYTE(convertor->single_size);
 
 	if ((convertor->shift_states = calloc(convertor->nr_shift_states, sizeof(shift_state_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	if ((convertor->codepage_states = calloc(convertor->nr_codepage_states + 1, sizeof(state_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	if ((convertor->codepage_entries = malloc((convertor->nr_codepage_entries + 1) * sizeof(entry_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	if ((convertor->unicode_states = calloc(convertor->nr_unicode_states + 1, sizeof(state_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	if ((convertor->unicode_entries = malloc((convertor->nr_unicode_entries + 1) * sizeof(entry_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	for (i = 0; i < convertor->nr_shift_states; i++) {
 		READ_BYTE(convertor->shift_states[i].from_state);
@@ -115,14 +114,14 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 		goto end_error;
 
 	if (!validate_states(convertor->codepage_states, convertor->nr_codepage_states, convertor->flags, convertor->codepage_range))
-		ERROR(T3_ERR_INVALID_FORMAT);
+		ERROR(CHARCONV_INVALID_FORMAT);
 	if (!validate_states(convertor->unicode_states, convertor->nr_unicode_states, 0, convertor->unicode_range))
-		ERROR(T3_ERR_INVALID_FORMAT);
+		ERROR(CHARCONV_INVALID_FORMAT);
 
 	if ((convertor->codepage_mappings = malloc(convertor->codepage_range * sizeof(uint16_t))) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	if ((convertor->unicode_mappings = calloc(convertor->unicode_range, convertor->single_size)) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 	memset(convertor->codepage_mappings, 0xff, convertor->codepage_range * sizeof(uint16_t));
 
 	for (i = 0; i < convertor->codepage_range; i++)
@@ -151,10 +150,10 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 	}
 
 	if (fread(magic, 1, 1, file) != 0 || !feof(file))
-		ERROR(T3_ERR_INVALID_FORMAT);
+		ERROR(CHARCONV_INVALID_FORMAT);
 
 	if ((convertor->name = strdup(file_name)) == NULL)
-		ERROR(T3_ERR_OUT_OF_MEMORY);
+		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	fclose(file);
 	return convertor;
@@ -192,7 +191,7 @@ void unload_cct_convertor(convertor_t *convertor) {
 	free(convertor);
 }
 
-static t3_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
+static cc_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
 	uint_fast32_t i, j, entries_idx = 0;
 
 	nr_states++;
@@ -208,27 +207,27 @@ static t3_bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states,
 			READ_BYTE(entries[entries_idx].action);
 			if (j > 0) {
 				if (entries[entries_idx].low <= entries[entries_idx - 1].low)
-					ERROR(T3_ERR_INVALID_FORMAT);
+					ERROR(CHARCONV_INVALID_FORMAT);
 				memset(states[i].map + entries[entries_idx - 1].low, j - 1, entries[entries_idx].low - entries[entries_idx - 1].low);
 			} else {
 				if (entries[entries_idx].low != 0)
-					ERROR(T3_ERR_INVALID_FORMAT);
+					ERROR(CHARCONV_INVALID_FORMAT);
 			}
 			entries_idx++;
 		}
 		memset(states[i].map + entries[entries_idx - 1].low, j - 1, 256 - entries[entries_idx - 1].low);
 		if (j < states[i].nr_entries)
-			ERROR(T3_ERR_INVALID_FORMAT);
+			ERROR(CHARCONV_INVALID_FORMAT);
 	}
 	if (entries_idx != max_entries)
-		ERROR(T3_ERR_INVALID_FORMAT);
+		ERROR(CHARCONV_INVALID_FORMAT);
 
-	return t3_true;
+	return cc_true;
 end_error:
-	return t3_false;
+	return cc_false;
 }
 
-static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range) {
+static cc_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range) {
 	uint_fast32_t i, j, calculated_range;
 	int next_is_initial;
 
@@ -237,12 +236,12 @@ static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t
 	for (i = 0; i < nr_states; i++) {
 		for (j = 0; j < states[i].nr_entries; j++) {
 			if (states[i].entries[j].next_state >= nr_states)
-				return t3_false;
+				return cc_false;
 
 			next_is_initial = states[i].entries[j].next_state == 0 ||
 					((flags & MULTIBYTE_START_STATE_1) && states[i].entries[j].next_state == 1);
 			if ((states[i].entries[j].action != ACTION_VALID) ^ next_is_initial)
-				return t3_false;
+				return cc_false;
 		}
 	}
 
@@ -256,9 +255,9 @@ static t3_bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t
 	}
 
 	if (calculated_range != range)
-		return t3_false;
+		return cc_false;
 
-	return t3_true;
+	return cc_true;
 }
 
 static void update_state_attributes(state_t *states, uint_fast32_t idx) {
@@ -291,7 +290,7 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 		}
 	}
 	states[idx].range = sum;
-	states[idx].complete = t3_true;
+	states[idx].complete = cc_true;
 }
 
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx) {
@@ -407,7 +406,7 @@ static uint8_t (* const get_flags_trie[16])(const flags_t *flags, uint_fast32_t 
 	get_flags_15_trie
 };
 
-static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error) {
+static cc_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error) {
 	uint_fast32_t nr_flag_bytes, nr_blocks, i;
 	uint8_t flag_info;
 	READ_BYTE(flag_info);
@@ -416,24 +415,24 @@ static t3_bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *
 	if (flag_info & 0x80) {
 		nr_flag_bytes = (nr_flag_bytes + 15) / 16;
 		if ((flags->indices = malloc(nr_flag_bytes * 2)) == NULL)
-			ERROR(T3_ERR_OUT_OF_MEMORY);
+			ERROR(CHARCONV_OUT_OF_MEMORY);
 		for (i = 0; i < nr_flag_bytes; i++)
 			READ_WORD(flags->indices[i]);
 
 		READ_WORD(nr_blocks);
 		nr_blocks++;
 		if ((flags->flags = malloc(nr_blocks * 16)) == NULL)
-			ERROR(T3_ERR_OUT_OF_MEMORY);
+			ERROR(CHARCONV_OUT_OF_MEMORY);
 		READ(nr_blocks * 16, flags->flags);
 		flags->get_flags = get_flags_trie[flag_info & 0xf];
 	} else {
 		if ((flags->flags = malloc(nr_flag_bytes)) == NULL)
-			ERROR(T3_ERR_OUT_OF_MEMORY);
+			ERROR(CHARCONV_OUT_OF_MEMORY);
 		READ(nr_flag_bytes, flags->flags);
 		flags->get_flags = get_flags[flag_info & 0xf];
 	}
 
-	return t3_true;
+	return cc_true;
 end_error:
-	return t3_false;
+	return cc_false;
 }

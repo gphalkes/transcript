@@ -24,7 +24,7 @@ typedef struct charconv_common_t charconv_t;
 typedef int (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 typedef int (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, t3_bool skip);
+typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, cc_bool skip);
 typedef int (*reset_func_t)(charconv_t *handle);
 typedef void (*close_func_t)(charconv_t *handle);
 typedef void (*save_func_t)(charconv_t *handle, void *state);
@@ -59,28 +59,23 @@ enum {
 	CHARCONV_NO_MN_CONVERSION = (1<<11) /* Do not use M:N conversions. */
 };
 
-enum {
-	CHARCONV_SUCCESS, /* All OK */
-	CHARCONV_FALLBACK, /* The next character to convert is a fallback mapping */
-	CHARCONV_UNASSIGNED, /* The next character to convert is an unassigned sequence */
-	CHARCONV_ILLEGAL, /* The input is an illegal sequence */
-	CHARCONV_ILLEGAL_END, /* The end of the input does not form a valid sequence */
-	CHARCONV_INTERNAL_ERROR, /* The charconv library screwed up; no recovery possible */
-	CHARCONV_PRIVATE_USE, /* The next character to convert maps to a private use codepoint */
-	CHARCONV_NO_SPACE, /* There was no space left in the output buffer */
-	CHARCONV_INCOMPLETE /* The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion */
+enum charconv_error_t {
+	CHARCONV_SUCCESS, /**< All OK. */
+	CHARCONV_FALLBACK, /**< The next character to convert is a fallback mapping. */
+	CHARCONV_UNASSIGNED, /**< The next character to convert is an unassigned sequence. */
+	CHARCONV_ILLEGAL, /**< The input is an illegal sequence. */
+	CHARCONV_ILLEGAL_END, /**< The end of the input does not form a valid sequence. */
+	CHARCONV_INTERNAL_ERROR, /**< The charconv library screwed up; no recovery possible. */
+	CHARCONV_PRIVATE_USE, /**< The next character to convert maps to a private use codepoint. */
+	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
+	CHARCONV_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
+	CHARCONV_ERRNO, /**< See errno for error code. */
+	CHARCONV_BAD_ARG, /**< Bad argument. */
+	CHARCONV_OUT_OF_MEMORY, /**< Out of memory. */
+	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
+	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
+	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
 };
-
-#define CHARCONV_UTF_ILLEGAL UINT32_C(0xffffffff)
-#define CHARCONV_UTF_INCOMPLETE UINT32_C(0xfffffffe)
-/* CHARCONV_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
-   from UTF-7/GB-18030/SCSU/BOCU-1 decoders. */
-#define CHARCONV_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
-
-
-#ifndef DB_DIRECTORY
-#define DB_DIRECTORY "/usr/local/share/libcharconv"
-#endif
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, int *error);
 void charconv_close_convertor(charconv_t *handle);
@@ -90,6 +85,7 @@ int charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesle
 int charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 void charconv_to_unicode_reset(charconv_t *handle);
 void charconv_from_unicode_reset(charconv_t *handle);
+// FIXME: use a macro instead!
 size_t charconv_get_saved_state_size(void);
 void charconv_save_state(charconv_t *handle, void *state);
 void charconv_load_state(charconv_t *handle, void *state);
@@ -116,10 +112,4 @@ typedef cc_iconv_t iconv_t;
 #endif
 #endif
 
-
-//#warning FIXME: these should not be replicated here!!!
-#define T3_ERR_INVALID_FORMAT (-32)
-#define T3_ERR_TRUNCATED_DB (-29)
-#define T3_ERR_READ_ERROR (-28)
-#define T3_ERR_WRONG_VERSION (-27)
 #endif
