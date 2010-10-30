@@ -14,6 +14,8 @@
 #ifndef CHARCONV_INTERNAL_H
 #define CHARCONV_INTERNAL_H
 
+#include "charconv.h"
+
 #define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
 
 #ifndef DB_DIRECTORY
@@ -56,7 +58,7 @@ struct _cc_iconv_t {
 	charconv_t *from, *to;
 };
 
-charconv_t *fill_utf(charconv_t *handle, int utf_type);
-int element_strcmp(const void *a, const void *b);
+CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, int utf_type);
+CHARCONV_LOCAL int _charconv_element_strcmp(const void *a, const void *b);
 
 #endif

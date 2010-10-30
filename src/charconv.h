@@ -38,7 +38,6 @@
 #else
 	#define CHARCONV_API CHARCONV_IMPORT
 #endif
-#define CHARCONV_STATIC CHARCONV_LOCAL
 
 typedef struct charconv_common_t charconv_t;
 
@@ -73,8 +72,11 @@ typedef enum {
 	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
 	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
+	CHARCONV_INTERNAL_TABLE /**< Tried to load a table that is for internal use only. */
 } charconv_error_t;
 
+/* I would rather not define these here, but I need them for the definition of
+   CHARCONV_SAVE_STATE_SIZE. */
 struct _charconv_cct_state_t {
 	uint8_t to, from;
 };

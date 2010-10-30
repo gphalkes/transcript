@@ -14,7 +14,6 @@
 #include <string.h>
 #include <pthread.h>
 
-#include "charconv.h"
 #include "charconv_internal.h"
 #include "cct_convertor.h"
 #include "utf.h"
@@ -31,7 +30,6 @@ static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inby
 static void close_convertor(convertor_state_t *handle);
 
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-convertor_t *cct_head = NULL;
 static put_unicode_func_t put_utf16;
 
 #define PUT_UNICODE(codepoint) do { int result; \
@@ -490,7 +488,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
-void *open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
+void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
 	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
 	convertor_t *ptr;
@@ -508,30 +506,21 @@ void *open_cct_convertor_internal(const char *name, int flags, int *error, bool 
 	strcat(file_name, ".cct");
 
 	pthread_mutex_lock(&cct_list_mutex);
+	/* Initialisation of global function. */
 	if (put_utf16 == NULL)
-		put_utf16 = get_put_unicode(UTF16);
+		put_utf16 = _charconv_get_put_unicode(UTF16);
 
-	for (ptr = cct_head; ptr != NULL; ptr = ptr->next) {
-		if (strcmp(ptr->name, file_name) == 0)
-			break;
-	}
-
-	if (ptr == NULL) {
-		ptr = load_cct_convertor(file_name, error);
-		if (ptr == NULL) {
-			pthread_mutex_unlock(&cct_list_mutex);
-			return NULL;
-		}
-		ptr->next = cct_head;
-		cct_head = ptr;
+	if ((ptr = _charconv_load_cct_convertor(file_name, error)) == NULL) {
+		pthread_mutex_unlock(&cct_list_mutex);
+		return NULL;
 	}
 	free(file_name);
 
 	if ((!internal_use && (ptr->flags & INTERNAL_TABLE)) || (retval = malloc(sizeof(convertor_state_t))) == NULL) {
 		if (ptr->refcount == 0)
-			unload_cct_convertor(ptr);
+			_charconv_unload_cct_convertor(ptr);
 		if (error != NULL)
-			*error = !internal_use && (ptr->flags & INTERNAL_TABLE) ? CHARCONV_INVALID_FORMAT : CHARCONV_OUT_OF_MEMORY;
+			*error = !internal_use && (ptr->flags & INTERNAL_TABLE) ? CHARCONV_INTERNAL_TABLE : CHARCONV_OUT_OF_MEMORY;
 		pthread_mutex_unlock(&cct_list_mutex);
 		return NULL;
 	}
@@ -554,21 +543,17 @@ void *open_cct_convertor_internal(const char *name, int flags, int *error, bool 
 	return retval;
 }
 
-void *open_cct_convertor(const char *name, int flags, int *error) {
-	return open_cct_convertor_internal(name, flags, error, false);
+void *_charconv_open_cct_convertor(const char *name, int flags, int *error) {
+	return _charconv_open_cct_convertor_internal(name, flags, error, false);
 }
 
 
 static void close_convertor(convertor_state_t *handle) {
 	pthread_mutex_lock(&cct_list_mutex);
 	if (handle->convertor->refcount == 1)
-		unload_cct_convertor(handle->convertor);
+		_charconv_unload_cct_convertor(handle->convertor);
 	else
 		handle->convertor->refcount--;
 	pthread_mutex_unlock(&cct_list_mutex);
 	free(handle);
-}
-
-size_t get_cct_saved_state_size(void) {
-	return sizeof(save_state_t);
 }

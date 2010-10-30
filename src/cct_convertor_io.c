@@ -16,7 +16,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 
-#include "charconv.h"
+#include "charconv_internal.h"
 #include "cct_convertor.h"
 
 static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
@@ -32,13 +32,19 @@ static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *err
 #define READ_DWORD(store) do { uint32_t value; READ(4, &value); store = ntohl(value); } while (0)
 
 static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
+static convertor_t *cct_head = NULL;
 
-convertor_t *load_cct_convertor(const char *file_name, int *error) {
+convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error) {
 	convertor_t *convertor = NULL;
 	FILE *file;
 	char magic[4];
 	uint32_t version;
 	uint_fast32_t i, j;
+
+	for (convertor = cct_head; convertor != NULL; convertor = convertor->next) {
+		if (strcmp(convertor->name, file_name) == 0)
+			return convertor;
+	}
 
 	if ((file = fopen(file_name, "r")) == NULL)
 		ERROR(CHARCONV_ERRNO);
@@ -156,6 +162,8 @@ convertor_t *load_cct_convertor(const char *file_name, int *error) {
 		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	fclose(file);
+	convertor->next = cct_head;
+	cct_head = convertor;
 	return convertor;
 
 end_error:
@@ -163,11 +171,11 @@ end_error:
 		fclose(file);
 	if (convertor == NULL)
 		return NULL;
-	unload_cct_convertor(convertor);
+	_charconv_unload_cct_convertor(convertor);
 	return NULL;
 }
 
-void unload_cct_convertor(convertor_t *convertor) {
+void _charconv_unload_cct_convertor(convertor_t *convertor) {
 	if (cct_head == convertor) {
 		cct_head = cct_head->next;
 	} else {

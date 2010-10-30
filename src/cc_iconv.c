@@ -14,7 +14,6 @@
 #include <errno.h>
 
 #define CHARCONV_ICONV_API
-#include "charconv.h"
 #include "charconv_internal.h"
 #include "utf.h"
 
@@ -48,7 +47,7 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	}
 	/* Because we don't use the M:N conversions, we don't have to perform any checks
 	   when retrieving the UTF-32 character in the from_unicode conversion. */
-	retval->to->get_unicode = get_utf32_no_check;
+	retval->to->get_unicode = _charconv_get_utf32_no_check;
 
 	return retval;
 

@@ -118,8 +118,6 @@ typedef struct convertor_t {
 	flags_t unicode_flags;
 } convertor_t;
 
-extern convertor_t *cct_head;
-
-convertor_t *load_cct_convertor(const char *file_name, int *error);
-void unload_cct_convertor(convertor_t *convertor);
+CHARCONV_LOCAL convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error);
+CHARCONV_LOCAL void _charconv_unload_cct_convertor(convertor_t *convertor);
 #endif

@@ -16,7 +16,6 @@
 #include <string.h>
 #include <search.h>
 
-#include "charconv.h"
 #include "charconv_internal.h"
 #include "utf.h"
 
@@ -30,27 +29,27 @@ typedef struct {
 
 //FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
 static name_mapping convertors[] = {
-	{ "ibm437", "ibm-437_P100-1995", open_cct_convertor },
-	{ "ibm437p100", "ibm-437_P100-1995", open_cct_convertor },
-	{ "ibm437p1001995", "ibm-437_P100-1995", open_cct_convertor },
-	{ "iso88591", "ISO-8859-1", open_iso8859_1_convertor },
-	{ "utf8", "UTF-8", open_unicode_convertor },
-	{ "utf8bom", "UTF-8_BOM", open_unicode_convertor },
-	{ "utf16", "UTF-16", open_unicode_convertor },
-	{ "utf16be", "UTF-16BE", open_unicode_convertor },
-	{ "utf16le", "UTF-16LE", open_unicode_convertor },
-	{ "ucs2", "UTF-16", open_unicode_convertor },
-	{ "ucs2be", "UTF-16BE", open_unicode_convertor },
-	{ "ucs2le", "UTF-16LE", open_unicode_convertor },
-	{ "utf32", "UTF-32", open_unicode_convertor },
-	{ "utf32be", "UTF-32BE", open_unicode_convertor },
-	{ "utf32le", "UTF-32LE", open_unicode_convertor },
-	{ "ucs4", "UTF-32", open_unicode_convertor },
-	{ "ucs4be", "UTF-32BE", open_unicode_convertor },
-	{ "ucs4le", "UTF-32LE", open_unicode_convertor },
-	{ "cesu8", "CESU-8", open_unicode_convertor },
-	{ "utf7", "UTF-7", open_unicode_convertor },
-	{ "gb18030", "GB-18030", open_unicode_convertor }
+	{ "ibm437", "ibm-437_P100-1995", _charconv_open_cct_convertor },
+	{ "ibm437p100", "ibm-437_P100-1995", _charconv_open_cct_convertor },
+	{ "ibm437p1001995", "ibm-437_P100-1995", _charconv_open_cct_convertor },
+	{ "iso88591", "ISO-8859-1", _charconv_open_iso8859_1_convertor },
+	{ "utf8", "UTF-8", _charconv_open_unicode_convertor },
+	{ "utf8bom", "UTF-8_BOM", _charconv_open_unicode_convertor },
+	{ "utf16", "UTF-16", _charconv_open_unicode_convertor },
+	{ "utf16be", "UTF-16BE", _charconv_open_unicode_convertor },
+	{ "utf16le", "UTF-16LE", _charconv_open_unicode_convertor },
+	{ "ucs2", "UTF-16", _charconv_open_unicode_convertor },
+	{ "ucs2be", "UTF-16BE", _charconv_open_unicode_convertor },
+	{ "ucs2le", "UTF-16LE", _charconv_open_unicode_convertor },
+	{ "utf32", "UTF-32", _charconv_open_unicode_convertor },
+	{ "utf32be", "UTF-32BE", _charconv_open_unicode_convertor },
+	{ "utf32le", "UTF-32LE", _charconv_open_unicode_convertor },
+	{ "ucs4", "UTF-32", _charconv_open_unicode_convertor },
+	{ "ucs4be", "UTF-32BE", _charconv_open_unicode_convertor },
+	{ "ucs4le", "UTF-32LE", _charconv_open_unicode_convertor },
+	{ "cesu8", "CESU-8", _charconv_open_unicode_convertor },
+	{ "utf7", "UTF-7", _charconv_open_unicode_convertor },
+	{ "gb18030", "GB-18030", _charconv_open_unicode_convertor }
 };
 
 /*================ API functions ===============*/
@@ -82,13 +81,13 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, c
 	}
 	name_buffer[store_idx] = 0;
 
-	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), element_strcmp)) != NULL) {
+	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), _charconv_element_strcmp)) != NULL) {
 		if (convertor->open != NULL)
-			return fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
+			return _charconv_fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
 		name = convertor->convertor_name;
 	}
 
-	return fill_utf(open_cct_convertor(name, flags, error), utf_type);
+	return _charconv_fill_utf(_charconv_open_cct_convertor(name, flags, error), utf_type);
 }
 
 void charconv_close_convertor(charconv_t *handle) {
@@ -132,14 +131,14 @@ void charconv_load_state(charconv_t *handle, void *state) {
 
 /*================ Internal functions ===============*/
 
-charconv_t *fill_utf(charconv_t *handle, int utf_type) {
+charconv_t *_charconv_fill_utf(charconv_t *handle, int utf_type) {
 	if (handle == NULL)
 		return NULL;
-	handle->get_unicode = get_get_unicode(utf_type);
-	handle->put_unicode = get_put_unicode(utf_type);
+	handle->get_unicode = _charconv_get_get_unicode(utf_type);
+	handle->put_unicode = _charconv_get_put_unicode(utf_type);
 	return handle;
 }
 
-int element_strcmp(const void *a, const void *b) {
+int _charconv_element_strcmp(const void *a, const void *b) {
 	return strcmp((const char *) a, *(char * const *) b);
 }

@@ -39,7 +39,7 @@ enum {
 	UTF7
 };
 
-put_unicode_func_t get_put_unicode(int type);
-get_unicode_func_t get_get_unicode(int type);
-uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, bool skip);
+CHARCONV_LOCAL put_unicode_func_t _charconv_get_put_unicode(int type);
+CHARCONV_LOCAL get_unicode_func_t _charconv_get_get_unicode(int type);
+CHARCONV_LOCAL uint_fast32_t _charconv_get_utf32_no_check(char **inbuf, size_t *inbytesleft, bool skip);
 #endif

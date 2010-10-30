@@ -46,11 +46,11 @@ enum {
 	UTF7_MODE_BASE64_4
 };
 
-int put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-uint_fast32_t get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
-int from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *inbytesleft);
+CHARCONV_LOCAL int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
+CHARCONV_LOCAL uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
+CHARCONV_LOCAL int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *inbytesleft);
 
-int put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-uint_fast32_t get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
+CHARCONV_LOCAL int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
+CHARCONV_LOCAL uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
 
 #endif

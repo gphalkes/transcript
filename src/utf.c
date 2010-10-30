@@ -13,7 +13,7 @@
 */
 #include <arpa/inet.h>
 
-#include "charconv.h"
+#include "charconv_internal.h"
 #include "utf.h"
 
 #if defined(USE_ENDIAN) || defined(USE_SYS_ENDIAN)
@@ -276,7 +276,7 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
 
-put_unicode_func_t get_put_unicode(int type) {
+put_unicode_func_t _charconv_get_put_unicode(int type) {
 	switch (type) {
 		case UTF8:
 		case UTF8_LOOSE:
@@ -303,7 +303,7 @@ put_unicode_func_t get_put_unicode(int type) {
 	}
 }
 
-get_unicode_func_t get_get_unicode(int type) {
+get_unicode_func_t _charconv_get_get_unicode(int type) {
 	switch (type) {
 		case UTF8:
 			return get_utf8strict;
@@ -331,7 +331,7 @@ get_unicode_func_t get_get_unicode(int type) {
 	}
 }
 
-uint_fast32_t get_utf32_no_check(char **inbuf, size_t *inbytesleft, bool skip) {
+uint_fast32_t _charconv_get_utf32_no_check(char **inbuf, size_t *inbytesleft, bool skip) {
 	uint_fast32_t codepoint = *(uint32_t *) *inbuf;
 
 	(void) skip;

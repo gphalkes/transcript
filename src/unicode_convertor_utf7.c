@@ -14,7 +14,7 @@
 
 /* Get/put routines for UTF-7. */
 
-#include "charconv.h"
+#include "charconv_internal.h"
 #include "utf.h"
 #include "unicode_convertor.h"
 
@@ -124,7 +124,7 @@ static const uint8_t value_to_base64[64] = {
 	return CHARCONV_SUCCESS; \
 } while (0)
 
-int put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	uint_fast32_t low_surrogate = 0;
 
 next_surrogate:
@@ -157,7 +157,7 @@ next_surrogate:
 	}
 }
 
-int from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
 	switch (handle->state.utf7_put_mode) {
 		case UTF7_MODE_DIRECT:
 			break;
@@ -181,7 +181,7 @@ int from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *ou
 
 #define SKIP_BYTES(x) do { *inbytesleft = _inbytesleft - (x); *inbuf = (char *) (_inbuf + (x)); } while (0)
 
-uint_fast32_t get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
+uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
 	uint_fast32_t codepoint, high_surrogate = 0;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;

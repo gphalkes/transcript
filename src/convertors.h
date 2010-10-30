@@ -14,18 +14,16 @@
 #ifndef CONVERTORS_H
 #define CONVERTORS_H
 #include <stdlib.h>
+#include "charconv_internal.h"
 
 /* CCT based convertors */
-void *open_cct_convertor(const char *name, int flags, charconv_error_t *error);
-void *open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use);
-size_t get_cct_saved_state_size(void);
+CHARCONV_LOCAL void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error);
+CHARCONV_LOCAL void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use);
 
 /* Unicode UTF convertors */
-void *open_unicode_convertor(const char *name, int flags, charconv_error_t *error);
-size_t get_unicode_saved_state_size(void);
+CHARCONV_LOCAL void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_error_t *error);
 
 /* ISO-8859-1 convertor */
-void *open_iso8859_1_convertor(const char *name, int flags, charconv_error_t *error);
-size_t get_iso8859_1_saved_state_size(void);
+CHARCONV_LOCAL void *_charconv_open_iso8859_1_convertor(const char *name, int flags, charconv_error_t *error);
 
 #endif

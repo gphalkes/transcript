@@ -16,7 +16,7 @@
 #define _ALT(x, y) __ALT(x, y)
 #define ALT(x) _ALT(x, UTF_ENDIAN_H_VERSION)
 
-int ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static int ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	uint16_t *_outbuf = (uint16_t *) *outbuf;
 
 	CHECK_CODEPOINT_RANGE();

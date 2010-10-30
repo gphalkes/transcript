@@ -14,7 +14,6 @@
 
 /* Get and put routines for GB-18030. This uses the internal gb18030.cct tables. */
 
-#include "charconv.h"
 #include "charconv_internal.h"
 #include "utf.h"
 #include "unicode_convertor.h"
@@ -38,7 +37,7 @@ static const gb_range_map_t gb_range_map[] = {
 	{ UINT32_C(0x99e2), UINT32_C(0x99fb), UINT32_C(0xffe6), UINT32_C(0xffff) },
 	{ UINT32_C(0x2e248), UINT32_C(0x12e247), UINT32_C(0x10000), UINT32_C(0x10ffff) }};
 
-int put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
 #else
@@ -101,7 +100,7 @@ int put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbu
 	return CHARCONV_SUCCESS;
 }
 
-uint_fast32_t get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
+uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
 	char *codepoint_ptr;
 	size_t codepoint_bytesleft;
 	size_t low, mid, high;
