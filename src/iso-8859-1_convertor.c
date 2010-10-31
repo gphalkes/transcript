@@ -25,7 +25,7 @@ static charconv_error_t to_unicode_conversion(charconv_common_t *handle, char **
 	uint_fast32_t codepoint;
 
 	while (*inbytesleft > 0) {
-		codepoint = **inbuf;
+		codepoint = *(uint8_t *) *inbuf;
 		if (handle->put_unicode(codepoint, outbuf, outbytesleft) == CHARCONV_NO_SPACE)
 			return CHARCONV_NO_SPACE;
 		(*inbuf)++;
