@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 LCFILES.libcharconv.la := charconv.c utf.c cc_iconv.c cct_convertor.c cct_convertor_io.c unicode_convertor.c \
-	unicode_convertor_utf7.c unicode_convertor_gb18030.c iso-8859-1_convertor.c
+	unicode_convertor_utf7.c unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c
 LDFLAGS.libcharconv.la := -pthread
 CFLAGS.cct_convertor := -pthread
 

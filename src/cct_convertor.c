@@ -26,7 +26,7 @@ typedef struct {
 	save_state_t state;
 } convertor_state_t;
 
-static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft);
 static void close_convertor(convertor_state_t *handle);
 
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -41,7 +41,7 @@ static inline size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
 }
 
-static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
@@ -64,6 +64,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			case ACTION_FINAL_PAIR:
 				conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
 				if ((conv_flags & TO_UNICODE_MULTI_START) && !(flags & CHARCONV_NO_MN_CONVERSION)) {
+					#warning FIXME: should always search for longest match!!!!
 					size_t outbytesleft_tmp, check_len;
 					uint_fast32_t i, j;
 					char *outbuf_tmp;
@@ -181,7 +182,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	return CHARCONV_SUCCESS;
 }
 
-static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 	size_t _inbytesleft = *inbytesleft;
 	uint_fast8_t state = handle->state.to;
@@ -230,7 +231,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
-static int put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesleft, size_t count, uint8_t *bytes) {
+static charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, size_t *outbytesleft, size_t count, uint8_t *bytes) {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 
@@ -261,7 +262,7 @@ write_bytes:
 	return CHARCONV_SUCCESS;
 }
 
-static int from_unicode_check_multi_mappings(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	uint_fast32_t codepoint;
@@ -276,6 +277,8 @@ static int from_unicode_check_multi_mappings(convertor_state_t *handle, char **i
 	size_t check_len;
 	size_t mapping_check_len;
 	bool can_read_more = true;
+
+	#warning FIXME: should always search for longest match!!!!
 
 	GET_UNICODE();
 	if (put_utf16(codepoint, &ptr, &codepoints_left) != 0)
@@ -358,7 +361,7 @@ check_next_mapping: ;
 	return -1;
 }
 
-static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	uint8_t *_inbuf;

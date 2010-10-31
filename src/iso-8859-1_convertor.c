@@ -19,7 +19,7 @@
 
 static void close_convertor(charconv_common_t *handle);
 
-static int to_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t to_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	uint_fast32_t codepoint;
@@ -36,7 +36,7 @@ static int to_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t
 	return CHARCONV_SUCCESS;
 }
 
-static int to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inbytesleft) {
+static charconv_error_t to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inbytesleft) {
 	(void) handle;
 
 	if (*inbytesleft == 0)
@@ -46,7 +46,7 @@ static int to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inby
 	return CHARCONV_SUCCESS;
 }
 
-static int from_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	uint_fast32_t codepoint;

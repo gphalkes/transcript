@@ -13,5 +13,7 @@
 - proper API definition with macros etc, and using a leading underscore
   for internal symbols
 
+- map FFFD to subchar!
+
 http://x0213.org/codetable/index.en.html
 official standard (in japanese) http://www.jisc.go.jp/app/pager?id=72545

@@ -48,7 +48,7 @@ static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, siz
 }
 
 
-static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode, flush_func_t flush)
 {
 	uint_fast32_t codepoint;
@@ -96,7 +96,7 @@ static int unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *i
 }
 
 
-static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
 	if (flags & CHARCONV_FILE_START) {
@@ -132,7 +132,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		handle->to_get, put_common, to_unicode_flush);
 }
 
-static int to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
 	if (handle->to_unicode_get(inbuf, inbytesleft, true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
