@@ -35,7 +35,8 @@ enum {
 	ISO2022_JP2004,
 	ISO2022_KR,
 	ISO2022_CN,
-	ISO2022_CNEXT
+	ISO2022_CNEXT,
+	ISO2022_TEST
 };
 
 typedef struct {
@@ -108,9 +109,13 @@ static int check_escapes(convertor_state_t *handle, uint8_t *_inbuf, size_t _inb
 	cct_handle_t *ptr;
 	size_t i;
 
-	for (i = 3; i < _inbytesleft; i++) {
-		if (_inbuf[i] > 0x41 && _inbuf[i] < 0x7f)
+	//FIXME: we should probably limit the number of bytes to check
+	for (i = 1; i < _inbytesleft; i++) {
+		if (_inbuf[i] >= 0x20 && _inbuf[i] <= 0x2f)
+			continue;
+		if (_inbuf[i] >= 0x40 && _inbuf[i] <= 0x7f)
 			break;
+		return CHARCONV_ILLEGAL;
 	}
 	if (i == _inbytesleft)
 		return CHARCONV_INCOMPLETE;
@@ -190,7 +195,6 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						_inbytesleft = (*inbytesleft) += result;
 						continue;
 				}
-
 			} else if (*_inbuf == 0xe) {
 				/* Shift out. */
 				if (handle->state.g[1] == NULL)
@@ -205,6 +209,14 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				_inbuf = (uint8_t *) ++(*inbuf);
 				_inbytesleft = --(*inbytesleft);
 				continue;
+			} else if (*_inbuf == 0xd) {
+				if (_inbytesleft > 1) {
+					if (_inbuf[1] == 0xa) {
+						//FIXME: reset state
+					}
+				} else if (!(flags & CHARCONV_END_OF_TEXT)) {
+					return CHARCONV_INCOMPLETE;
+				}
 			}
 			/* Other control. */
 			PUT_UNICODE(*_inbuf);
@@ -218,7 +230,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			char *buffer_ptr = buffer;
 			uint32_t codepoint;
 			char *codepoint_ptr = (char *) &codepoint;
-			size_t codepoint_size = 3;
+			size_t codepoint_size = 4;
 			int i;
 
 			state = handle->state.to;
@@ -229,7 +241,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				goto incomplete_char;
 
 			for (i = 0; i < handle->state.g[state]->bytes_per_char; i++)
-				buffer[i] = _inbuf[i] | (handle->state.g[state]->high_bit << 8);
+				buffer[i] = _inbuf[i] | (handle->state.g[state]->high_bit << 7);
 			size_t buffer_size = handle->state.g[state]->bytes_per_char;
 
 			if ((result = handle->state.g[state]->cct->convert_to(handle->state.g[state]->cct, &buffer_ptr, &buffer_size,
@@ -248,11 +260,16 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
+	if (flags & CHARCONV_END_OF_TEXT) {
+		//FIXME: reset
+	}
+
 	return CHARCONV_SUCCESS;
 
 incomplete_char:
 	if (flags & CHARCONV_END_OF_TEXT) {
 		if (flags & CHARCONV_SUBST_ILLEGAL) {
+			//FIXME: reset
 			PUT_UNICODE(0xfffd);
 			(*inbuf) += _inbytesleft;
 			*inbytesleft = 0;
@@ -297,19 +314,20 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, charco
 	}
 
 	cct_handle->cct = ext_handle;
+	cct_handle->bytes_per_char = desc->bytes_per_char;
 	cct_handle->seq_len = strlen(desc->escape_seq);
 	strcpy(cct_handle->escape_seq, desc->escape_seq);
 	cct_handle->high_bit = desc->high_bit;
-	cct_handle->next = handle->g_sets[desc->g];
 	cct_handle->write = write;
-	handle->g_sets[desc->g] = cct_handle->next;
+	cct_handle->next = handle->g_sets[desc->g];
+	handle->g_sets[desc->g] = cct_handle;
 	cct_handle->prev = NULL;
 	return true;
 }
 
 #define CHECK_LOAD(x) do { if (!(x)) { close_convertor(retval); return NULL; }} while (0)
 
-void *open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
+void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
 	static const name_to_iso2022type map[] = {
 		{ "ISO-2022-JP", ISO2022_JP },
 		{ "ISO-2022-JP-1", ISO2022_JP1 },
@@ -319,6 +337,10 @@ void *open_iso2022_convertor(const char *name, int flags, charconv_error_t *erro
 		{ "ISO-2022-KR", ISO2022_KR },
 		{ "ISO-2022-CN", ISO2022_CN },
 		{ "ISO-2022-CN-EXT", ISO2022_CNEXT }
+#ifdef DEBUG
+#warning using ISO-2022-TEST
+		, { "ISO-2022-TEST", ISO2022_TEST }
+#endif
 	};
 
 	convertor_state_t *retval;
@@ -340,6 +362,11 @@ void *open_iso2022_convertor(const char *name, int flags, charconv_error_t *erro
 	retval->g_sets[1] = NULL;
 	retval->g_sets[2] = NULL;
 	retval->g_sets[3] = NULL;
+	retval->state.g[0] = NULL;
+	retval->state.g[1] = NULL;
+	retval->state.g[2] = NULL;
+	retval->state.g[3] = NULL;
+
 	retval->iso2022_type = ptr->iso2022_type;
 
 	switch (retval->iso2022_type) {
@@ -437,6 +464,11 @@ void *open_iso2022_convertor(const char *name, int flags, charconv_error_t *erro
 			CHECK_LOAD(load_table(retval, &cns_11643_1992_2, error, true));
 			CHECK_LOAD(load_table(retval, &ascii, error, true));
 			break;
+		case ISO2022_TEST:
+			CHECK_LOAD(load_table(retval, &iso8859_1, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			retval->state.g[0] = retval->g_sets[0];
+			break;
 		default:
 			close_convertor(retval);
 			if (error != NULL)
@@ -453,11 +485,6 @@ void *open_iso2022_convertor(const char *name, int flags, charconv_error_t *erro
 /*	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_cct_state;
 	retval->common.load = (load_func_t) load_cct_state;*/
-	retval->state.g[0] = NULL;
-	retval->state.g[1] = NULL;
-	retval->state.g[2] = NULL;
-	retval->state.g[3] = NULL;
-
 	return retval;
 }
 

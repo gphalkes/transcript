@@ -1,6 +1,9 @@
 - interface should have flags for
 	- allowing fallbacks, including (and perhaps separately) fullwidth to
 	  halfwidth fallbacks
+- use a separate flush call instead of automatic flush at end of text, for
+  better performance (otherwise we have to check at the end of every
+  conversion call)
 - perhaps an iconv like A to B convertor with better semantics and better
   performance (through multiple conversions at a time) should be provided as
   well

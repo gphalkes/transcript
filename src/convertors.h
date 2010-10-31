@@ -20,10 +20,13 @@
 CHARCONV_LOCAL void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error);
 CHARCONV_LOCAL void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use);
 
-/* Unicode UTF convertors */
+/* Unicode UTF-X/GB-18030 convertors */
 CHARCONV_LOCAL void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_error_t *error);
 
 /* ISO-8859-1 convertor */
 CHARCONV_LOCAL void *_charconv_open_iso8859_1_convertor(const char *name, int flags, charconv_error_t *error);
+
+/* ISO-2022-* convertor */
+CHARCONV_LOCAL void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error);
 
 #endif

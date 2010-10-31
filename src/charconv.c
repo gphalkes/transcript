@@ -50,6 +50,9 @@ static name_mapping convertors[] = {
 	{ "cesu8", "CESU-8", _charconv_open_unicode_convertor },
 	{ "utf7", "UTF-7", _charconv_open_unicode_convertor },
 	{ "gb18030", "GB-18030", _charconv_open_unicode_convertor }
+#ifdef DEBUG
+	, { "iso2022test", "ISO-2022-TEST", _charconv_open_iso2022_convertor }
+#endif
 };
 
 /*================ API functions ===============*/
