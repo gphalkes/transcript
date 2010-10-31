@@ -56,13 +56,15 @@ struct cct_handle_t {
 };
 
 struct _charconv_iso2022_state_t {
-	cct_handle_t *g[4]; /* Shifted-in sets. */
+	cct_handle_t *g_to[4]; /* Shifted-in sets. */
+	cct_handle_t *g_from[4]; /* Shifted-in sets. */
 	uint_fast8_t to, from;
 };
 typedef struct _charconv_iso2022_state_t state_t;
 
 typedef struct {
 	charconv_common_t common;
+	cct_handle_t *g_initial[4];
 	cct_handle_t *g_sets[4]; /* Linked lists of possible tables. */
 	state_t state;
 	int iso2022_type;
@@ -80,8 +82,8 @@ typedef struct {
 cct_descriptor_t ascii = { NULL, 1, 0, "\x1b\x28\x42", false };
 cct_descriptor_t iso8859_1 = { NULL, 1, 2, "\x1b\x2e\x41", true };
 //FIXME: use the correct codepage names and check the high_bit flag
-cct_descriptor_t jis_x_0201_1976_kana = { "JIS-X-0201-1976-Kana", 1, 0, "\x1b\x28\x49", true };
-cct_descriptor_t jis_x_0201_1976_roman = { "JIS-X-0201-1976-Roman", 1, 0, "\x1b\x28\x4a", true };
+cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, 0, "\x1b\x28\x49", true };
+cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, 0, "\x1b\x28\x4a", false };
 cct_descriptor_t jis_x_0208_1978 = { "JIS-X-0208-1978", 2, 0, "\x1b\x24\x40", true };
 cct_descriptor_t jis_x_0208_1983 = { "JIS-X-0208-1983", 2, 0, "\x1b\x24\x42", true };
 cct_descriptor_t jis_x_0212_1990 = { "JIS-X-0212-1990", 2, 0, "\x1b\x24\x28\x44", true };
@@ -128,7 +130,7 @@ static int check_escapes(convertor_state_t *handle, uint8_t *_inbuf, size_t _inb
 			if (memcmp(_inbuf, ptr->escape_seq, ptr->seq_len) != 0)
 				continue;
 
-			handle->state.g[i] = ptr;
+			handle->state.g_to[i] = ptr;
 			return -ptr->seq_len;
 		}
 	}
@@ -173,7 +175,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						goto state_shift_done;
 
 				state_shift_done:
-						if (handle->state.g[state > 3 ? state >> 2 : state] == NULL)
+						if (handle->state.g_to[state > 3 ? state >> 2 : state] == NULL)
 							return CHARCONV_ILLEGAL;
 						handle->state.to = state;
 
@@ -197,7 +199,7 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				}
 			} else if (*_inbuf == 0xe) {
 				/* Shift out. */
-				if (handle->state.g[1] == NULL)
+				if (handle->state.g_to[1] == NULL)
 					return CHARCONV_ILLEGAL;
 				handle->state.to = 1;
 				_inbuf = (uint8_t *) ++(*inbuf);
@@ -237,19 +239,19 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			if (state > 3)
 				state >>= 2;
 
-			if (_inbytesleft < handle->state.g[state]->bytes_per_char)
+			if (_inbytesleft < handle->state.g_to[state]->bytes_per_char)
 				goto incomplete_char;
 
-			for (i = 0; i < handle->state.g[state]->bytes_per_char; i++)
-				buffer[i] = _inbuf[i] | (handle->state.g[state]->high_bit << 7);
-			size_t buffer_size = handle->state.g[state]->bytes_per_char;
+			for (i = 0; i < handle->state.g_to[state]->bytes_per_char; i++)
+				buffer[i] = _inbuf[i] | (handle->state.g_to[state]->high_bit << 7);
+			size_t buffer_size = handle->state.g_to[state]->bytes_per_char;
 
-			if ((result = handle->state.g[state]->cct->convert_to(handle->state.g[state]->cct, &buffer_ptr, &buffer_size,
+			if ((result = handle->state.g_to[state]->cct->convert_to(handle->state.g_to[state]->cct, &buffer_ptr, &buffer_size,
 					&codepoint_ptr, &codepoint_size, 0)) != CHARCONV_SUCCESS)
 				return result;
 			PUT_UNICODE(codepoint);
-			_inbuf += handle->state.g[state]->bytes_per_char;
-			_inbytesleft -= handle->state.g[state]->bytes_per_char;
+			_inbuf += handle->state.g_to[state]->bytes_per_char;
+			_inbytesleft -= handle->state.g_to[state]->bytes_per_char;
 		}
 
 		if (handle->state.to > 3)
@@ -290,8 +292,10 @@ static int to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inby
 	return CHARCONV_SUCCESS;
 }
 
-
-
+static void to_unicode_reset(convertor_state_t *handle) {
+	memcpy(handle->state.g_to, handle->g_initial, sizeof(handle->g_initial));
+	handle->state.to = 0;
+}
 
 static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, charconv_error_t *error, bool write)
 {
@@ -362,10 +366,10 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	retval->g_sets[1] = NULL;
 	retval->g_sets[2] = NULL;
 	retval->g_sets[3] = NULL;
-	retval->state.g[0] = NULL;
-	retval->state.g[1] = NULL;
-	retval->state.g[2] = NULL;
-	retval->state.g[3] = NULL;
+	retval->g_initial[0] = NULL;
+	retval->g_initial[1] = NULL;
+	retval->g_initial[2] = NULL;
+	retval->g_initial[3] = NULL;
 
 	retval->iso2022_type = ptr->iso2022_type;
 
@@ -465,9 +469,11 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 			CHECK_LOAD(load_table(retval, &ascii, error, true));
 			break;
 		case ISO2022_TEST:
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, error, true));
 			CHECK_LOAD(load_table(retval, &iso8859_1, error, true));
 			CHECK_LOAD(load_table(retval, &ascii, error, true));
-			retval->state.g[0] = retval->g_sets[0];
+			retval->g_initial[0] = retval->g_sets[0];
 			break;
 		default:
 			close_convertor(retval);
@@ -480,11 +486,14 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;*/
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
-/*	retval->common.reset_to = (reset_func_t) to_unicode_reset;*/
+	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 /*	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_cct_state;
 	retval->common.load = (load_func_t) load_cct_state;*/
+
+	to_unicode_reset(retval);
+/* 	from_unicode_reset(retval); */
 	return retval;
 }
 
