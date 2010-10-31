@@ -73,37 +73,35 @@ typedef struct {
 typedef struct {
 	const char *name;
 	uint_fast8_t bytes_per_char;
-	uint_fast8_t g;
-	const char *escape_seq;
+	char final_byte;
 	bool high_bit;
+	bool large_set; /* 96 byte character set. */
 } cct_descriptor_t ;
 
 /* We use the lower part of the ISO8859-1 convertor for ASCII. */
-cct_descriptor_t ascii = { NULL, 1, 0, "\x1b\x28\x42", false };
-cct_descriptor_t iso8859_1 = { NULL, 1, 2, "\x1b\x2e\x41", true };
+cct_descriptor_t ascii = { NULL, 1, '\x42', false, false };
+cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, true };//2
+cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, false };
+cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, false };
 //FIXME: use the correct codepage names and check the high_bit flag
-cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, 0, "\x1b\x28\x49", true };
-cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, 0, "\x1b\x28\x4a", false };
-cct_descriptor_t jis_x_0208_1978 = { "JIS-X-0208-1978", 2, 0, "\x1b\x24\x40", true };
-cct_descriptor_t jis_x_0208_1983 = { "JIS-X-0208-1983", 2, 0, "\x1b\x24\x42", true };
-cct_descriptor_t jis_x_0212_1990 = { "JIS-X-0212-1990", 2, 0, "\x1b\x24\x28\x44", true };
-cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, 0, "\x1b\x24\x28\x4f", true };
-cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, 0, "\x1b\x24\x28\x50", true };
-cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, 0, "\x1b\x24\x28\x51", true };
-cct_descriptor_t iso8859_7 = { "ISO-8859-7", 1, 2, "\x1b\x2e\x4f", true };
-cct_descriptor_t ksc5601_1987_g0 = { "KSC5601-1987", 2, 0, "\x1b\x24\x28\x43", true };
-cct_descriptor_t ksc5601_1987_g1 = { "KSC5601-1987", 2, 1, "\x1b\x24\x29\x43", true };
-cct_descriptor_t gb2312_1980_g0 = { "GB2312-1980", 2, 0, "\x1b\x24\x41", true };
-cct_descriptor_t gb2312_1980_g1 = { "GB2312-1980", 2, 1, "\x1b\x24\x29\x41", true };
+cct_descriptor_t jis_x_0208_1978 = { "JIS-X-0208-1978", 2, '\x40', true, false };
+cct_descriptor_t jis_x_0208_1983 = { "JIS-X-0208-1983", 2, '\x42', true, false };
+cct_descriptor_t jis_x_0212_1990 = { "JIS-X-0212-1990", 2, '\x44', true, false };
+cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, false };
+cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, false };
+cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, false };
+cct_descriptor_t iso8859_7 = { "ISO-8859-7", 1, '\x4f', true, true }; //2
+cct_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, false };
+cct_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, false };
 
-cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, 1, "\x1b\x24\x29\x47", true };
-cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, 2, "\x1b\x24\x2A\x48", true };
-cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, 3, "\x1b\x24\x2B\x49", true };
-cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, 3, "\x1b\x24\x2B\x4a", true };
-cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, 3, "\x1b\x24\x2B\x4b", true };
-cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, 3, "\x1b\x24\x2B\x4c", true };
-cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, 3, "\x1b\x24\x2B\x4d", true };
-cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, 1, "\x1b\x24\x29\x45", true };
+cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, false };//1
+cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, false };//2
+cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, false };//3
+cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, false };//3
+cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, false };//3
+cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, false };//3
+cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, false };//3
+cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, false };//1
 
 static void close_convertor(convertor_state_t *handle);
 
@@ -297,10 +295,14 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	handle->state.to = 0;
 }
 
-static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, charconv_error_t *error, bool write)
+static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, bool write)
 {
-	cct_handle_t *cct_handle;
+	cct_handle_t *cct_handle, *extra_handle;
 	charconv_t *ext_handle;
+	uint_fast8_t idx = 0;
+
+	if (desc->large_set && g == 0)
+		return CHARCONV_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
 		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(desc->name, 0, error), UTF32);
@@ -319,13 +321,35 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, charco
 
 	cct_handle->cct = ext_handle;
 	cct_handle->bytes_per_char = desc->bytes_per_char;
-	cct_handle->seq_len = strlen(desc->escape_seq);
-	strcpy(cct_handle->escape_seq, desc->escape_seq);
+	cct_handle->escape_seq[idx++] = 0x1b;
+	if (desc->bytes_per_char > 1)
+		cct_handle->escape_seq[idx++] = 0x24;
+	cct_handle->escape_seq[idx++] = (desc->large_set ? 0x2C : 0x28) + g;
+	cct_handle->escape_seq[idx++] = desc->final_byte;
+	cct_handle->seq_len = idx;
+
 	cct_handle->high_bit = desc->high_bit;
 	cct_handle->write = write;
-	cct_handle->next = handle->g_sets[desc->g];
-	handle->g_sets[desc->g] = cct_handle;
 	cct_handle->prev = NULL;
+
+	if (desc->final_byte < 0x43 && desc->bytes_per_char > 1) {
+		if ((extra_handle = malloc(sizeof(cct_handle_t))) == NULL) {
+			charconv_close_convertor(ext_handle);
+			free(cct_handle);
+			if (error != NULL)
+				*error = CHARCONV_OUT_OF_MEMORY;
+			return false;
+		}
+		memcpy(extra_handle, cct_handle, sizeof(cct_handle_t));
+		extra_handle->escape_seq[2] = desc->final_byte;
+		extra_handle->seq_len = 3;
+		extra_handle->write = false;
+		extra_handle->next = handle->g_sets[g];
+		handle->g_sets[g] = extra_handle;
+	}
+
+	cct_handle->next = handle->g_sets[g];
+	handle->g_sets[g] = cct_handle;
 	return true;
 }
 
@@ -409,70 +433,70 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 		*/
 		case ISO2022_JP2004:
 			/* Load the JP and JP-3 sets, but only for reading. */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, 0, error, false));
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2004_1, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0213_2004_1, 0, error, true));
 			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			break;
 		case ISO2022_JP3:
 			/* Load the JP sets, but only for reading. */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, false));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, false));
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, 0, error, true));
 			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			break;
 		case ISO2022_JP2:
-			CHECK_LOAD(load_table(retval, &iso8859_1, error, true));
-			CHECK_LOAD(load_table(retval, &iso8859_7, error, true));
-			CHECK_LOAD(load_table(retval, &ksc5601_1987_g0, error, true));
-			CHECK_LOAD(load_table(retval, &gb2312_1980_g0, error, true));
+			CHECK_LOAD(load_table(retval, &iso8859_1, 2, error, true));
+			CHECK_LOAD(load_table(retval, &iso8859_7, 2, error, true));
+			CHECK_LOAD(load_table(retval, &ksc5601_1987, 0, error, true));
+			CHECK_LOAD(load_table(retval, &gb2312_1980, 0, error, true));
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
-			CHECK_LOAD(load_table(retval, &jis_x_0212_1990, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0212_1990, 0, error, true));
 			/* FALLTHROUGH */
 		case ISO2022_JP:
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, true));
 			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			break;
 		case ISO2022_KR:
-			CHECK_LOAD(load_table(retval, &ksc5601_1987_g1, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &ksc5601_1987, 1, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			break;
 		case ISO2022_CNEXT:
-			CHECK_LOAD(load_table(retval, &iso_ir_165, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_3, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_4, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_5, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_6, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_7, error, true));
+			CHECK_LOAD(load_table(retval, &iso_ir_165, 1, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_3, 3, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_4, 3, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_5, 3, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_6, 3, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_7, 3, error, true));
 			/* FALLTHROUGH */
 		case ISO2022_CN:
-			CHECK_LOAD(load_table(retval, &gb2312_1980_g1, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_1, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_2, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &gb2312_1980, 1, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_1, 1, error, true));
+			CHECK_LOAD(load_table(retval, &cns_11643_1992_2, 2, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			break;
 		case ISO2022_TEST:
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, error, true));
-			CHECK_LOAD(load_table(retval, &iso8859_1, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, true));
+			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
+			CHECK_LOAD(load_table(retval, &iso8859_1, 2, error, true));
+			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
 			retval->g_initial[0] = retval->g_sets[0];
 			break;
 		default:
