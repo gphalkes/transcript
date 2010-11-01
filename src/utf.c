@@ -55,7 +55,7 @@ static inline uint16_t swaps(uint16_t value) {
 
 #define CHECK_OUTBYTESLEFT(_x) if (*outbytesleft < (_x)) return CHARCONV_NO_SPACE; *outbytesleft -= (_x);
 
-static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -80,7 +80,7 @@ static int put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft
 	return CHARCONV_SUCCESS;
 }
 
-static int put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
