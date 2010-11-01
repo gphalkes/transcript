@@ -96,10 +96,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			return 0;
 		}
 
-		codepoint_ptr = (char *) &codepoint;
-		codepoint_bytesleft = 0;
-		switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-				CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_END_OF_TEXT))
+		switch (charconv_from_unicode_flush(cd->to, outbuf, outbytesleft))
 		{
 			case CHARCONV_SUCCESS:
 				break;

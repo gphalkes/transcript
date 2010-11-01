@@ -177,8 +177,6 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 			return CHARCONV_INCOMPLETE;
 		}
 	}
-	if (flags & CHARCONV_END_OF_TEXT)
-		handle->state.to = 0;
 	return CHARCONV_SUCCESS;
 }
 
@@ -476,12 +474,16 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 		} else {
 			return CHARCONV_INCOMPLETE;
 		}
-	} else if (flags & CHARCONV_END_OF_TEXT) {
-		if (handle->state.from != 0)
-			PUT_BYTES(0, NULL);
 	}
 	return CHARCONV_SUCCESS;
 }
+
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+	if (handle->state.from != 0)
+		PUT_BYTES(0, NULL);
+	return CHARCONV_SUCCESS;
+}
+
 
 static void from_unicode_reset(convertor_state_t *handle) {
 	handle->state.from = 0;
@@ -539,6 +541,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *er
 	retval->state.to = 0;
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.flush_from = (flush_func_t) from_unicode_flush;
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;

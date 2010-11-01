@@ -29,8 +29,6 @@ typedef struct {
 } name_to_utftype;
 
 
-static int to_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
-static int from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
 static void close_convertor(convertor_state_t *handle);
 
 
@@ -49,7 +47,7 @@ static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, siz
 
 
 static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode, flush_func_t flush)
+		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode)
 {
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
@@ -71,8 +69,6 @@ static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inb
 						return result;
 					*inbuf -= *inbytesleft;
 					*inbytesleft = 0;
-					if ((result = flush(handle, outbuf, outbytesleft)) != 0)
-						return result;
 					return CHARCONV_SUCCESS;
 				}
 				return CHARCONV_INCOMPLETE;
@@ -86,12 +82,6 @@ static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inb
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
-
-	if (flags & CHARCONV_END_OF_TEXT) {
-		if ((result = flush(handle, outbuf, outbytesleft)) != 0)
-			return result;
-	}
-
 	return CHARCONV_SUCCESS;
 }
 
@@ -129,7 +119,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 	}
 
 	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
-		handle->to_get, put_common, to_unicode_flush);
+		handle->to_get, put_common);
 }
 
 static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
@@ -154,14 +144,6 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-static int to_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
-	(void) outbuf;
-	(void) outbytesleft;
-
-	to_unicode_reset(handle);
-	return CHARCONV_SUCCESS;
-}
-
 static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
@@ -182,7 +164,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 	}
 
 	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
-		get_common, handle->from_put, from_unicode_flush);
+		get_common, handle->from_put);
 }
 
 static void from_unicode_reset(convertor_state_t *handle) {
@@ -192,13 +174,9 @@ static void from_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-static int from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
-	if (handle->utf_type == UTF7) {
-		int result;
-		if ((result = _charconv_from_unicode_flush_utf7(handle, outbuf, outbytesleft)) != CHARCONV_SUCCESS)
-			return result;
-	}
-	from_unicode_reset(handle);
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+	if (handle->utf_type == UTF7)
+		return _charconv_from_unicode_flush_utf7(handle, outbuf, outbytesleft);
 	return CHARCONV_SUCCESS;
 }
 
@@ -243,6 +221,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	}
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.flush_from = (flush_func_t) from_unicode_flush;
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;

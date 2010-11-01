@@ -66,6 +66,7 @@ typedef enum {
 	CHARCONV_PRIVATE_USE, /**< The next character to convert maps to a private use codepoint. */
 	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
 	CHARCONV_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
+
 	CHARCONV_ERRNO, /**< See errno for error code. */
 	CHARCONV_BAD_ARG, /**< Bad argument. */
 	CHARCONV_OUT_OF_MEMORY, /**< Out of memory. */
@@ -105,6 +106,7 @@ CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inb
 CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
 CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+CHARCONV_API charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, size_t *outbytesleft);
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);

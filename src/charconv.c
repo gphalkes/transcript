@@ -117,6 +117,20 @@ charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, si
 	return CHARCONV_SUCCESS;
 }
 
+charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, size_t *outbytesleft) {
+	charconv_error_t result;
+	switch (handle->flush_from(handle, outbuf, outbytesleft)) {
+		case CHARCONV_SUCCESS:
+			break;
+		case CHARCONV_NO_SPACE:
+			return CHARCONV_NO_SPACE;
+		default:
+			return CHARCONV_INTERNAL_ERROR;
+	}
+	handle->reset_from(handle);
+	return CHARCONV_SUCCESS;
+}
+
 void charconv_to_unicode_reset(charconv_t *handle) {
 	handle->reset_to(handle);
 }

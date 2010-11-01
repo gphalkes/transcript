@@ -20,7 +20,6 @@ typedef struct convertor_state_t convertor_state_t;
 
 typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
 typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
-typedef int (*flush_func_t)(convertor_state_t *handle, char **outbuf, size_t *outbytesleft);
 
 typedef struct _charconv_unicode_state_t state_t;
 

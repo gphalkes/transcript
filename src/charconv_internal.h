@@ -29,9 +29,10 @@ typedef enum {false, true} bool;
 #include <stdbool.h>
 #endif
 
-typedef int (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-typedef int (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-typedef int (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
+typedef charconv_error_t (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
+typedef charconv_error_t (*flush_func_t)(charconv_t *handle, char **outbuf, size_t *outbytesleft);
+typedef charconv_error_t (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
+typedef charconv_error_t (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
 typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, bool skip);
 typedef int (*reset_func_t)(charconv_t *handle);
 typedef void (*close_func_t)(charconv_t *handle);
@@ -41,8 +42,10 @@ typedef void (*load_func_t)(charconv_t *handle, void *state);
 typedef struct charconv_common_t {
 	conversion_func_t convert_to;
 	conversion_func_t convert_from;
+	/* flush_func_t flush_to; */ /* The same for all convertors! */
+	flush_func_t flush_from;
 	skip_func_t skip_to;
-	/* skip_func_t skip_from; */ // The same for all convertors!
+	/* skip_func_t skip_from; */ /* The same for all convertors! */
 	put_unicode_func_t put_unicode;
 	get_unicode_func_t get_unicode;
 	reset_func_t reset_to;
