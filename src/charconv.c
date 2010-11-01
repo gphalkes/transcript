@@ -49,7 +49,8 @@ static name_mapping convertors[] = {
 	{ "ucs4le", "UTF-32LE", _charconv_open_unicode_convertor },
 	{ "cesu8", "CESU-8", _charconv_open_unicode_convertor },
 	{ "utf7", "UTF-7", _charconv_open_unicode_convertor },
-	{ "gb18030", "GB-18030", _charconv_open_unicode_convertor }
+	{ "gb18030", "GB-18030", _charconv_open_unicode_convertor },
+	{ "iso2022jp", "ISO-2022-JP", _charconv_open_iso2022_convertor }
 #ifdef DEBUG
 	, { "iso2022test", "ISO-2022-TEST", _charconv_open_iso2022_convertor }
 #endif

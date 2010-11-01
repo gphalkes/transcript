@@ -148,34 +148,38 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 				ERROR(EBADF);
 		}
 
-		codepoint_ptr = (char *) &codepoint;
-		codepoint_bytesleft = 4;
-		switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-				outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
-		{
-			case CHARCONV_SUCCESS:
-				break;
-			case CHARCONV_FALLBACK:
-				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = true;
-				break;
-			case CHARCONV_UNASSIGNED:
-			case CHARCONV_PRIVATE_USE:
-				charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL);
-				fallback = true;
-				break;
-			case CHARCONV_NO_SPACE:
-				ERROR(E2BIG);
-			/* None of the other errors should happen, as we feed it only valid codepoints. So
-			   we handle all of them as internal errors. */
-			default:
-				ERROR(EBADF);
+		if (codepoint_bytesleft == 0) {
+			codepoint_ptr = (char *) &codepoint;
+			codepoint_bytesleft = 4;
+			switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf,
+					outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
+			{
+				case CHARCONV_SUCCESS:
+					break;
+				case CHARCONV_FALLBACK:
+					charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
+							CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
+					fallback = true;
+					break;
+				case CHARCONV_UNASSIGNED:
+				case CHARCONV_PRIVATE_USE:
+					charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
+							CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL);
+					fallback = true;
+					break;
+				case CHARCONV_NO_SPACE:
+					ERROR(E2BIG);
+				/* None of the other errors should happen, as we feed it only valid codepoints. So
+				   we handle all of them as internal errors. */
+				default:
+					ERROR(EBADF);
+			}
 		}
 
-		if (fallback)
+		if (fallback) {
 			result++;
+			fallback = false;
+		}
 		*inbuf = _inbuf;
 		*inbytesleft = _inbytesleft;
 	}

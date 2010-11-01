@@ -41,7 +41,6 @@ static int ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, size_t *outbyt
 	CHECK_OUTBYTESLEFT(4);
 	*_outbuf = ALT(swapl)(codepoint);
 	*outbuf += 4;
-	*outbytesleft += 4;
 	return CHARCONV_SUCCESS;
 }
 

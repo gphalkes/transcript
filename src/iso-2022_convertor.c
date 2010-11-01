@@ -44,9 +44,9 @@ typedef struct {
 	int iso2022_type;
 } name_to_iso2022type;
 
-typedef struct cct_handle_t cct_handle_t;
+typedef struct _charconv_iso2022_cct_handle_t cct_handle_t;
 
-struct cct_handle_t {
+struct _charconv_iso2022_cct_handle_t {
 	charconv_t *cct; /* Handle for the table based convertor. */
 	uint_fast8_t bytes_per_char; /* Bytes per character code. */
 	uint_fast8_t seq_len; /* Length of the escape sequence used to shift. */
@@ -55,11 +55,6 @@ struct cct_handle_t {
 	cct_handle_t *prev, *next; /* Doubly-linked list ptrs. */
 };
 
-struct _charconv_iso2022_state_t {
-	cct_handle_t *g_to[4]; /* Shifted-in sets. */
-	cct_handle_t *g_from[4]; /* Shifted-in sets. */
-	uint_fast8_t to, from;
-};
 typedef struct _charconv_iso2022_state_t state_t;
 
 typedef struct {
@@ -83,14 +78,20 @@ cct_descriptor_t ascii = { NULL, 1, '\x42', false, false };
 cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, true };//2
 cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, false };
 cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, false };
+cct_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', false, false };
+/* This is the 1990 version, not the 1983 version, which includes two extra characters. */
+/* FIXME: gconv simply uses the extra two characters. On the other hand, for JP-3, it
+   does use the 2004 version for characters only in the new version... The proper version
+   appears to be 13240, but that seems to be missing one character (based on the
+   number of characters that IBM says is in there). */
+cct_descriptor_t jis_x_0208_1983 = { "ibm-5048_P100-1995", 2, '\x42', true, false };
+cct_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, false };
+
 //FIXME: use the correct codepage names and check the high_bit flag
-cct_descriptor_t jis_x_0208_1978 = { "JIS-X-0208-1978", 2, '\x40', true, false };
-cct_descriptor_t jis_x_0208_1983 = { "JIS-X-0208-1983", 2, '\x42', true, false };
-cct_descriptor_t jis_x_0212_1990 = { "JIS-X-0212-1990", 2, '\x44', true, false };
 cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, false };
 cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, false };
 cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, false };
-cct_descriptor_t iso8859_7 = { "ISO-8859-7", 1, '\x4f', true, true }; //2
+cct_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, true }; //2
 cct_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, false };
 cct_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, false };
 
@@ -353,6 +354,17 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 	return true;
 }
 
+
+static void save_iso2022_state(convertor_state_t *handle, state_t *save) {
+	memcpy(save, &handle->state, sizeof(state_t));
+}
+
+static void load_iso2022_state(convertor_state_t *handle, state_t *save) {
+	memcpy(&handle->state, save, sizeof(state_t));
+}
+
+
+
 #define CHECK_LOAD(x) do { if (!(x)) { close_convertor(retval); return NULL; }} while (0)
 
 void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
@@ -402,7 +414,8 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 		   JIS X 0213 has two planes: the first plane which is a superset of
 		   JIS X 0208, and plane 2 which contains only new chars. However, in
 		   making JIS X 0213, they found that they needed to amend the standard
-		   for plane 1 in 2004.
+		   for plane 1 in 2004. The result is 10 added codepoints that were not
+		   present in the 2000 version.
 
 		   ISO-2022-JP-2004 is the completely new and revised version, which
 		   _should_ only contain ASCII and JIS X 0213 (2004). Note that plane 2
@@ -512,9 +525,9 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
-/*	retval->common.close = (close_func_t) close_convertor;
-	retval->common.save = (save_func_t) save_cct_state;
-	retval->common.load = (load_func_t) load_cct_state;*/
+	retval->common.close = (close_func_t) close_convertor;
+	retval->common.save = (save_func_t) save_iso2022_state;
+	retval->common.load = (load_func_t) load_iso2022_state;
 
 	to_unicode_reset(retval);
 /* 	from_unicode_reset(retval); */

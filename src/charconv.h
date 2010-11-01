@@ -87,8 +87,17 @@ struct _charconv_unicode_state_t {
 	uint_fast8_t utf7_put_mode;
 };
 
+struct _charconv_iso2022_cct_handle_t;
+
+struct _charconv_iso2022_state_t {
+	struct _charconv_iso2022_cct_handle_t *g_to[4]; /* Shifted-in sets. */
+	struct _charconv_iso2022_cct_handle_t *g_from[4]; /* Shifted-in sets. */
+	uint_fast8_t to, from;
+};
+
 #define _CHARCONV_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), sizeof(struct _charconv_unicode_state_t))
+#define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
+	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
 
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
