@@ -28,6 +28,22 @@ per set:
 #include "utf.h"
 
 enum {
+	CCT_FLAG_WRITE = (1<<0),
+	CCT_FLAG_ASCII = (1<<1),
+	CCT_FLAGS_SHORT_SEQ = (1<<6),
+	CCT_FLAG_LARGE_SET = (1<<7)
+};
+
+enum {
+	LS0 = (1<<0),
+	LS1 = (1<<1),
+	LS2 = (1<<2),
+	LS3 = (1<<3),
+	SS2 = (1<<4),
+	SS3 = (1<<5),
+};
+
+enum {
 	ISO2022_JP,
 	ISO2022_JP1,
 	ISO2022_JP2,
@@ -46,23 +62,28 @@ typedef struct {
 
 typedef struct _charconv_iso2022_cct_handle_t cct_handle_t;
 
+
 struct _charconv_iso2022_cct_handle_t {
 	charconv_t *cct; /* Handle for the table based convertor. */
 	uint_fast8_t bytes_per_char; /* Bytes per character code. */
 	uint_fast8_t seq_len; /* Length of the escape sequence used to shift. */
 	char escape_seq[7]; /* The escape sequence itselft. */
-	bool high_bit, write; /* Whether the cct has the high bit set for characters. */
+	uint_fast8_t high_bit; /* Whether the cct has the high bit set for characters. */
+	uint_fast8_t flags;
 	cct_handle_t *prev, *next; /* Doubly-linked list ptrs. */
 };
 
 typedef struct _charconv_iso2022_state_t state_t;
 
+
 typedef struct {
 	charconv_common_t common;
 	cct_handle_t *g_initial[4];
 	cct_handle_t *g_sets[4]; /* Linked lists of possible tables. */
+	cct_handle_t *ascii;
 	state_t state;
 	int iso2022_type;
+	int shift_types;
 } convertor_state_t;
 
 typedef struct {
@@ -70,68 +91,99 @@ typedef struct {
 	uint_fast8_t bytes_per_char;
 	char final_byte;
 	bool high_bit;
-	bool large_set; /* 96 byte character set. */
+	uint_fast8_t flags;
 } cct_descriptor_t ;
 
 /* We use the lower part of the ISO8859-1 convertor for ASCII. */
-cct_descriptor_t ascii = { NULL, 1, '\x42', false, false };
-cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, true };//2
-cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, false };
-cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, false };
-cct_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', false, false };
+static cct_descriptor_t ascii = { NULL, 1, '\x42', false, CCT_FLAG_ASCII };
+static cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, CCT_FLAG_LARGE_SET };//2
+static cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
+static cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, 0 };
+static cct_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', false, 0 };
 /* This is the 1990 version, not the 1983 version, which includes two extra characters. */
 /* FIXME: gconv simply uses the extra two characters. On the other hand, for JP-3, it
    does use the 2004 version for characters only in the new version... The proper version
    appears to be 13240, but that seems to be missing one character (based on the
    number of characters that IBM says is in there). */
-cct_descriptor_t jis_x_0208_1983 = { "ibm-5048_P100-1995", 2, '\x42', true, false };
-cct_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, false };
+static cct_descriptor_t jis_x_0208_1983 = { "ibm-5048_P100-1995", 2, '\x42', true, 0 };
+static cct_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, 0 };
 
 //FIXME: use the correct codepage names and check the high_bit flag
-cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, false };
-cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, false };
-cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, false };
-cct_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, true }; //2
-cct_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, false };
-cct_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, false };
+static cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
+static cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
+static cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
+static cct_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, CCT_FLAG_LARGE_SET }; //2
+static cct_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, 0 };
+static cct_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, 0 };
 
-cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, false };//1
-cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, false };//2
-cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, false };//3
-cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, false };//3
-cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, false };//3
-cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, false };//3
-cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, false };//3
-cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, false };//1
+static cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, 0 };//1
+static cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, 0 };//2
+static cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, 0 };//3
+static cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, 0 };//3
+static cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, 0 };//3
+static cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, 0 };//3
+static cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, 0 };//3
+static cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };//1
 
+static const char *ls[] = { "\x0f", "\x0e", "\x1b\x6e", "\x1b\x6f", "\x1b\x4e", "\x1b\x4f" };
+
+static void to_unicode_reset(convertor_state_t *handle);
+static void from_unicode_reset(convertor_state_t *handle);
 static void close_convertor(convertor_state_t *handle);
 
-static int check_escapes(convertor_state_t *handle, uint8_t *_inbuf, size_t _inbytesleft) {
+static int check_escapes(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
 	cct_handle_t *ptr;
-	size_t i;
+	uint8_t *_inbuf = (uint8_t *) *inbuf;
+	size_t i, max;
 
-	//FIXME: we should probably limit the number of bytes to check
-	for (i = 1; i < _inbytesleft; i++) {
+	/* Limit the number of bytes to check to 5. No sequence that large has been
+	   assigned yet, so that won't be a problem. */
+	max = *inbytesleft > 5 ? 5 : *inbytesleft;
+
+	for (i = 1; i < max; i++) {
 		if (_inbuf[i] >= 0x20 && _inbuf[i] <= 0x2f)
 			continue;
 		if (_inbuf[i] >= 0x40 && _inbuf[i] <= 0x7f)
-			break;
+			goto sequence_found;
+		if (skip) {
+			*inbuf += i - 1;
+			*inbytesleft -= i - 1;
+		}
 		return CHARCONV_ILLEGAL;
 	}
-	if (i == _inbytesleft)
-		return CHARCONV_INCOMPLETE;
 
-	for (i = 0; i < 3; i++) {
-		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-			if (_inbytesleft < ptr->seq_len)
-				continue;
-
-			if (memcmp(_inbuf, ptr->escape_seq, ptr->seq_len) != 0)
-				continue;
-
-			handle->state.g_to[i] = ptr;
-			return -ptr->seq_len;
+	if (i == 5) {
+		if (skip) {
+			*inbuf += 5;
+			*inbytesleft -= 5;
 		}
+		return CHARCONV_ILLEGAL;
+	} else {
+		return CHARCONV_INCOMPLETE;
+	}
+
+sequence_found:
+	max = i;
+
+	if (!skip) {
+		for (i = 0; i < 3; i++) {
+			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
+				if (max != ptr->seq_len)
+					continue;
+
+				if (memcmp(_inbuf, ptr->escape_seq, ptr->seq_len) != 0)
+					continue;
+
+				handle->state.g_to[i] = ptr;
+				*inbuf += max;
+				*inbytesleft += max;
+				return CHARCONV_SUCCESS;
+			}
+		}
+	}
+	if (skip) {
+		*inbuf += max;
+		*inbytesleft += max;
 	}
 	return CHARCONV_ILLEGAL;
 }
@@ -150,7 +202,8 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 	int result;
 
 	while (_inbytesleft > 0) {
-		//FIXME: should we accept shift sequences in non-locking shift states?
+		/* We accept shift sequences even in non-locking shift states. This
+		   follows the 'be liberal in what you accept' policy. */
 		if (*_inbuf < 32) {
 			/* Control characters. */
 			if (*_inbuf == 0x1b) {
@@ -186,15 +239,17 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 						break;
 				}
 
-				switch (result = check_escapes(handle, _inbuf, _inbytesleft)) {
+				switch (check_escapes(handle, inbuf, inbytesleft, false)) {
 					case CHARCONV_INCOMPLETE:
 						goto incomplete_char;
 					case CHARCONV_ILLEGAL:
-						return result;
-					default:
-						_inbuf = (uint8_t *) ((*inbuf) -= result);
-						_inbytesleft = (*inbytesleft) += result;
+						return CHARCONV_ILLEGAL;
+					case CHARCONV_SUCCESS:
+						_inbuf = (uint8_t *) *inbuf;
+						_inbytesleft = *inbytesleft;
 						continue;
+					default:
+						return CHARCONV_INTERNAL_ERROR;
 				}
 			} else if (*_inbuf == 0xe) {
 				/* Shift out. */
@@ -210,16 +265,11 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				_inbuf = (uint8_t *) ++(*inbuf);
 				_inbytesleft = --(*inbytesleft);
 				continue;
-			} else if (*_inbuf == 0xd) {
-				if (_inbytesleft > 1) {
-					if (_inbuf[1] == 0xa) {
-						//FIXME: reset state
-					}
-				} else if (!(flags & CHARCONV_END_OF_TEXT)) {
-					return CHARCONV_INCOMPLETE;
-				}
 			}
-			/* Other control. */
+			/* Other control.
+			   Note that we don't issue a reset of the state after CRNL. Eventhough the state
+			   should be re-initialised after CRNL, this doesn't mean we should ignore all
+			   previous state. The input may not conform the the standard that well... */
 			PUT_UNICODE(*_inbuf);
 			_inbuf++;
 			_inbytesleft--;
@@ -253,24 +303,17 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			_inbytesleft -= handle->state.g_to[state]->bytes_per_char;
 		}
 
-		if (handle->state.to > 3)
-			handle->state.to &= 3;
-
+		handle->state.to &= 3;
 		*inbuf = (char *) _inbuf;
 		*inbytesleft = _inbytesleft;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
-	if (flags & CHARCONV_END_OF_TEXT) {
-		//FIXME: reset
-	}
-
 	return CHARCONV_SUCCESS;
 
 incomplete_char:
 	if (flags & CHARCONV_END_OF_TEXT) {
 		if (flags & CHARCONV_SUBST_ILLEGAL) {
-			//FIXME: reset
 			PUT_UNICODE(0xfffd);
 			(*inbuf) += _inbytesleft;
 			*inbytesleft = 0;
@@ -281,13 +324,28 @@ incomplete_char:
 	return CHARCONV_INCOMPLETE;
 }
 
-static int to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inbytesleft) {
-	(void) handle;
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
+	uint_fast8_t state;
 
 	if (*inbytesleft == 0)
 		return CHARCONV_INCOMPLETE;
-	(*inbuf)++;
-	(*inbytesleft)--;
+
+	if (**inbuf == 0x1b)
+		return check_escapes(handle, inbuf, inbytesleft, true) == CHARCONV_INCOMPLETE ?
+			CHARCONV_INCOMPLETE : CHARCONV_SUCCESS;
+
+	state = handle->state.to;
+	if (state > 3)
+		state >>= 2;
+
+
+	if (*inbytesleft < handle->state.g_to[state]->bytes_per_char)
+		return CHARCONV_INCOMPLETE;
+
+	handle->state.to &= 3;
+
+	*inbuf += handle->state.g_to[state]->bytes_per_char;
+	*inbytesleft -= handle->state.g_to[state]->bytes_per_char;
 	return CHARCONV_SUCCESS;
 }
 
@@ -296,13 +354,208 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	handle->state.to = 0;
 }
 
-static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, bool write)
+#define PUT_BYTES(count, buffer) do { size_t _i, _count = count; \
+	if (*outbytesleft < _count) \
+		return CHARCONV_NO_SPACE; \
+	for (_i = 0; _i < _count; _i++) \
+		(*outbuf)[_i] = buffer[_i] & 0x7f; \
+	*outbuf += _count; \
+	*outbytesleft -= _count; \
+} while (0)
+
+static charconv_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *cct, uint_fast8_t g,
+		char **outbuf, size_t *outbytesleft)
+{
+	if (handle->state.g_from[g] != cct) {
+		PUT_BYTES(cct->seq_len, cct->escape_seq);
+		handle->state.g_from[g] = cct;
+	}
+	if (handle->state.from != g && ((handle->state.from & 3) != (1 << 2))) {
+		if (handle->shift_types & (1 << g)) {
+			PUT_BYTES(1 + (g >> 1), ls[g]);
+			handle->state.from = g;
+		} else if (g > 1 && (handle->shift_types & (1 << (g + 2)))) {
+			PUT_BYTES(1 + (g >> 1), ls[g]);
+			handle->state.from = (handle->state.from & 3) | (g << 2);
+		}
+	}
+	return CHARCONV_SUCCESS;
+}
+
+#define SWITCH_TO_SET(cct, g) do { \
+	if (switch_to_set(handle, cct, g, outbuf, outbytesleft) != CHARCONV_SUCCESS) \
+		return CHARCONV_NO_SPACE; \
+} while (0)
+
+
+static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
+		char **outbuf, size_t *outbytesleft, int flags)
+{
+	uint32_t codepoint;
+	char *codepoint_ptr;
+	size_t codepoint_bytesleft;
+	uint8_t *_inbuf = (uint8_t *) *inbuf;
+	size_t _inbytesleft = *inbytesleft;
+	cct_handle_t *ptr;
+	char buffer[4], *buffer_ptr;
+	size_t buffer_bytesleft;
+	struct { cct_handle_t *cct; uint_fast8_t state; } fallback;
+	uint_fast8_t state;
+	int i;
+//FIXME: M:N conversions are sometimes also available!!! Check which ones are and convert multiple codepoints if necessary!!
+	while (*inbytesleft > 0) {
+		switch (codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, false)) {
+			case CHARCONV_UTF_ILLEGAL:
+				return CHARCONV_ILLEGAL;
+			case CHARCONV_UTF_INCOMPLETE:
+				if (flags & CHARCONV_END_OF_TEXT) {
+					if (!(flags & CHARCONV_SUBST_ILLEGAL))
+						return CHARCONV_ILLEGAL_END;
+					SWITCH_TO_SET(handle->ascii, 0);
+					buffer[0] = 0x1a;
+					PUT_BYTES(1, buffer);
+					return CHARCONV_SUCCESS;
+				}
+				return CHARCONV_INCOMPLETE;
+			case 0x0d:
+			case 0x0a:
+				/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
+				   This may be a bit too much, it is not wrong, and some convertors may
+				   actually be expecting this. */
+				SWITCH_TO_SET(handle->ascii, 0);
+				//FIXME: reset state, as required for some convertors
+				break;
+			default:
+				break;
+		}
+
+		fallback.cct = NULL;
+		/* Assume that most codepoints will come from the same character set, so just try to
+		   convert using that. If it succeeds, we're done. Otherwise, we need to search for
+		   the first set that does encode the character. */
+		state = handle->state.from;
+		if (state > 3)
+			state >>= 2;
+		ptr = handle->state.g_from[state];
+		codepoint_ptr = (char *) &codepoint;
+		codepoint_bytesleft = 4;
+		buffer_ptr = buffer;
+		buffer_bytesleft = 4;
+		switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, &codepoint_bytesleft, &buffer_ptr, &buffer_bytesleft, 0)) {
+			case CHARCONV_SUCCESS:
+				PUT_BYTES(4 - buffer_bytesleft, buffer);
+				*inbuf = (char *) _inbuf;
+				*inbytesleft = _inbytesleft;
+				handle->state.from &= 3;
+				continue;
+			case CHARCONV_NO_SPACE:
+				return CHARCONV_NO_SPACE;
+			case CHARCONV_FALLBACK:
+				fallback.cct = ptr;
+				fallback.state = state;
+				break;
+			case CHARCONV_UNASSIGNED:
+				break;
+			default:
+				return CHARCONV_INTERNAL_ERROR;
+		}
+
+		for (i = 0; i < 4; i++) {
+			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
+				if (!(ptr->flags & CCT_FLAG_WRITE))
+					continue;
+
+				codepoint_ptr = (char *) &codepoint;
+				codepoint_bytesleft = 4;
+				buffer_ptr = buffer;
+				buffer_bytesleft = 4;
+
+				switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, &codepoint_bytesleft,
+						&buffer_ptr, &buffer_bytesleft, 0))
+				{
+					case CHARCONV_SUCCESS:
+						SWITCH_TO_SET(ptr, i);
+						PUT_BYTES(4 - buffer_bytesleft, buffer);
+						goto next_codepoint;
+					case CHARCONV_UNASSIGNED:
+						break;
+					case CHARCONV_FALLBACK:
+						if (fallback.cct != NULL) {
+							fallback.cct = ptr;
+							fallback.state = i;
+						}
+						break;
+					default:
+						return CHARCONV_INTERNAL_ERROR;
+				}
+			}
+		}
+		if (fallback.cct == NULL) {
+			/* Unassigned */
+			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+				return CHARCONV_UNASSIGNED;
+			SWITCH_TO_SET(handle->ascii, 0);
+			buffer[0] = 0x1a;
+			PUT_BYTES(1, buffer);
+		} else {
+			/* Fallback */
+			if (!(flags & CHARCONV_ALLOW_FALLBACK))
+				return CHARCONV_FALLBACK;
+			SWITCH_TO_SET(fallback.cct, fallback.state);
+			codepoint_ptr = (char *) &codepoint;
+			codepoint_bytesleft = 4;
+			switch (fallback.cct->cct->convert_from(fallback.cct->cct, &codepoint_ptr, &codepoint_bytesleft,
+					outbuf, outbytesleft, CHARCONV_ALLOW_FALLBACK))
+			{
+				case CHARCONV_NO_SPACE:
+					return CHARCONV_NO_SPACE;
+				case CHARCONV_SUCCESS:
+					break;
+				default:
+					return CHARCONV_INTERNAL_ERROR;
+			}
+		}
+
+next_codepoint:
+		*inbuf = (char *) _inbuf;
+		*inbytesleft = _inbytesleft;
+		handle->state.from &= 3;
+
+		if (flags & CHARCONV_SINGLE_CONVERSION)
+			return CHARCONV_SUCCESS;
+	}
+	return CHARCONV_SUCCESS;
+}
+
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+	SWITCH_TO_SET(handle->ascii, 0);
+	return CHARCONV_SUCCESS;
+}
+
+static void from_unicode_reset(convertor_state_t *handle) {
+	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
+	handle->state.from = 0;
+}
+
+static void save_iso2022_state(convertor_state_t *handle, state_t *save) {
+	memcpy(save, &handle->state, sizeof(state_t));
+}
+
+static void load_iso2022_state(convertor_state_t *handle, state_t *save) {
+	memcpy(&handle->state, save, sizeof(state_t));
+}
+
+
+
+static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags)
 {
 	cct_handle_t *cct_handle, *extra_handle;
 	charconv_t *ext_handle;
 	uint_fast8_t idx = 0;
 
-	if (desc->large_set && g == 0)
+	flags |= desc->flags;
+
+	if ((flags & CCT_FLAG_LARGE_SET) && g == 0)
 		return CHARCONV_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
@@ -325,13 +578,15 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 	cct_handle->escape_seq[idx++] = 0x1b;
 	if (desc->bytes_per_char > 1)
 		cct_handle->escape_seq[idx++] = 0x24;
-	cct_handle->escape_seq[idx++] = (desc->large_set ? 0x2C : 0x28) + g;
+	cct_handle->escape_seq[idx++] = (desc->flags & CCT_FLAG_LARGE_SET ? 0x2C : 0x28) + g;
 	cct_handle->escape_seq[idx++] = desc->final_byte;
 	cct_handle->seq_len = idx;
 
 	cct_handle->high_bit = desc->high_bit;
-	cct_handle->write = write;
+	cct_handle->flags = flags;
 	cct_handle->prev = NULL;
+	cct_handle->next = handle->g_sets[g];
+	handle->g_sets[g] = cct_handle;
 
 	if (desc->final_byte < 0x43 && desc->bytes_per_char > 1) {
 		if ((extra_handle = malloc(sizeof(cct_handle_t))) == NULL) {
@@ -344,28 +599,23 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 		memcpy(extra_handle, cct_handle, sizeof(cct_handle_t));
 		extra_handle->escape_seq[2] = desc->final_byte;
 		extra_handle->seq_len = 3;
-		extra_handle->write = false;
+		if (flags & CCT_FLAGS_SHORT_SEQ)
+			cct_handle->flags &= ~(CCT_FLAG_WRITE);
+		else
+			extra_handle->flags &= ~(CCT_FLAG_WRITE);
 		extra_handle->next = handle->g_sets[g];
 		handle->g_sets[g] = extra_handle;
 	}
 
-	cct_handle->next = handle->g_sets[g];
-	handle->g_sets[g] = cct_handle;
 	return true;
 }
 
-
-static void save_iso2022_state(convertor_state_t *handle, state_t *save) {
-	memcpy(save, &handle->state, sizeof(state_t));
-}
-
-static void load_iso2022_state(convertor_state_t *handle, state_t *save) {
-	memcpy(&handle->state, save, sizeof(state_t));
-}
-
-
-
-#define CHECK_LOAD(x) do { if (!(x)) { close_convertor(retval); return NULL; }} while (0)
+#define LOAD_TABLE(handle, desc, g, error, _write) do { \
+	if (!load_table((handle), (desc), (g), (error), (_write))) { \
+		close_convertor(handle); \
+		return NULL; \
+	} \
+} while (0)
 
 void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
 	static const name_to_iso2022type map[] = {
@@ -446,71 +696,71 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 		*/
 		case ISO2022_JP2004:
 			/* Load the JP and JP-3 sets, but only for reading. */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, 0, error, false));
+			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, 0);
+			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, 0);
+			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, 0);
+			LOAD_TABLE(retval, &jis_x_0213_2000_1, 0, error, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2004_1, 0, error, true));
-			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
+			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0213_2004_1, 0, error, CCT_FLAG_WRITE);
+			retval->shift_types = 0;
 			break;
 		case ISO2022_JP3:
 			/* Load the JP sets, but only for reading. */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, false));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, false));
+			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, 0);
+			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, 0);
+			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_1, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0213_2000_2, 0, error, true));
-			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
+			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0213_2000_1, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
+			retval->shift_types = 0;
 			break;
 		case ISO2022_JP2:
-			CHECK_LOAD(load_table(retval, &iso8859_1, 2, error, true));
-			CHECK_LOAD(load_table(retval, &iso8859_7, 2, error, true));
-			CHECK_LOAD(load_table(retval, &ksc5601_1987, 0, error, true));
-			CHECK_LOAD(load_table(retval, &gb2312_1980, 0, error, true));
+			LOAD_TABLE(retval, &iso8859_1, 2, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &iso8859_7, 2, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &ksc5601_1987, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &gb2312_1980, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
-			CHECK_LOAD(load_table(retval, &jis_x_0212_1990, 0, error, true));
+			LOAD_TABLE(retval, &jis_x_0212_1990, 0, error, CCT_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_JP:
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1983, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0208_1978, 0, error, true));
-			/* Load ASCII last, as that is what should be the initial state. */
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
+			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
+			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
+			retval->shift_types = 0;
 			break;
 		case ISO2022_KR:
-			CHECK_LOAD(load_table(retval, &ksc5601_1987, 1, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
+			LOAD_TABLE(retval, &ksc5601_1987, 1, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &ascii, 0, error, CCT_FLAG_WRITE);
+			retval->shift_types = LS0 | LS1;
 			break;
 		case ISO2022_CNEXT:
-			CHECK_LOAD(load_table(retval, &iso_ir_165, 1, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_3, 3, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_4, 3, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_5, 3, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_6, 3, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_7, 3, error, true));
+			/* The RFC (1922) lists several more character sets, but only under the assumption
+			   that a final character would be assigned to them. To the best of my knowledge,
+			   this hasn't happened yet, so we don't include them. */
+			LOAD_TABLE(retval, &iso_ir_165, 1, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_3, 3, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_4, 3, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_5, 3, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_6, 3, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_7, 3, error, CCT_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_CN:
-			CHECK_LOAD(load_table(retval, &gb2312_1980, 1, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_1, 1, error, true));
-			CHECK_LOAD(load_table(retval, &cns_11643_1992_2, 2, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
+			LOAD_TABLE(retval, &gb2312_1980, 1, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_1, 1, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &cns_11643_1992_2, 2, error, CCT_FLAG_WRITE);
+			retval->shift_types = LS0 | LS1 | SS2 | (retval->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
 			break;
 		case ISO2022_TEST:
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_roman, 0, error, true));
-			CHECK_LOAD(load_table(retval, &jis_x_0201_1976_kana, 0, error, true));
-			CHECK_LOAD(load_table(retval, &iso8859_1, 2, error, true));
-			CHECK_LOAD(load_table(retval, &ascii, 0, error, true));
-			retval->g_initial[0] = retval->g_sets[0];
+			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			LOAD_TABLE(retval, &iso8859_1, 2, error, CCT_FLAG_WRITE);
+			retval->shift_types = 0;
 			break;
 		default:
 			close_convertor(retval);
@@ -518,9 +768,14 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 				*error = CHARCONV_INTERNAL_ERROR;
 			return NULL;
 	}
+	/* Load ASCII, which all convertors need. */
+	LOAD_TABLE(retval, &ascii, 0, error, true);
+	retval->ascii = retval->g_sets[0];
+	retval->g_initial[0] = retval->ascii;
 
-/*	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->common.reset_from = (reset_func_t) from_unicode_reset;*/
+	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.flush_from = (flush_func_t) from_unicode_flush;
+	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
@@ -530,7 +785,7 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	retval->common.load = (load_func_t) load_iso2022_state;
 
 	to_unicode_reset(retval);
-/* 	from_unicode_reset(retval); */
+	from_unicode_reset(retval);
 	return retval;
 }
 
