@@ -74,17 +74,19 @@ struct _charconv_iso2022_cct_handle_t {
 };
 
 typedef struct _charconv_iso2022_state_t state_t;
+typedef struct convertor_state_t convertor_state_t;
+typedef void (*reset_state_func_t)(convertor_state_t *handle);
 
-
-typedef struct {
+struct convertor_state_t {
 	charconv_common_t common;
 	cct_handle_t *g_initial[4];
 	cct_handle_t *g_sets[4]; /* Linked lists of possible tables. */
 	cct_handle_t *ascii;
+	reset_state_func_t reset_state;
 	state_t state;
 	int iso2022_type;
 	int shift_types;
-} convertor_state_t;
+};
 
 typedef struct {
 	const char *name;
@@ -96,7 +98,7 @@ typedef struct {
 
 /* We use the lower part of the ISO8859-1 convertor for ASCII. */
 static cct_descriptor_t ascii = { NULL, 1, '\x42', false, CCT_FLAG_ASCII };
-static cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, CCT_FLAG_LARGE_SET };//2
+static cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, CCT_FLAG_LARGE_SET };
 static cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
 static cct_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, 0 };
 static cct_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', false, 0 };
@@ -112,18 +114,33 @@ static cct_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', tru
 static cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
 static cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
 static cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
-static cct_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, CCT_FLAG_LARGE_SET }; //2
+static cct_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, CCT_FLAG_LARGE_SET };
 static cct_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, 0 };
 static cct_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, 0 };
 
-static cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, 0 };//1
-static cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, 0 };//2
-static cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, 0 };//3
-static cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, 0 };//3
-static cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, 0 };//3
-static cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, 0 };//3
-static cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, 0 };//3
+static cct_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, 0 };
+static cct_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, 0 };
+static cct_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, 0 };
+static cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, 0 };
+static cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, 0 };
+static cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, 0 };
+static cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, 0 };
 static cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };//1
+
+/* FIXME: M:N conversions are sometimes also available!!! Check which ones are and convert multiple codepoints if necessary!!
+   For ISO-2022-JP2004 the maximum number of codepoints is 2.
+
+	Checked (need 1):
+	ASCII
+	ISO-8859-1
+	ibm-897_P100-1995
+	ibm-955_P110-1997
+	ibm-5048_P100-1995
+	ibm-5049_P100-1995
+	ibm-813_P100-1995
+	CNS-11643-1992-[1-7]
+*/
+
 
 static const char *ls[] = { "\x0f", "\x0e", "\x1b\x6e", "\x1b\x6f", "\x1b\x4e", "\x1b\x4f" };
 
@@ -402,7 +419,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	struct { cct_handle_t *cct; uint_fast8_t state; } fallback;
 	uint_fast8_t state;
 	int i;
-//FIXME: M:N conversions are sometimes also available!!! Check which ones are and convert multiple codepoints if necessary!!
+
 	while (*inbytesleft > 0) {
 		switch (codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, false)) {
 			case CHARCONV_UTF_ILLEGAL:
@@ -423,7 +440,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 				   This may be a bit too much, it is not wrong, and some convertors may
 				   actually be expecting this. */
 				SWITCH_TO_SET(handle->ascii, 0);
-				//FIXME: reset state, as required for some convertors
+				handle->reset_state(handle);
 				break;
 			default:
 				break;
@@ -545,7 +562,10 @@ static void load_iso2022_state(convertor_state_t *handle, state_t *save) {
 	memcpy(&handle->state, save, sizeof(state_t));
 }
 
-
+static void reset_state_nop(convertor_state_t *handle) { (void) handle; };
+static void reset_state_cn(convertor_state_t *handle) {
+	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
+};
 
 static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags)
 {
@@ -658,6 +678,7 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	retval->g_initial[3] = NULL;
 
 	retval->iso2022_type = ptr->iso2022_type;
+	retval->reset_state = reset_state_nop;
 
 	switch (retval->iso2022_type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
@@ -755,6 +776,7 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 			LOAD_TABLE(retval, &cns_11643_1992_1, 1, error, CCT_FLAG_WRITE);
 			LOAD_TABLE(retval, &cns_11643_1992_2, 2, error, CCT_FLAG_WRITE);
 			retval->shift_types = LS0 | LS1 | SS2 | (retval->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
+			retval->reset_state = reset_state_cn;
 			break;
 		case ISO2022_TEST:
 			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
