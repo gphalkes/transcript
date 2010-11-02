@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <strings.h>
 
 #include "charconv.h"
 #include "utf.h"
@@ -21,10 +23,52 @@ int main(int argc, char *argv[]) {
 	size_t result, i;
 	size_t fill = 0, outleft;
 
-	if (argc != 2)
-		fatal("Usage: test <name>\n");
+	int c;
+	enum { FROM, TO } dir = FROM;
+	charconv_error_t (*convert)(charconv_t *, char **, size_t *, char **, size_t *, int) = charconv_from_unicode;
+	int utf_type = UTF8;
 
-	if ((conv = charconv_open_convertor(argv[1], UTF8, 0, &error)) == NULL)
+	static struct { const char *name; int type; } utf_list[] = {
+		{ "UTF-8", UTF8 },
+		{ "UTF-16", UTF16 },
+		{ "UTF-16BE", UTF16BE },
+		{ "UTF-16LE", UTF16LE },
+		{ "UTF-32", UTF32 },
+		{ "UTF-32BE", UTF32BE },
+		{ "UTF-32LE", UTF32LE }};
+
+	while ((c = getopt(argc, argv, "d:u:")) != EOF) {
+		switch (c) {
+			case 'd':
+				if (strcasecmp(optarg, "to") == 0) {
+					dir = TO;
+					convert = charconv_to_unicode;
+				} else if (strcasecmp(optarg, "from") == 0) {
+					dir = FROM;
+					convert = charconv_from_unicode;
+				} else {
+					fatal("Invalid argument for -d\n");
+				}
+				break;
+			case 'u':
+				for (i = 0; i < sizeof(utf_list) / sizeof(utf_list[0]); i++) {
+					if (strcasecmp(optarg, utf_list[i].name) == 0) {
+						utf_type = utf_list[i].type;
+						break;
+					}
+				}
+				if (i == sizeof(utf_list) / sizeof(utf_list[0]))
+					fatal("Invalid argument for -u\n");
+				break;
+			default:
+				fatal("Error processing options\n");
+		}
+	}
+
+	if (argc - optind != 1)
+		fatal("Usage: test [-d <direction>] [-u <utf type>] <codepage name>\n");
+
+	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening convertor: %d\n", error);
 
 	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
@@ -32,13 +76,14 @@ int main(int argc, char *argv[]) {
 		outbuf_ptr = outbuf;
 		fill += result;
 		outleft = 1024;
-		if ((error = charconv_to_unicode(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
+		if ((error = convert(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
 			fatal("conversion result: %d\n", error);
 		printf("fill: %zd, outleft: %zd\n", fill, outleft);
 		for (i = 0; i < 1024 - outleft; i++)
 			printf("\\x%02X", (uint8_t) outbuf[i]);
-		printf("\n%.*s", (int) i, outbuf);
+		if (dir == TO && utf_type == UTF8)
+			printf("\n%.*s", (int) i, outbuf);
 	}
-	printf("\nEnd\n");
+	putchar('\n');
 	return 0;
 }
