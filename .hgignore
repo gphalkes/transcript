@@ -10,3 +10,4 @@ src.util/genconv
 src.util/ibm-ucm
 src/.libs
 src/charconv
+tmp/*

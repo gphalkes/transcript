@@ -46,21 +46,21 @@ void fatal(const char *fmt, ...) {
 
 Ucm::tag_t string_to_tag(const char *str) {
 	if (strcmp(str, "<code_set_name>") == 0)
-		return Ucm::CODE_SET_NAME;
+		return UcmBase::CODE_SET_NAME;
 	if (strcmp(str, "<uconv_class>") == 0)
-		return Ucm::UCONV_CLASS;
+		return UcmBase::UCONV_CLASS;
 	if (strcmp(str, "<subchar>") == 0)
-		return Ucm::SUBCHAR;
+		return UcmBase::SUBCHAR;
 	if (strcmp(str, "<subchar1>") == 0)
-		return Ucm::SUBCHAR1;
-	if (strcmp(str, "<icu:base>") == 0)
-		return Ucm::ICU_BASE;
+		return UcmBase::SUBCHAR1;
 	if (strcmp(str, "<mb_cur_max>") == 0)
-		return Ucm::MB_MAX;
+		return UcmBase::MB_MAX;
 	if (strcmp(str, "<mb_cur_min>") == 0)
-		return Ucm::MB_MIN;
+		return UcmBase::MB_MIN;
 	if (strcmp(str, "<icu:charsetFamily>") == 0)
-		return Ucm::CHARSET_FAMILY;
+		return UcmBase::CHARSET_FAMILY;
+	if (strcmp(str, "<base>") == 0)
+		return UcmBase::BASE;
 	return Ucm::IGNORED;
 }
 

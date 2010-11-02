@@ -16,7 +16,9 @@
 
 #include <vector>
 #include <deque>
+#include <list>
 #include <inttypes.h>
+#include <cstdio>
 
 using namespace std;
 
@@ -93,15 +95,10 @@ class StateMachineInfo {
 		virtual double get_single_cost(void) = 0;
 };
 
-class Ucm {
+class UcmBase {
 	public:
-		vector<State *> codepage_states;
-		vector<State *> unicode_states;
 		vector<Mapping *> simple_mappings;
 		vector<Mapping *> multi_mappings;
-
-		uint32_t codepage_range;
-		uint32_t unicode_range;
 
 		enum tag_t {
 			IGNORED = -1,
@@ -109,14 +106,45 @@ class Ucm {
 			UCONV_CLASS,
 			SUBCHAR,
 			SUBCHAR1,
-			ICU_BASE,
 			MB_MAX,
 			MB_MIN,
 			CHARSET_FAMILY,
+			BASE,
 
 			/* All tags must be defined before this value. */
 			LAST_TAG
 		};
+
+		void add_mapping(Mapping *mapping);
+		virtual int check_codepage_bytes(vector<uint8_t> &bytes) = 0;
+		virtual const char *get_tag_value(tag_t tag) = 0;
+};
+
+class Ucm;
+
+class Variant : public UcmBase {
+	public:
+		Ucm *base;
+		uint32_t id;
+
+	public:
+		Variant(Ucm *_base, uint32_t _id = 0);
+		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
+		virtual const char *get_tag_value(tag_t tag);
+};
+
+class Ucm : public UcmBase {
+	public:
+		vector<State *> codepage_states;
+		vector<State *> unicode_states;
+		vector<Mapping *> simple_mappings;
+		vector<Mapping *> multi_mappings;
+
+		list<Variant *> variants;
+
+		uint32_t codepage_range;
+		uint32_t unicode_range;
+
 
 		enum {
 			CLASS_MBCS = 1,
@@ -148,7 +176,6 @@ class Ucm {
 
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
-		int check_codepage_bytes(vector<uint8_t> &bytes);
 		void check_duplicates(vector<Mapping *> &mappings);
 		int calculate_depth(Entry *entry);
 		void trace_back(size_t idx, shift_sequence_t &shift_sequence);
@@ -186,11 +213,12 @@ class Ucm {
 	public:
 		Ucm(void);
 		void set_tag_value(tag_t tag, const char *value);
+		virtual const char *get_tag_value(tag_t tag);
 		void new_codepage_state(int _flags = 0);
 		void new_codepage_entry(Entry entry);
 		void process_header(void);
 		void validate_states(void);
-		void add_mapping(Mapping *mapping);
+		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		void check_duplicates(void);
 		void remove_fullwidth_fallbacks(void);
 		void remove_private_use_fallbacks(void);
@@ -199,6 +227,7 @@ class Ucm {
 		void minimize_state_machines(void);
 		void find_shift_sequences(void);
 		void write_table(FILE *output);
+		void add_variant(Variant *variant);
 };
 
 extern "C" int line_number;

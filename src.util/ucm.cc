@@ -65,6 +65,45 @@ void State::new_entry(Entry entry) {
 	}
 }
 
+void UcmBase::add_mapping(Mapping *mapping) {
+	int codepage_chars = check_codepage_bytes(mapping->codepage_bytes);
+
+	if (codepage_chars == 1 && mapping->codepoints.size() == 1) {
+		switch (mapping->precision) {
+			case 0:
+				break;
+			case 1:
+				mapping->from_unicode_flags |= Mapping::FROM_UNICODE_FALLBACK;
+				break;
+			case 2:
+				if (get_tag_value(SUBCHAR1) == NULL) {
+					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n", file_name, line_number - 1);
+					return;
+				} else {
+					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_NOT_AVAIL;
+				}
+				break;
+			case 3:
+				mapping->to_unicode_flags |= Mapping::TO_UNICODE_FALLBACK;
+				break;
+			default:
+				PANIC();
+		}
+		if ((mapping->codepoints[0] >= UINT32_C(0xfdd0) && mapping->codepoints[0] <= UINT32_C(0xfdef)) ||
+				(mapping->codepoints[0] & UINT32_C(0xfffe)) == UINT32_C(0xfffe))
+			fatal("%s:%d: codepoint specifies a non-character (U%04" PRIX32 ")\n", file_name, line_number - 1, mapping->codepoints[0]);
+
+		if ((mapping->codepoints[0] >= UINT32_C(0xe000) && mapping->codepoints[0] <= UINT32_C(0xf8ff)) ||
+				(mapping->codepoints[0] >= UINT32_C(0xf0000) && mapping->codepoints[0] <= UINT32_C(0xffffd)) ||
+				(mapping->codepoints[0] >= UINT32_C(0x100000) && mapping->codepoints[0] <= UINT32_C(0x10fffd)))
+			mapping->to_unicode_flags |= Mapping::TO_UNICODE_PRIVATE_USE;
+		mapping->from_unicode_flags |= (mapping->codepage_bytes.size() - 1);
+		simple_mappings.push_back(mapping);
+	} else {
+		//FIXME: check for private-use or non-character codepoints
+		multi_mappings.push_back(mapping);
+	}
+}
 
 Ucm::Ucm(void) : flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0),
 		to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0)
@@ -78,6 +117,10 @@ void Ucm::set_tag_value(tag_t tag, const char *value) {
 		return;
 	if ((tag_values[tag] = strdup(value)) == NULL)
 		OOM();
+}
+
+const char *Ucm::get_tag_value(tag_t tag) {
+	return tag_values[tag];
 }
 
 void Ucm::new_codepage_state(int _flags) {
@@ -413,46 +456,6 @@ static bool compareCodepoints(Mapping *a, Mapping *b) {
 	if (result == 0)
 		return a->precision < b->precision;
 	return result < 0;
-}
-
-void Ucm::add_mapping(Mapping *mapping) {
-	int codepage_chars = check_codepage_bytes(mapping->codepage_bytes);
-
-	if (codepage_chars == 1 && mapping->codepoints.size() == 1) {
-		switch (mapping->precision) {
-			case 0:
-				break;
-			case 1:
-				mapping->from_unicode_flags |= Mapping::FROM_UNICODE_FALLBACK;
-				break;
-			case 2:
-				if (tag_values[SUBCHAR1] == NULL) {
-					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n", file_name, line_number - 1);
-					return;
-				} else {
-					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_NOT_AVAIL;
-				}
-				break;
-			case 3:
-				mapping->to_unicode_flags |= Mapping::TO_UNICODE_FALLBACK;
-				break;
-			default:
-				PANIC();
-		}
-		if ((mapping->codepoints[0] >= UINT32_C(0xfdd0) && mapping->codepoints[0] <= UINT32_C(0xfdef)) ||
-				(mapping->codepoints[0] & UINT32_C(0xfffe)) == UINT32_C(0xfffe))
-			fatal("%s:%d: codepoint specifies a non-character (U%04" PRIX32 ")\n", file_name, line_number - 1, mapping->codepoints[0]);
-
-		if ((mapping->codepoints[0] >= UINT32_C(0xe000) && mapping->codepoints[0] <= UINT32_C(0xf8ff)) ||
-				(mapping->codepoints[0] >= UINT32_C(0xf0000) && mapping->codepoints[0] <= UINT32_C(0xffffd)) ||
-				(mapping->codepoints[0] >= UINT32_C(0x100000) && mapping->codepoints[0] <= UINT32_C(0x10fffd)))
-			mapping->to_unicode_flags |= Mapping::TO_UNICODE_PRIVATE_USE;
-		mapping->from_unicode_flags |= (mapping->codepage_bytes.size() - 1);
-		simple_mappings.push_back(mapping);
-	} else {
-		//FIXME: check for private-use or non-character codepoints
-		multi_mappings.push_back(mapping);
-	}
 }
 
 void Ucm::remove_fullwidth_fallbacks(void) {
@@ -1184,4 +1187,11 @@ next_multi_mapping:
 
 double Ucm::UnicodeStateMachineInfo::get_single_cost(void) {
 	return source.from_flag_costs + source.single_bytes;
+}
+
+void Ucm::add_variant(Variant *variant) {
+	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++)
+		if (variant->id == (*iter)->id)
+			fatal("%s:%d: Multiple variants with the same ID specified\n", file_name, line_number);
+	variants.push_back(variant);
 }

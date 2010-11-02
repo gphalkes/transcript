@@ -43,11 +43,12 @@ Bit   | Meaning
 ---------------------------------------------------
 0     | A table with information about the from-unicode transformation is available
 1     | A table with information about the to-unicode transformation is available
-2     | A table with m:n mappings is available
+2     | A table with M:N mappings is available
 3     | Subchar1 is valid
 4     | Code page is of MBCS type (state 1 is also intial state)
 5     | Conversion information is for internal converter use only
-6-15  | Reserved (must be 0)
+6     | The convertor has variants appended.
+7-15  | Reserved (must be 0)
 
 After the header follow the definitions of the shift sequences, followed by the
 definitions of the states. The lookup tables are stored at the end of the file.
@@ -183,8 +184,8 @@ a 2 byte count of the number of blocks - 1. This holds for both the to- and
 from-unicode flags tables. //FIXME: this description needs to be improved [include calculation of lengths]
 
 
-Finally, there is an optional m:n mapping table. This table consists of a
-single 4 byte number indicating the number of m:n mappings, followed by the
+Finally, there is an optional M:N mapping table. This table consists of a
+single 4 byte number indicating the number of M:N mappings, followed by the
 mappings. The mappings should be sorted in ascending order of codepage bytes.
 
 Field                      | Bytes
@@ -193,3 +194,48 @@ Number of codepoints       | 1 (1 through 31)
 [ codepoints ]+            | [ UTF-16BE ]+
 Number of code page bytes  | 1 (1 through 19)
 [ code page bytes ]+       | [ Indicated by previous field ]+
+
+
+
+Variant descriptors
+-------------------
+
+Some convertors are very similar. To support such convertors in a space
+efficent manner, variants can be appended to the file. Each variant is a
+description of an extra set of conversions that need to be included. To ensure
+efficient lookup using the original convertor, the codepoints/byte sequences
+for which extra codepoints are defined have an assigned final state in the
+state machine. The extra conversions can thus be simply inserted in the
+existing tables. The only complication is the flags trie. Updating the flags
+trie is more difficult, because it requires ensuring unique pages in the trie
+before updating.
+
+Because checking the correct removal or modification of a mapping requires
+more complicated logic, the only allowed operation is addition. To facilitate
+different convertors which have different mappings for the same codepoint/
+byte sequence, it is possible to define a default variant which must be loaded
+if a specific variant is not requested. This variant has variant identifier 0.
+
+Contrary to the UCM/CNV format used by the ICU libraries, it is possible to
+have M:N mappings in the base table.
+
+If the header indicates that variants are included, first the number of
+variants is encoded as a two byte integer.
+
+Each variant consists of:
+
+Field                      | Bytes
+---------------------------------------------------
+Variant identifier         | 4 (CSID if available, a number > 65535 otherwise)
+Size of mappings table     | 4 After reading this, skip this many bytes to arrive at the next variant
+Number of simple mappings  | 4
+Simple mappings as tuples :
+  Codepage bytes           | string
+  Codepoint                | UTF-16BE (1 or 2)
+  To unicode flags         | 1
+  From unicode flags       | 1
+Number of M:N mappings     | 4
+M:N mappings, as before
+
+Note that if M:N mappings are included, the flag tables should also be updated
+to reflect this.

@@ -15,6 +15,7 @@
 
 %options "generate-symbol-table lowercase-symbols generate-lexer-wrapper reentrant";
 %label CHARMAP, "CHARMAP";
+%label VARIANT, "VARIANT";
 %label END, "END";
 %label HEXNUM, "hexadecimal number";
 %label CHARSEQ, "character sequence";
@@ -46,11 +47,12 @@ void LLmessage(int _class) {
 	}
 }
 
-static Ucm *ucm;
-
 }
 
-ucm<void *>:
+ucm<void *> {
+	Ucm *ucm;
+	Variant *variant;
+}:
 	{
 		if (option_verbose)
 			fprintf(stderr, "Reading input\n");
@@ -58,7 +60,7 @@ ucm<void *>:
 	}
 	'\n'*
 	[
-		header_line
+		header_line(ucm)
 		'\n'+
 	]+
 	{
@@ -67,7 +69,7 @@ ucm<void *>:
 	}
 	CHARMAP '\n'+
 	[
-		mapping
+		mapping(ucm)
 		'\n'+
 	]+
 	END CHARMAP
@@ -75,17 +77,37 @@ ucm<void *>:
 		'\n'+
 		[
 			CHARMAP '\n'+
+			{
+				variant = new Variant(ucm);
+				ucm->add_variant(variant);
+			}
 			[
-				mapping
+				mapping(variant)
 				'\n'+
 			]+
 			END CHARMAP
 			'\n'*
 		]?
 	]?
+	[
+		VARIANT
+		NUMBER
+		{
+			variant = new Variant(ucm, strtol(yytext, NULL, 0));
+			ucm->add_variant(variant);
+		}
+		'\n'+
+		[
+			mapping(variant)
+			'\n'+
+		]+
+		END VARIANT
+		['\n'+]..?
+	]*
 ;
 
-header_line {
+
+header_line(Ucm *ucm) {
 	Ucm::tag_t tag;
 } :
 	TAG
@@ -94,7 +116,7 @@ header_line {
 	{ ucm->set_tag_value(tag, yytext); }
 |
 	_STATE
-	state
+	state(ucm)
 ;
 
 value:
@@ -105,7 +127,7 @@ value:
 	CHARSEQ
 ;
 
-state {
+state(Ucm *ucm) {
 	int flags = 0;
 } :
 	[
@@ -118,7 +140,7 @@ state {
 	]?
 	{ ucm->new_codepage_state(flags); }
 	[
-		entry
+		entry(ucm)
 		[
 			','
 			...
@@ -126,7 +148,7 @@ state {
 	]?
 ;
 
-entry {
+entry(Ucm *ucm) {
 	Entry result(0, 0, 0, ACTION_FINAL, 0, 0);
 } :
 	HEXNUM
@@ -174,7 +196,7 @@ entry {
 	{ ucm->new_codepage_entry(result); }
 ;
 
-mapping {
+mapping(UcmBase *ucm) {
 	Mapping *mapping = new Mapping();
 } :
 	TAG
@@ -196,3 +218,4 @@ mapping {
 	]?
 	{ ucm->add_mapping(mapping); }
 ;
+
