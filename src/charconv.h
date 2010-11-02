@@ -53,7 +53,8 @@ enum {
 	CHARCONV_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
 	CHARCONV_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text. */
 	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.). */
-	CHARCONV_NO_MN_CONVERSION = (1<<11) /**< Do not use M:N conversions.. */
+	CHARCONV_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions. */
+	CHARCONV_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::CHARCONV_NO_MN_CONVERSION  */
 };
 
 typedef enum {

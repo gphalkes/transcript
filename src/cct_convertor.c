@@ -63,7 +63,9 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 			case ACTION_FINAL:
 			case ACTION_FINAL_PAIR:
 				conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
-				if ((conv_flags & TO_UNICODE_MULTI_START) && !(flags & CHARCONV_NO_MN_CONVERSION)) {
+				if ((conv_flags & TO_UNICODE_MULTI_START) &&
+						(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+				{
 					#warning FIXME: should always search for longest match!!!!
 					size_t outbytesleft_tmp, check_len;
 					uint_fast32_t i, j;
@@ -77,7 +79,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 							continue;
 
 						if (check_len != handle->convertor->multi_mappings[i].bytes_length) {
-							if (flags & CHARCONV_END_OF_TEXT)
+							if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
 								continue;
 							return CHARCONV_INCOMPLETE;
 						}
@@ -274,7 +276,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	size_t _inbytesleft = *inbytesleft;
 	size_t check_len;
 	size_t mapping_check_len;
-	bool can_read_more = true;
+	bool can_read_more = flags & CHARCONV_NO_MN_CONVERSION ? false : true;
 
 	#warning FIXME: should always search for longest match!!!!
 
@@ -399,7 +401,9 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 				case ACTION_FINAL:
 				case ACTION_FINAL_PAIR:
 					conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
-					if ((conv_flags & FROM_UNICODE_MULTI_START) && !(flags & CHARCONV_NO_MN_CONVERSION)) {
+					if ((conv_flags & FROM_UNICODE_MULTI_START) &&
+							(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+					{
 						switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags)) {
 							case CHARCONV_SUCCESS:
 								_inbuf = (uint8_t *) *inbuf;

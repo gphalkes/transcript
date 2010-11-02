@@ -49,7 +49,7 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 	uint8_t *_outbuf;
 
 	switch (handle->gb18030_cct->convert_from(handle->gb18030_cct, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-			outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
+			outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_1N_CONVERSION))
 	{
 		case CHARCONV_SUCCESS:
 			return CHARCONV_SUCCESS;
@@ -115,18 +115,18 @@ uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, siz
 	codepoint_ptr = (char *) &codepoint;
 	codepoint_bytesleft = 4;
 	switch (handle->gb18030_cct->convert_to(handle->gb18030_cct, inbuf, inbytesleft, &codepoint_ptr,
-			&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE | CHARCONV_NO_MN_CONVERSION))
+			&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE | CHARCONV_NO_1N_CONVERSION))
 	{
 		case CHARCONV_SUCCESS:
 			return codepoint;
 		case CHARCONV_ILLEGAL:
 			return CHARCONV_UTF_ILLEGAL;
 
-		/* CHARCONV_FALLBACK
-		   CHARCONV_ILLEGAL_END
+		/* CHARCONV_FALLBACK - There should be no fallback mappings in the GB-18030 table.
+		   CHARCONV_ILLEGAL_END - As we do not include the CHARCONV_END_OF_TEXT flag, this should be impossible.
 		   CHARCONV_INTERNAL_ERROR
 		   CHARCONV_PRIVATE_USE - Should not happen because we told the convertor that private use mappings are alright.
-		   CHARCONV_NO_SPACE */
+		   CHARCONV_NO_SPACE - We provided enough space for the single character. */
 		default:
 			return CHARCONV_UTF_INTERNAL_ERROR;
 

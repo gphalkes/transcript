@@ -118,7 +118,6 @@ charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, si
 }
 
 charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, size_t *outbytesleft) {
-	charconv_error_t result;
 	switch (handle->flush_from(handle, outbuf, outbytesleft)) {
 		case CHARCONV_SUCCESS:
 			break;

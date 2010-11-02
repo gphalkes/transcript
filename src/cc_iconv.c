@@ -45,10 +45,6 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
-	/* Because we don't use the M:N conversions, we don't have to perform any checks
-	   when retrieving the UTF-32 character in the from_unicode conversion. */
-	retval->to->get_unicode = _charconv_get_utf32_no_check;
-
 	return retval;
 
 end_error:
@@ -79,10 +75,10 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	size_t _inbytesleft;
 	char saved_state[CHARCONV_SAVE_STATE_SIZE];
 
-	uint32_t codepoint;
+	uint32_t codepoints[20];
 	char *codepoint_ptr;
 	size_t codepoint_bytesleft;
-	bool fallback;
+	bool non_reversible;
 
 	if (inbuf == NULL || *inbuf == NULL) {
 		/* There is no need to convert the input buffer, because even if it had an incomplete
@@ -113,9 +109,10 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 
 	while (*inbytesleft > 0) {
 		charconv_save_state(cd->from, saved_state);
-		fallback = false;
-		codepoint_ptr = (char *) &codepoint;
-		codepoint_bytesleft = 4;
+		non_reversible = false;
+		codepoint_ptr = (char *) &codepoints;
+		codepoint_bytesleft = sizeof(codepoints);
+		/* Convert a single character of the input, by forcing a single conversion. */
 		switch (charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr,
 				&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
 		{
@@ -125,13 +122,14 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_FALLBACK:
 				charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-				fallback = true;
+				non_reversible = true;
 				break;
 			case CHARCONV_PRIVATE_USE:
 			case CHARCONV_UNASSIGNED:
-				codepoint = 0xFFFD;
+				codepoints[0] = 0xFFFD;
+				codepoint_bytesleft = sizeof(codepoints) - sizeof(codepoints[0]);
 				charconv_to_unicode_skip(cd->from, &_inbuf, &_inbytesleft);
-				fallback = true;
+				non_reversible = true;
 				break;
 			case CHARCONV_ILLEGAL:
 				ERROR(EILSEQ);
@@ -145,25 +143,34 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 				ERROR(EBADF);
 		}
 
-		if (codepoint_bytesleft == 0) {
-			codepoint_ptr = (char *) &codepoint;
-			codepoint_bytesleft = 4;
+		/* Only try to convert if the previous conversion yielded any codepoints. */
+		if (codepoint_bytesleft < sizeof(codepoints)) {
+
+			/* If the previous conversion yielded more than one codepoint, the
+			   conversion is definately non_reversible. */
+			if (codepoint_bytesleft < sizeof(codepoints) - sizeof(codepoints[0]))
+				non_reversible = true;
+
+			codepoint_ptr = (char *) &codepoints;
+			codepoint_bytesleft = sizeof(codepoints) - codepoint_bytesleft;
+		try_again:
+			/* Try to convert. If so far the conversion is reversible, try without substitutions and fallbacks first. */
 			switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-					outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
+					outbytesleft, CHARCONV_NO_1N_CONVERSION |
+					(non_reversible ? CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL | CHARCONV_ALLOW_FALLBACK : 0)))
 			{
 				case CHARCONV_SUCCESS:
 					break;
 				case CHARCONV_FALLBACK:
-					charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-							CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
-					fallback = true;
-					break;
 				case CHARCONV_UNASSIGNED:
 				case CHARCONV_PRIVATE_USE:
-					charconv_from_unicode(cd->from, &codepoint_ptr, &codepoint_bytesleft, outbuf, outbytesleft,
-							CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL);
-					fallback = true;
-					break;
+					/* Apparently, we couldn't convert (all) the characters, so this counts as
+					   as a non-reversible conversion. */
+					if (non_reversible)
+						/* We shouldn't be able to get here! Return "internal error". */
+						ERROR(EBADF);
+					non_reversible = true;
+					goto try_again;
 				case CHARCONV_NO_SPACE:
 					ERROR(E2BIG);
 				/* None of the other errors should happen, as we feed it only valid codepoints. So
@@ -173,9 +180,9 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			}
 		}
 
-		if (fallback) {
+		if (non_reversible) {
 			result++;
-			fallback = false;
+			non_reversible = false;
 		}
 		*inbuf = _inbuf;
 		*inbytesleft = _inbytesleft;
