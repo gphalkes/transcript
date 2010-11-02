@@ -66,11 +66,13 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 				if ((conv_flags & TO_UNICODE_MULTI_START) &&
 						(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
 				{
-					#warning FIXME: should always search for longest match!!!!
 					size_t outbytesleft_tmp, check_len;
 					uint_fast32_t i, j;
 					char *outbuf_tmp;
 					int result;
+
+					/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
+					   check the longer mappings. This way we always find the longest match. */
 
 					for (i = 0; i < handle->convertor->nr_multi_mappings; i++) {
 						check_len = min(handle->convertor->multi_mappings[i].bytes_length, *inbytesleft);
@@ -278,18 +280,19 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	size_t mapping_check_len;
 	bool can_read_more = flags & CHARCONV_NO_MN_CONVERSION ? false : true;
 
-	#warning FIXME: should always search for longest match!!!!
+	/* Note: we specifically use the codepoint_sorted_multi_mappings to ensure that we always use
+	   the longest possible match. */
 
 	GET_UNICODE();
 	if (put_utf16(codepoint, &ptr, &codepoints_left) != 0)
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->convertor->nr_multi_mappings; i++) {
-		mapping_check_len = handle->convertor->multi_mappings[i].codepoints_length * 2;
+		mapping_check_len = handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(19 * 2 - codepoints_left, mapping_check_len);
 
 		/* No need to read more of the input if we already know that the start doesn't match. */
-		if (memcmp(codepoints, handle->convertor->multi_mappings[i].codepoints, check_len) != 0)
+		if (memcmp(codepoints, handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints, check_len) != 0)
 			continue;
 
 		/* If we already read enough codepoints, then the comparison already verified that
@@ -334,11 +337,12 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		if (check_len < mapping_check_len)
 			continue;
 
-		if (memcmp(codepoints, handle->convertor->multi_mappings[i].codepoints, check_len) == 0) {
+		if (memcmp(codepoints, handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints, check_len) == 0) {
 check_complete:
-			if (*outbytesleft < handle->convertor->multi_mappings[i].bytes_length)
+			if (*outbytesleft < handle->convertor->codepoint_sorted_multi_mappings[i]->bytes_length)
 				return CHARCONV_NO_SPACE;
-			PUT_BYTES(handle->convertor->multi_mappings[i].bytes_length, handle->convertor->multi_mappings[i].bytes);
+			PUT_BYTES(handle->convertor->codepoint_sorted_multi_mappings[i]->bytes_length,
+				handle->convertor->codepoint_sorted_multi_mappings[i]->bytes);
 
 			if (19 * 2 - codepoints_left != mapping_check_len) {
 				/* Re-read codepoints up to the number in the mapping. */
