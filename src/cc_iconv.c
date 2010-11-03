@@ -23,9 +23,6 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	cc_iconv_t retval = NULL;
 	charconv_error_t error;
 
-	if ((error = charconv_init()) != CHARCONV_SUCCESS)
-		ERROR(EBADF); /* Use EBADF as "internal error" */
-
 	if ((retval = malloc(sizeof(*retval))) == NULL)
 		ERROR(ENOMEM);
 

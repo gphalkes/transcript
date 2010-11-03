@@ -74,8 +74,7 @@ typedef enum {
 	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
 	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
-	CHARCONV_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
-	CHARCONV_UNINITIALIZED /**< Library was not initialized before calling ::charconv_open. */
+	CHARCONV_INTERNAL_TABLE /**< Tried to load a table that is for internal use only. */
 } charconv_error_t;
 
 /* I would rather not define these here, but I need them for the definition of
@@ -102,7 +101,6 @@ struct _charconv_iso2022_state_t {
 #define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
 	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
 
-CHARCONV_API charconv_error_t charconv_init(void);
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
 CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);

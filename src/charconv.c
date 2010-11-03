@@ -59,19 +59,7 @@ static name_mapping convertors[] = {
 #endif
 };
 
-static volatile bool initialized = false;
-
 /*================ API functions ===============*/
-charconv_error_t charconv_init(void) {
-	if (!initialized) {
-		// FIXME: initialize any necessary library parts, like gettext or semaphores/mutexes
-
-
-		initialized = true;
-	}
-	return CHARCONV_SUCCESS;
-}
-
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error) {
 	bool last_was_digit = false;
 	name_mapping *convertor;
@@ -79,13 +67,6 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, c
 	size_t store_idx = 0;
 	size_t array_size = ARRAY_SIZE(convertors);
 	const char *ptr;
-
-	if (!initialized) {
-		if (error != NULL)
-			*error = CHARCONV_UNINITIALIZED;
-		return NULL;
-	}
-
 
 	if (utf_type < 0 || utf_type > UTF32LE) {
 		if (error != NULL)
@@ -216,7 +197,5 @@ const char *charconv_strerror(charconv_error_t error) {
 			return _("Map file is of an unsupported version");
 		case CHARCONV_INTERNAL_TABLE:
 			return _("Map file is for internal use only");
-		case CHARCONV_UNINITIALIZED:
-			return _("Library is not initialized");
 	}
 }

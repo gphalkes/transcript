@@ -68,10 +68,6 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction>] [-u <utf type>] <codepage name>\n");
 
-	if ((error = charconv_init()) != CHARCONV_SUCCESS)
-		fatal("Error initializing charconv library: %s\n", charconv_strerror(error));
-
-
 	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening convertor: %s\n", charconv_strerror(error));
 
