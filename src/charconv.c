@@ -21,6 +21,9 @@
 
 #include "convertors.h"
 
+//FIXME: use gettext for this one
+#define _(x) x
+
 typedef struct {
 	const char *squashed_name;
 	const char *convertor_name;
@@ -56,7 +59,18 @@ static name_mapping convertors[] = {
 #endif
 };
 
+static volatile bool initialized = false;
+
 /*================ API functions ===============*/
+charconv_error_t charconv_init(void) {
+	if (!initialized) {
+		// FIXME: initialize any necessary library parts, like gettext or semaphores/mutexes
+
+
+		initialized = true;
+	}
+	return CHARCONV_SUCCESS;
+}
 
 charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error) {
 	bool last_was_digit = false;
@@ -65,6 +79,13 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, c
 	size_t store_idx = 0;
 	size_t array_size = ARRAY_SIZE(convertors);
 	const char *ptr;
+
+	if (!initialized) {
+		if (error != NULL)
+			*error = CHARCONV_UNINITIALIZED;
+		return NULL;
+	}
+
 
 	if (utf_type < 0 || utf_type > UTF32LE) {
 		if (error != NULL)
@@ -158,4 +179,44 @@ charconv_t *_charconv_fill_utf(charconv_t *handle, int utf_type) {
 
 int _charconv_element_strcmp(const void *a, const void *b) {
 	return strcmp((const char *) a, *(char * const *) b);
+}
+
+const char *charconv_strerror(charconv_error_t error) {
+	switch (error) {
+		case CHARCONV_SUCCESS:
+			return _("Success");
+		case CHARCONV_FALLBACK:
+			return _("Only a fallback mapping is available");
+		case CHARCONV_UNASSIGNED:
+			return _("Character can not be mapped");
+		case CHARCONV_ILLEGAL:
+			return _("Illegal sequence in input buffer");
+		case CHARCONV_ILLEGAL_END:
+			return _("Illegal sequence at end of input buffer");
+		default:
+		case CHARCONV_INTERNAL_ERROR:
+			return _("Internal error");
+		case CHARCONV_PRIVATE_USE:
+			return _("Character maps to a private use codepoint");
+		case CHARCONV_NO_SPACE:
+			return _("No space left in output buffer");
+		case CHARCONV_INCOMPLETE:
+			return _("Incomplete character at end of input buffer");
+		case CHARCONV_ERRNO:
+			return strerror(errno);
+		case CHARCONV_BAD_ARG:
+			return _("Bad argument");
+		case CHARCONV_OUT_OF_MEMORY:
+			return _("Out of memory");
+		case CHARCONV_INVALID_FORMAT:
+			return _("Invalid map-file format");
+		case CHARCONV_TRUNCATED_MAP:
+			return _("Map file is truncated");
+		case CHARCONV_WRONG_VERSION:
+			return _("Map file is of an unsupported version");
+		case CHARCONV_INTERNAL_TABLE:
+			return _("Map file is for internal use only");
+		case CHARCONV_UNINITIALIZED:
+			return _("Library is not initialized");
+	}
 }

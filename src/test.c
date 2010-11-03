@@ -68,8 +68,12 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction>] [-u <utf type>] <codepage name>\n");
 
+	if ((error = charconv_init()) != CHARCONV_SUCCESS)
+		fatal("Error initializing charconv library: %s\n", charconv_strerror(error));
+
+
 	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
-		fatal("Error opening convertor: %d\n", error);
+		fatal("Error opening convertor: %s\n", charconv_strerror(error));
 
 	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;
@@ -77,7 +81,7 @@ int main(int argc, char *argv[]) {
 		fill += result;
 		outleft = 1024;
 		if ((error = convert(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
-			fatal("conversion result: %d\n", error);
+			fatal("conversion result: %s\n", charconv_strerror(error));
 		printf("fill: %zd, outleft: %zd\n", fill, outleft);
 		for (i = 0; i < 1024 - outleft; i++)
 			printf("\\x%02X", (uint8_t) outbuf[i]);
