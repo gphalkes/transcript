@@ -53,17 +53,17 @@ void Ucm::validate_states(void) {
 	for (i = 0; i < codepage_states.size(); i++) {
 		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
 			if (codepage_states[i]->entries[j].next_state >= (int) codepage_states.size())
-				fatal("%s: State %zd:%x-%x designates a non-existant state as next state\n", file_name, i,
+				fatal("%s: State %zd:%x-%x designates a non-existant state as next state\n", name, i,
 					codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 
 			if (codepage_states[i]->entries[j].action == ACTION_VALID) {
 				if (codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL)
 					fatal("%s: State %d:%x-%x designates an initial state as next state for non-final transition\n",
-						file_name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+						name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 			} else {
 				if (!(codepage_states[codepage_states[i]->entries[j].next_state]->flags & State::INITIAL))
 					fatal("%s: State %zd:%x-%x designates a non-initial state as next state for final/unassigned/illegal/shift transition\n",
-						file_name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
+						name, i, codepage_states[i]->entries[j].low, codepage_states[i]->entries[j].high);
 			}
 		}
 	}
@@ -72,9 +72,9 @@ void Ucm::validate_states(void) {
 	mb_cur_min = atoi(tag_values[MB_MIN]);
 
 	if (mb_cur_max > 4 || mb_cur_max < 1)
-		fatal("%s: <mb_cur_max> is out of range\n", file_name);
+		fatal("%s: <mb_cur_max> is out of range\n", name);
 	if (mb_cur_min > mb_cur_max || mb_cur_min < 1)
-		fatal("%s: <mb_cur_min> is out of range\n", file_name);
+		fatal("%s: <mb_cur_min> is out of range\n", name);
 
 	for (i = 0; i < codepage_states.size(); i++) {
 		if (!(codepage_states[i]->flags & State::INITIAL))
@@ -83,9 +83,9 @@ void Ucm::validate_states(void) {
 		for (j = 0; j < codepage_states[i]->entries.size(); j++) {
 			int depth = calculate_depth(&codepage_states[i]->entries[j]);
 			if (depth > 0 && depth > mb_cur_max)
-				fatal("%s: State machine specifies byte sequences longer than <mb_cur_max>\n", file_name);
+				fatal("%s: State machine specifies byte sequences longer than <mb_cur_max>\n", name);
 			if (depth > 0 && depth < mb_cur_min)
-				fatal("%s: State machine specifies byte sequences shorter than <mb_cur_min>\n", file_name);
+				fatal("%s: State machine specifies byte sequences shorter than <mb_cur_min>\n", name);
 		}
 	}
 
@@ -156,7 +156,7 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepointsSimple(*iter, *(iter - 1)) == 0) {
 				if ((*iter)->precision > 1 || (*(iter - 1))->precision > 1)
 					continue;
-				fprintf(stderr, "%s: Duplicate mapping defined for ", file_name);
+				fprintf(stderr, "%s: Duplicate mapping defined for ", name);
 				for (vector<uint32_t>::iterator codepoint_iter = (*iter)->codepoints.begin();
 						codepoint_iter != (*iter)->codepoints.end(); codepoint_iter++)
 					fprintf(stderr,  "<U%04" PRIX32 ">", *codepoint_iter);
@@ -169,7 +169,7 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepageBytesSimple(*iter, *(iter - 1)) == 0) {
 				if (reorder_precision[(*iter)->precision] > 1 || reorder_precision[(*(iter - 1))->precision] > 1)
 					continue;
-				fprintf(stderr, "%s: Duplicate mapping defined for ", file_name);
+				fprintf(stderr, "%s: Duplicate mapping defined for ", name);
 				for (vector<uint8_t>::iterator codepage_byte_iter = (*iter)->codepage_bytes.begin();
 						codepage_byte_iter != (*iter)->codepage_bytes.end(); codepage_byte_iter++)
 					fprintf(stderr,  "\\x%02" PRIX32, *codepage_byte_iter);
@@ -322,26 +322,127 @@ void Ucm::find_shift_sequences(void) {
 	}
 }
 
-bool Ucm::is_compatible(Ucm *other) {
-	if (uconv_class != other->uconv_class)
-		return false;
-	if (strcmp(tag_values[MB_MAX], other->tag_values[MB_MAX]) != 0)
-		return false;
-	if (strcmp(tag_values[MB_MIN], other->tag_values[MB_MIN]) != 0)
-		return false;
-	if (flags != other->flags)
-		return false;
-	if (strcmp(tag_values[SUBCHAR], other->tag_values[SUBCHAR]) != 0)
-		return false;
-	if (tag_values[SUBCHAR1] == NULL) {
-		if (other->tag_values[SUBCHAR1] != NULL)
-			return false;
-	} else {
-		if (other->tag_values[SUBCHAR1] == NULL || strcmp(tag_values[SUBCHAR1], other->tag_values[SUBCHAR1]) != 0)
-			return false;
-	}
+void Ucm::check_state_machine(Ucm *other, int this_state, int other_state) {
+	vector<Entry>::iterator this_iter = codepage_states[this_state]->entries.begin();
+	vector<Entry>::iterator other_iter = other->codepage_states[other_state]->entries.begin();
 
-	/* FIXME: CHECK: state machine */
-	return true;
+	while (this_iter != codepage_states[this_state]->entries.end() &&
+			other_iter != other->codepage_states[other_state]->entries.end())
+	{
+		switch (this_iter->action) {
+			case ACTION_VALID:
+				if (other_iter->action != ACTION_VALID)
+					goto not_compat;
+				check_state_machine(other, this_iter->next_state, other_iter->next_state);
+				break;
+			case ACTION_FINAL:
+			case ACTION_FINAL_PAIR:
+			case ACTION_UNASSIGNED:
+				if (other_iter->action != ACTION_FINAL && other_iter->action != ACTION_FINAL_PAIR &&
+						other_iter->action != ACTION_UNASSIGNED)
+					goto not_compat;
+				if (this_iter->next_state != other_iter->next_state)
+					goto not_compat;
+				break;
+			case ACTION_SHIFT:
+			case ACTION_ILLEGAL:
+				if (other_iter->action != this_iter->action)
+					goto not_compat;
+
+				if (this_iter->next_state != other_iter->next_state)
+					goto not_compat;
+				break;
+			default:
+				PANIC();
+		}
+
+		if (this_iter->high < other_iter->high) {
+			this_iter++;
+		} else if (this_iter->high > other_iter->high) {
+			other_iter++;
+		} else {
+			this_iter++;
+			other_iter++;
+		}
+	}
+	return;
+
+not_compat:
+	fatal("%s: State machine in %s is not compatible\n", name, other->name);
 }
 
+void Ucm::check_compatibility(Ucm *other) {
+	if (uconv_class != other->uconv_class)
+		fatal("%s: Convertor in %s has different uconv_class\n", name, other->name);
+	if (strcmp(tag_values[MB_MAX], other->tag_values[MB_MAX]) != 0)
+		fatal("%s: Convertor in %s has different mb_cur_max\n", name, other->name);
+	if (strcmp(tag_values[MB_MIN], other->tag_values[MB_MIN]) != 0)
+		fatal("%s: Convertor in %s has different mb_cur_min\n", name, other->name);
+	if (flags != other->flags)
+		fatal("%s: Convertor in %s is incompatible\n", name, other->name);
+	if (strcmp(tag_values[SUBCHAR], other->tag_values[SUBCHAR]) != 0)
+		fatal("%s: Convertor in %s has different subchar\n", name, other->name);
+	if (tag_values[SUBCHAR1] == NULL) {
+		if (other->tag_values[SUBCHAR1] != NULL)
+			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
+	} else {
+		if (other->tag_values[SUBCHAR1] == NULL || strcmp(tag_values[SUBCHAR1], other->tag_values[SUBCHAR1]) != 0)
+			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
+	}
+
+	check_state_machine(other, 0, 0);
+	if (flags & MULTIBYTE_START_STATE_1)
+		check_state_machine(other, 1, 1);
+}
+
+
+static bool compareMapping(Mapping *a, Mapping *b) {
+	int result = compareCodepageBytesSimple(a, b);
+
+	if (result != 0)
+		return result < 0;
+	result = compareCodepointsSimple(a, b);
+	if (result != 0)
+		return result < 0;
+
+	return a->precision < b->precision;
+}
+
+void Ucm::prepare_subtract(void) {
+	sort(simple_mappings.begin(), simple_mappings.end(), compareMapping);
+}
+
+void Ucm::subtract(Ucm *other) {
+	int bytes_result, codepoints_result;
+	vector<Mapping *>::iterator this_iter = simple_mappings.begin();
+	vector<Mapping *>::iterator other_iter = other->simple_mappings.begin();
+
+	while (this_iter != simple_mappings.end() && other_iter != other->simple_mappings.end()) {
+		bytes_result = compareCodepageBytesSimple(*this_iter, *other_iter);
+		codepoints_result = compareCodepointsSimple(*this_iter, *other_iter);
+
+		if (bytes_result < 0) {
+			variant.simple_mappings.push_back(*this_iter);
+			this_iter = simple_mappings.erase(this_iter);
+		} else if (bytes_result > 0) {
+			other->variant.simple_mappings.push_back(*other_iter);
+			other_iter = other->simple_mappings.erase(other_iter);
+		} else if (codepoints_result < 0) {
+			variant.simple_mappings.push_back(*this_iter);
+			this_iter = simple_mappings.erase(this_iter);
+		} else if (codepoints_result > 0) {
+			other->variant.simple_mappings.push_back(*other_iter);
+			other_iter = other->simple_mappings.erase(other_iter);
+		} else if ((*this_iter)->precision < (*other_iter)->precision) {
+			variant.simple_mappings.push_back(*this_iter);
+			this_iter = simple_mappings.erase(this_iter);
+		} else if ((*this_iter)->precision > (*other_iter)->precision) {
+			other->variant.simple_mappings.push_back(*other_iter);
+			other_iter = other->simple_mappings.erase(other_iter);
+		} else {
+			this_iter++;
+			other_iter++;
+		}
+	}
+	//FIXME: multi mappings!
+}

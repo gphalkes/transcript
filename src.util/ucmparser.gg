@@ -57,7 +57,7 @@ ucm<void *> {
 	{
 		if (option_verbose)
 			fprintf(stderr, "Reading input\n");
-		LLretval = ucm = new Ucm();
+		LLretval = ucm = new Ucm(file_name);
 	}
 	'\n'*
 	[

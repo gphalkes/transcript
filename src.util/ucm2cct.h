@@ -137,14 +137,14 @@ class Ucm : public UcmBase {
 	public:
 		vector<State *> codepage_states;
 		vector<State *> unicode_states;
-		vector<Mapping *> simple_mappings;
-		vector<Mapping *> multi_mappings;
 
+		Variant variant;
 		list<Variant *> variants;
 
 		uint32_t codepage_range;
 		uint32_t unicode_range;
 
+		const char *name;
 
 		enum {
 			CLASS_MBCS = 1,
@@ -183,6 +183,7 @@ class Ucm : public UcmBase {
 		void write_from_unicode_table(FILE *output);
 		void write_to_unicode_flags(FILE *output);
 		void write_from_unicode_flags(FILE *output);
+		void check_state_machine(Ucm *other, int this_state, int other_state);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			private:
@@ -211,7 +212,7 @@ class Ucm : public UcmBase {
 		};
 
 	public:
-		Ucm(void);
+		Ucm(const char *_name);
 		void set_tag_value(tag_t tag, const char *value);
 		virtual const char *get_tag_value(tag_t tag);
 		void new_codepage_state(int _flags = 0);
@@ -228,7 +229,9 @@ class Ucm : public UcmBase {
 		void find_shift_sequences(void);
 		void write_table(FILE *output);
 		void add_variant(Variant *variant);
-		bool is_compatible(Ucm *other);
+		void check_compatibility(Ucm *other);
+		void prepare_subtract(void);
+		void subtract(Ucm *other);
 };
 
 extern "C" int line_number;
@@ -244,5 +247,7 @@ Ucm::tag_t string_to_tag(const char *str);
 void parse_byte_sequence(char *charseq, vector<uint8_t> &store);
 void minimize_state_machine(StateMachineInfo *info, int flags);
 void print_state_machine(const vector<State *> &states);
+const char *sprint_sequence(vector<uint8_t> &bytes);
+const char *sprint_codepoints(vector<uint32_t> &codepoints);
 uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
 #endif

@@ -104,7 +104,7 @@ void UcmBase::add_mapping(Mapping *mapping) {
 	}
 }
 
-Ucm::Ucm(void) : flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0),
+Ucm::Ucm(const char *_name) : variant(this, 0), name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0),
 		to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0)
 {
 	for (int i = 0; i < LAST_TAG; i++)
@@ -152,7 +152,7 @@ bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 #define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0)
 void Ucm::process_header(void) {
 	if (tag_values[UCONV_CLASS] == NULL)
-		fatal("%s: <uconv_class> unspecified\n", file_name);
+		fatal("%s: <uconv_class> unspecified\n", name);
 
 	if (strcmp(tag_values[UCONV_CLASS], "SBCS") == 0)
 		uconv_class = CLASS_SBCS;
@@ -163,14 +163,14 @@ void Ucm::process_header(void) {
 	else if (strcmp(tag_values[UCONV_CLASS], "EBCDIC_STATEFUL") == 0)
 		uconv_class = CLASS_EBCDIC_STATEFUL;
 	else
-		fatal("%s:%d: <uconv_class> specifies an unknown class\n", file_name, line_number);
+		fatal("%s: <uconv_class> specifies an unknown class\n", name);
 
 	if (tag_values[MB_MAX] == NULL)
-		fatal("%s: <mb_cur_max> unspecified\n", file_name);
+		fatal("%s: <mb_cur_max> unspecified\n", name);
 	if (tag_values[MB_MIN] == NULL)
-		fatal("%s: <mb_cur_min> unspecified\n", file_name);
+		fatal("%s: <mb_cur_min> unspecified\n", name);
 	if (tag_values[SUBCHAR] == NULL)
-		fatal("%s: <subchar> unspecified\n", file_name);
+		fatal("%s: <subchar> unspecified\n", name);
 
 	if (tag_values[SUBCHAR1] != NULL)
 		flags |= SUBCHAR1_VALID;
@@ -222,7 +222,7 @@ void Ucm::process_header(void) {
 
 void Ucm::set_default_codepage_states(void) {
 	if (uconv_class == 0 || uconv_class == CLASS_MBCS)
-		fatal("%s: No states specified and no implicit states defined through <uconv_class> either\n", file_name);
+		fatal("%s: No states specified and no implicit states defined through <uconv_class> either\n", name);
 
 	if (uconv_class == CLASS_SBCS) {
 		new_codepage_state();
@@ -272,14 +272,6 @@ void Ucm::set_default_codepage_states(void) {
 }
 #undef ENTRY
 
-static const char *print_sequence(vector<uint8_t> &bytes) {
-	static char sequence_buffer[31 * 4 + 1];
-	size_t i;
-	for (i = 0; i < 31 && i < bytes.size(); i++)
-		sprintf(sequence_buffer + i * 4, "\\x%02X", bytes[i]);
-	return sequence_buffer;
-}
-
 int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 	int state, count = 0;
 	size_t i, j;
@@ -304,11 +296,11 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 
 			switch (codepage_states[state]->entries[j].action) {
 				case ACTION_ILLEGAL:
-					fatal("%s:%d: Illegal sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
+					fatal("%s:%d: Illegal sequence '%s'\n", file_name, line_number - 1, sprint_sequence(bytes));
 				case ACTION_UNASSIGNED:
-					fatal("%s:%d: Unassigned sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
+					fatal("%s:%d: Unassigned sequence '%s'\n", file_name, line_number - 1, sprint_sequence(bytes));
 				case ACTION_SHIFT:
-					fatal("%s:%d: Shift in sequence '%s'\n", file_name, line_number - 1, print_sequence(bytes));
+					fatal("%s:%d: Shift in sequence '%s'\n", file_name, line_number - 1, sprint_sequence(bytes));
 				case ACTION_VALID:
 					state = codepage_states[state]->entries[j].next_state;
 					goto next_char;
@@ -427,7 +419,7 @@ void Ucm::ensure_ascii_controls(void) {
 	}
 	if (seen != 7)
 		return;
-	fprintf(stderr, "%s: WARNING: mappings define IBM specific control code mappings. Correcting.\n", file_name);
+	fprintf(stderr, "%s: WARNING: mappings define IBM specific control code mappings. Correcting.\n", name);
 
 	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		switch ((*iter)->codepage_bytes[0]) {
@@ -570,9 +562,9 @@ double Ucm::UnicodeStateMachineInfo::get_single_cost(void) {
 	return source.from_flag_costs + source.single_bytes;
 }
 
-void Ucm::add_variant(Variant *variant) {
+void Ucm::add_variant(Variant *_variant) {
 	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++)
-		if (variant->id == (*iter)->id)
-			fatal("%s:%d: Multiple variants with the same ID specified\n", file_name, line_number);
-	variants.push_back(variant);
+		if (_variant->id == (*iter)->id)
+			fatal("%s:%d: Multiple _variants with the same ID specified\n", file_name, line_number);
+	variants.push_back(_variant);
 }

@@ -81,7 +81,7 @@ void parse_byte_sequence(char *charseq, vector<uint8_t> &store) {
 }
 
 static void print_usage(void) {
-	printf("Usage: ucm2ctt [<options>] <ucm file>\n"
+	printf("Usage: ucm2ctt [<options>] <ucm file>+\n"
 		"  -h                  Display this help message\n"
 		"  -o <output>         Specify the output file name\n"
 		"  -v                  Increase verbosity\n");
@@ -136,6 +136,23 @@ void print_state_machine(const vector<State *> &states) {
 		putchar('\n');
 	}
 }
+
+const char *sprint_sequence(vector<uint8_t> &bytes) {
+	static char sequence_buffer[31 * 4 + 1];
+	size_t i;
+	for (i = 0; i < 31 && i < bytes.size(); i++)
+		sprintf(sequence_buffer + i * 4, "\\x%02X", bytes[i]);
+	return sequence_buffer;
+}
+
+const char *sprint_codepoints(vector<uint32_t> &codepoints) {
+	static char codepoint_buffer[19 * 7 + 1];
+	size_t i, idx = 0;
+	for (i = 0; i < 31 && i < codepoints.size(); i++)
+		idx += sprintf(codepoint_buffer + idx, "<U%04X>", codepoints[i] & 0x1fffff);
+	return codepoint_buffer;
+}
+
 
 static void update_state_attributes(vector<State *> &states, size_t idx) {
 	size_t i, sum = 0;
@@ -230,6 +247,7 @@ next_char:;
 
 int main(int argc, char *argv[]) {
 	FILE *output;
+	vector<Ucm *> ucms;
 	Ucm *ucm;
 	int c;
 
@@ -252,18 +270,43 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	if (argc - optind != 1)
+	if (argc - optind == 0)
 		print_usage();
 
-	if ((yyin = fopen(argv[optind], "r")) == NULL)
-		fatal("Could not open '%s': %s\n", argv[optind], strerror(errno));
-	file_name = argv[optind];
+	for (; optind != argc; optind++) {
+		if ((yyin = fopen(argv[optind], "r")) == NULL)
+			fatal("Could not open '%s': %s\n", argv[optind], strerror(errno));
+		file_name = argv[optind];
+		line_number = 1;
 
-	parse_ucm((void **) &ucm);
-	ucm->check_duplicates();
-	ucm->ensure_ascii_controls();
-	ucm->remove_fullwidth_fallbacks();
-	ucm->remove_private_use_fallbacks();
+		parse_ucm((void **) &ucm);
+		ucm->check_duplicates();
+		ucm->ensure_ascii_controls();
+		ucm->remove_fullwidth_fallbacks();
+		ucm->remove_private_use_fallbacks();
+		//FIXME: check that variants don't collide with base table
+
+		ucms.push_back(ucm);
+		fclose(yyin);
+	}
+
+	ucm = ucms.front();
+	if (ucms.size() > 0) {
+		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
+			ucm->check_compatibility(*iter);
+
+		for (vector<Ucm *>::iterator iter = ucms.begin(); iter != ucms.end(); iter++)
+			(*iter)->prepare_subtract();
+
+		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
+			ucm->subtract(*iter);
+
+		/* FIXME: find ucm with empty variant if it exists. This should be the base of all variants.
+		   This will result in a different output name than expected, so this presents a problem. */
+		//FIXME: add "base variant" to all other variants in the list
+
+		fatal("Finish variant coding!\n");
+	}
 
 	ucm->calculate_item_costs();
 
