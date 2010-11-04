@@ -115,7 +115,7 @@ static int compareCodepageBytesSimple(Mapping *a, Mapping *b) {
 	return 0;
 }
 
-static bool compareCodepageBytes(Mapping *a, Mapping *b) {
+bool compareCodepageBytes(Mapping *a, Mapping *b) {
 	int result = compareCodepageBytesSimple(a, b);
 
 	if (result == 0)
@@ -140,7 +140,7 @@ static int compareCodepointsSimple(Mapping *a, Mapping *b) {
 	return 0;
 }
 
-static bool compareCodepoints(Mapping *a, Mapping *b) {
+bool compareCodepoints(Mapping *a, Mapping *b) {
 	int result = compareCodepointsSimple(a, b);
 
 	if (result == 0)
@@ -444,7 +444,7 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 		if (bytes_result < 0) {
 			this_variant_mappings.push_back(*this_iter);
 			this_iter = this_mappings.erase(this_iter);
-		} else if (bytes_result == 0) {
+		} else if (bytes_result > 0) {
 			other_iter++;
 		} else if (codepoints_result < 0) {
 			this_variant_mappings.push_back(*this_iter);

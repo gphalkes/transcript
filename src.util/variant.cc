@@ -12,6 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cstring>
+#include <algorithm>
 
 #include "ucm2cct.h"
 
@@ -25,8 +26,13 @@ Variant::Variant(Ucm *_base, const char *_id) : base(_base) {
 		OOM();
 
 	len = strlen(id);
-	if (len < 4 || strcmp(id + len - 4, ".ucm") == 0)
-		id[len - 4] = 0;
+	if (len < 4 || strcmp(id + len - 4, ".ucm") == 0) {
+		len -= 4;
+		id[len] = 0;
+	}
+
+	if (len > 255)
+		fatal("%s: Variant name %s too long\n", file_name, id);
 }
 
 int Variant::check_codepage_bytes(vector<uint8_t> &bytes) {
@@ -35,4 +41,40 @@ int Variant::check_codepage_bytes(vector<uint8_t> &bytes) {
 
 const char *Variant::get_tag_value(tag_t tag) {
 	return base->get_tag_value(tag);
+}
+
+uint32_t Variant::size(void) {
+	uint32_t result;
+
+	result = 2 + 2; // Simple mappings size + Multi mappings size
+	result += 12 * simple_mappings.size();
+
+	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++) {
+		result += 2; // Byte count + Codepoint count
+		result += (*iter)->codepage_bytes.size();
+		for (vector<uint32_t>::iterator codepoint_iter = (*iter)->codepoints.begin();
+				codepoint_iter != (*iter)->codepoints.end(); codepoint_iter++)
+			result += (*codepoint_iter) > UINT32_C(0xffff) ? 4 : 2;
+	}
+	return result;
+}
+
+void Variant::sort_simple_mappings(void) {
+	sort(simple_mappings.begin(), simple_mappings.end(), compareCodepageBytes);
+	for (size_t idx = 0; idx < simple_mappings.size(); idx++)
+		simple_mappings[idx]->idx = idx;
+
+	sort(simple_mappings.begin(), simple_mappings.end(), compareCodepoints);
+}
+
+void Variant::dump(void) {
+	printf("VARIANT %s\n", id);
+
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
+		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
+
+	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
+		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
+
+	printf("END VARIANT\n");
 }

@@ -106,35 +106,60 @@ void Ucm::write_table(FILE *output) {
 		write_from_unicode_flags(output);
 
 	if (multi_mappings.size() > 0) {
-		//sort(multi_mappings.begin(), multi_mappings.end(), compareCodepageBytes);
 		WRITE_DWORD(multi_mappings.size());
-		for (vector<Mapping *>::iterator multi_iter = multi_mappings.begin();
-				multi_iter != multi_mappings.end(); multi_iter++)
+		write_multi_mappings(output, multi_mappings);
+	}
+
+	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
+		WRITE_BYTE(strlen((*variant_iter)->id));
+		WRITE(strlen((*variant_iter)->id), (*variant_iter)->id);
+		WRITE_DWORD((*variant_iter)->size());
+		WRITE_WORD((*variant_iter)->simple_mappings.size());
+		for (vector<Mapping *>::iterator mapping_iter = (*variant_iter)->simple_mappings.begin();
+				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 		{
-			vector<uint32_t>::iterator codepoint_iter;
-			uint8_t count = 0;
-			for (codepoint_iter = (*multi_iter)->codepoints.begin();
-					codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
-				count += 1 + ((*codepoint_iter) >= UINT32_C(0x10000));
-
-			WRITE_BYTE(count);
-			for (codepoint_iter = (*multi_iter)->codepoints.begin();
-					codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
-			{
-				if (*codepoint_iter < UINT32_C(0x10000)) {
-					WRITE_WORD(*codepoint_iter);
-				} else {
-					uint32_t codepoint = (*codepoint_iter) - 0x10000;
-					WRITE_WORD(UINT32_C(0xd800) + (codepoint >> 10));
-					WRITE_WORD(UINT32_C(0xdc00) + (codepoint & 0x3ff));
-				}
-			}
-
-			WRITE_BYTE((*multi_iter)->codepage_bytes.size());
-			for (vector<uint8_t>::iterator byte_iter = (*multi_iter)->codepage_bytes.begin();
-					byte_iter != (*multi_iter)->codepage_bytes.end(); byte_iter++)
-				WRITE_BYTE(*byte_iter);
+			uint8_t buffer[4];
+			memset(buffer, 0, sizeof(buffer));
+			WRITE_DWORD((*mapping_iter)->codepoints[0]);
+			copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
+			WRITE(4, buffer);
+			WRITE_BYTE((*mapping_iter)->to_unicode_flags);
+			WRITE_BYTE((*mapping_iter)->from_unicode_flags);
+			WRITE_WORD((*mapping_iter)->idx);
 		}
+
+		WRITE_WORD((*variant_iter)->multi_mappings.size());
+		write_multi_mappings(output, (*variant_iter)->multi_mappings);
+	}
+}
+
+void Ucm::write_multi_mappings(FILE *output, vector<Mapping *> &mappings) {
+	for (vector<Mapping *>::iterator multi_iter = mappings.begin();
+			multi_iter != mappings.end(); multi_iter++)
+	{
+		vector<uint32_t>::iterator codepoint_iter;
+		uint8_t count = 0;
+		for (codepoint_iter = (*multi_iter)->codepoints.begin();
+				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+			count += 1 + ((*codepoint_iter) >= UINT32_C(0x10000));
+
+		WRITE_BYTE(count);
+		for (codepoint_iter = (*multi_iter)->codepoints.begin();
+				codepoint_iter != (*multi_iter)->codepoints.end(); codepoint_iter++)
+		{
+			if (*codepoint_iter < UINT32_C(0x10000)) {
+				WRITE_WORD(*codepoint_iter);
+			} else {
+				uint32_t codepoint = (*codepoint_iter) - 0x10000;
+				WRITE_WORD(UINT32_C(0xd800) + (codepoint >> 10));
+				WRITE_WORD(UINT32_C(0xdc00) + (codepoint & 0x3ff));
+			}
+		}
+
+		WRITE_BYTE((*multi_iter)->codepage_bytes.size());
+		for (vector<uint8_t>::iterator byte_iter = (*multi_iter)->codepage_bytes.begin();
+				byte_iter != (*multi_iter)->codepage_bytes.end(); byte_iter++)
+			WRITE_BYTE(*byte_iter);
 	}
 }
 

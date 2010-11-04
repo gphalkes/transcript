@@ -70,6 +70,7 @@ class Mapping {
 		uint8_t from_unicode_flags,
 			to_unicode_flags,
 			precision;
+		uint16_t idx;
 
 		enum {
 			FROM_UNICODE_LENGTH_MASK = (3<<0),
@@ -133,6 +134,9 @@ class Variant : public UcmBase {
 		Variant(Ucm *_base, const char *_id);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		virtual const char *get_tag_value(tag_t tag);
+		uint32_t size(void);
+		void sort_simple_mappings(void);
+		void dump(void);
 };
 
 class Ucm : public UcmBase {
@@ -173,7 +177,7 @@ class Ucm : public UcmBase {
 
 			public:
 				StateMachineInfo(Ucm &_source) : variant_iter(_source.variants.begin()), source(_source),
-					iterating_simple_mappings(false), idx(0) {}
+					iterating_simple_mappings(true), idx(0) {}
 				virtual const vector<State *> &get_state_machine(void) = 0;
 				virtual void replace_state_machine(vector<State *> &states) = 0;
 				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
@@ -197,6 +201,7 @@ class Ucm : public UcmBase {
 		void check_duplicates(vector<Mapping *> &mappings);
 		int calculate_depth(Entry *entry);
 		void trace_back(size_t idx, shift_sequence_t &shift_sequence);
+		void write_multi_mappings(FILE *output, vector<Mapping *> &mappings);
 		void write_to_unicode_table(FILE *output);
 		void write_from_unicode_table(FILE *output);
 		void write_to_unicode_flags(FILE *output);
@@ -267,4 +272,7 @@ const char *sprint_sequence(vector<uint8_t> &bytes);
 const char *sprint_codepoints(vector<uint32_t> &codepoints);
 uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
 void minimize_state_machine(Ucm::StateMachineInfo *info, int flags);
+
+bool compareCodepageBytes(Mapping *a, Mapping *b);
+bool compareCodepoints(Mapping *a, Mapping *b);
 #endif
