@@ -422,37 +422,43 @@ void Ucm::prepare_subtract(void) {
 	sort(simple_mappings.begin(), simple_mappings.end(), compareMapping);
 }
 
-void Ucm::subtract(Ucm *other) {
+void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
+		vector<Mapping *> &this_variant_mappings, vector<Mapping *> &other_variant_mappings)
+{
 	int bytes_result, codepoints_result;
-	vector<Mapping *>::iterator this_iter = simple_mappings.begin();
-	vector<Mapping *>::iterator other_iter = other->simple_mappings.begin();
+	vector<Mapping *>::iterator this_iter = this_mappings.begin();
+	vector<Mapping *>::iterator other_iter = other_mappings.begin();
 
-	while (this_iter != simple_mappings.end() && other_iter != other->simple_mappings.end()) {
+	while (this_iter != this_mappings.end() && other_iter != other_mappings.end()) {
 		bytes_result = compareCodepageBytesSimple(*this_iter, *other_iter);
 		codepoints_result = compareCodepointsSimple(*this_iter, *other_iter);
 
 		if (bytes_result < 0) {
-			variant.simple_mappings.push_back(*this_iter);
-			this_iter = simple_mappings.erase(this_iter);
+			this_variant_mappings.push_back(*this_iter);
+			this_iter = this_mappings.erase(this_iter);
 		} else if (bytes_result > 0) {
-			other->variant.simple_mappings.push_back(*other_iter);
-			other_iter = other->simple_mappings.erase(other_iter);
+			other_variant_mappings.push_back(*other_iter);
+			other_iter = other_mappings.erase(other_iter);
 		} else if (codepoints_result < 0) {
-			variant.simple_mappings.push_back(*this_iter);
-			this_iter = simple_mappings.erase(this_iter);
+			this_variant_mappings.push_back(*this_iter);
+			this_iter = this_mappings.erase(this_iter);
 		} else if (codepoints_result > 0) {
-			other->variant.simple_mappings.push_back(*other_iter);
-			other_iter = other->simple_mappings.erase(other_iter);
+			other_variant_mappings.push_back(*other_iter);
+			other_iter = other_mappings.erase(other_iter);
 		} else if ((*this_iter)->precision < (*other_iter)->precision) {
-			variant.simple_mappings.push_back(*this_iter);
-			this_iter = simple_mappings.erase(this_iter);
+			this_variant_mappings.push_back(*this_iter);
+			this_iter = this_mappings.erase(this_iter);
 		} else if ((*this_iter)->precision > (*other_iter)->precision) {
-			other->variant.simple_mappings.push_back(*other_iter);
-			other_iter = other->simple_mappings.erase(other_iter);
+			other_variant_mappings.push_back(*other_iter);
+			other_iter = other_mappings.erase(other_iter);
 		} else {
 			this_iter++;
 			other_iter++;
 		}
 	}
-	//FIXME: multi mappings!
+}
+
+void Ucm::subtract(Ucm *other) {
+	subtract(simple_mappings, other->simple_mappings, variant.simple_mappings, other->variant.simple_mappings);
+	subtract(multi_mappings, other->multi_mappings, variant.multi_mappings, other->variant.multi_mappings);
 }

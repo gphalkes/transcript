@@ -190,6 +190,9 @@ class Ucm : public UcmBase {
 		void write_to_unicode_flags(FILE *output);
 		void write_from_unicode_flags(FILE *output);
 		void check_state_machine(Ucm *other, int this_state, int other_state);
+		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
+		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
+			vector<Mapping *> &this_variant_mappings, vector<Mapping *> &other_variant_mappings);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			private:
@@ -226,7 +229,6 @@ class Ucm : public UcmBase {
 		void process_header(void);
 		void validate_states(void);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
-		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		void check_duplicates(void);
 		void remove_fullwidth_fallbacks(void);
 		void remove_private_use_fallbacks(void);
