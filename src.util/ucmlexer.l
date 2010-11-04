@@ -36,6 +36,7 @@ extern "C" void fatal(const char *fmt, ...);
 [0-9]+                      return NUMBER;
 CHARMAP                     return CHARMAP;
 END                         return END;
+VARIANT                     return VARIANT;
 \"[^\"\n]+\"                { size_t len = strlen(yytext); memmove(yytext, yytext + 1, len - 2); yytext[len - 2] = 0; return STRING; }
 \".                         fatal("%s:%d: Incomplete string\n", file_name, line_number);
 \|[0-3]                     return PRECISION;

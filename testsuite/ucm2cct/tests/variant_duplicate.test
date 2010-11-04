@@ -1,0 +1,19 @@
+#%% No options
+
+<code_set_name>               "TEST"
+<mb_cur_max>                  1
+<mb_cur_min>                  1
+<uconv_class>                 "SBCS"
+<subchar>                     \x7F
+
+CHARMAP
+<U0041> \x41 |0
+<U0042> \x42 |0
+<U0043> \x43 |0
+<U0061> \x41 |1
+END CHARMAP
+
+VARIANT "TEST2"
+<U0062> \x42 |0 # Should of course be |1
+END VARIANT
+

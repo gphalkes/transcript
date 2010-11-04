@@ -1,0 +1,2 @@
+==== Testcase ../tests/variant_duplicate.test ====
+map00.ucm: Variant TEST2 defines a duplicate mapping for \x42

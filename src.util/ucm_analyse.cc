@@ -156,11 +156,7 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepointsSimple(*iter, *(iter - 1)) == 0) {
 				if ((*iter)->precision > 1 || (*(iter - 1))->precision > 1)
 					continue;
-				fprintf(stderr, "%s: Duplicate mapping defined for ", name);
-				for (vector<uint32_t>::iterator codepoint_iter = (*iter)->codepoints.begin();
-						codepoint_iter != (*iter)->codepoints.end(); codepoint_iter++)
-					fprintf(stderr,  "<U%04" PRIX32 ">", *codepoint_iter);
-				fatal("\n");
+				fatal("%s: Duplicate mapping defined for %s\n", name, sprint_codepoints((*iter)->codepoints));
 			}
 		}
 
@@ -169,14 +165,22 @@ void Ucm::check_duplicates(vector<Mapping *> &mappings) {
 			if (compareCodepageBytesSimple(*iter, *(iter - 1)) == 0) {
 				if (reorder_precision[(*iter)->precision] > 1 || reorder_precision[(*(iter - 1))->precision] > 1)
 					continue;
-				fprintf(stderr, "%s: Duplicate mapping defined for ", name);
-				for (vector<uint8_t>::iterator codepage_byte_iter = (*iter)->codepage_bytes.begin();
-						codepage_byte_iter != (*iter)->codepage_bytes.end(); codepage_byte_iter++)
-					fprintf(stderr,  "\\x%02" PRIX32, *codepage_byte_iter);
-				fatal("\n");
+				fatal("%s: Duplicate mapping defined for %s\n", name, sprint_sequence((*iter)->codepage_bytes));
 			}
 		}
 	}
+}
+
+void Ucm::check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id) {
+	sort(base_mappings.begin(), base_mappings.end(), compareCodepoints);
+	for (vector<Mapping *>::iterator iter = variant_mappings.begin(); iter != variant_mappings.end(); iter++)
+		if (binary_search(base_mappings.begin(), base_mappings.end(), (*iter), compareCodepoints))
+			fatal("%s: Variant %s defines a duplicate mapping for %s\n", name, variant_id, sprint_codepoints((*iter)->codepoints));
+
+	sort(base_mappings.begin(), base_mappings.end(), compareCodepageBytes);
+	for (vector<Mapping *>::iterator iter = variant_mappings.begin(); iter != variant_mappings.end(); iter++)
+		if (binary_search(base_mappings.begin(), base_mappings.end(), (*iter), compareCodepageBytes))
+			fatal("%s: Variant %s defines a duplicate mapping for %s\n", name, variant_id, sprint_sequence((*iter)->codepage_bytes));
 }
 
 void Ucm::check_duplicates(void) {
@@ -184,6 +188,12 @@ void Ucm::check_duplicates(void) {
 		fprintf(stderr, "Checking for duplicate mappings\n");
 	check_duplicates(simple_mappings);
 	check_duplicates(multi_mappings);
+	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+		check_duplicates((*iter)->simple_mappings);
+		check_duplicates((*iter)->multi_mappings);
+		check_variant_duplicates(simple_mappings, (*iter)->simple_mappings, (*iter)->id);
+		check_variant_duplicates(multi_mappings, (*iter)->multi_mappings, (*iter)->id);
+	}
 }
 
 void Ucm::calculate_item_costs(void) {

@@ -226,6 +226,7 @@ class Ucm : public UcmBase {
 		void process_header(void);
 		void validate_states(void);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
+		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		void check_duplicates(void);
 		void remove_fullwidth_fallbacks(void);
 		void remove_private_use_fallbacks(void);

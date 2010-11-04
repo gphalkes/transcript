@@ -11,3 +11,5 @@ src.util/ibm-ucm
 src/.libs
 src/charconv
 tmp/*
+testsuite/ucm2cct/testlog*.txt
+testsuite/ucm2cct/work
