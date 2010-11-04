@@ -220,6 +220,10 @@ void Ucm::calculate_item_costs(void) {
 
 	find_used_flags(simple_mappings, length_counts);
 	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+		if ((*iter)->simple_mappings.size() > 0) {
+			used_from_unicode_flags |= Mapping::FROM_UNICODE_VARIANT;
+			used_to_unicode_flags |= Mapping::TO_UNICODE_VARIANT;
+		}
 		find_used_flags((*iter)->simple_mappings, NULL);
 		used_from_unicode_flags |= (*iter)->used_from_unicode_flags;
 		used_to_unicode_flags |= (*iter)->used_to_unicode_flags;
