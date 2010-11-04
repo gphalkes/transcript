@@ -99,7 +99,7 @@ ucm<void *> {
 				[
 					mapping(variant)
 					'\n'+
-				]+
+				]*
 				END VARIANT
 				['\n'+]..?
 			]+

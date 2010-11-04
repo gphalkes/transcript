@@ -77,12 +77,14 @@ class Mapping {
 			FROM_UNICODE_FALLBACK = (1<<3),
 			FROM_UNICODE_SUBCHAR1 = (1<<4),
 			FROM_UNICODE_MULTI_START = (1<<5),
+			FROM_UNICODE_VARIANT = (1<<6)
 		};
 
 		enum {
 			TO_UNICODE_FALLBACK = (1<<0),
 			TO_UNICODE_MULTI_START = (1<<1),
-			TO_UNICODE_PRIVATE_USE = (1<<2)
+			TO_UNICODE_PRIVATE_USE = (1<<2),
+			TO_UNICODE_VARIANT = (1<<3)
 		};
 
 		Mapping() : from_unicode_flags(0), to_unicode_flags(0), precision(0) {};
@@ -91,14 +93,6 @@ class Mapping {
 struct shift_sequence_t {
 	deque<uint8_t> bytes;
 	uint8_t from_state, to_state;
-};
-
-class StateMachineInfo {
-	public:
-		virtual const vector<State *> &get_state_machine(void) = 0;
-		virtual void replace_state_machine(vector<State *> &states) = 0;
-		virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
-		virtual double get_single_cost(void) = 0;
 };
 
 class UcmBase {
@@ -168,6 +162,22 @@ class Ucm : public UcmBase {
 			INTERNAL_TABLE = (1<<5)
 		};
 
+		class StateMachineInfo {
+			protected:
+				list<Variant *>::iterator variant_iter;
+				Ucm &source;
+				bool iterating_simple_mappings;
+				size_t idx;
+
+			public:
+				StateMachineInfo(Ucm &_source) : variant_iter(_source.variants.begin()), source(_source),
+					iterating_simple_mappings(false), idx(0) {}
+				virtual const vector<State *> &get_state_machine(void) = 0;
+				virtual void replace_state_machine(vector<State *> &states) = 0;
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
+				virtual double get_single_cost(void) = 0;
+		};
+
 	private:
 		char *tag_values[LAST_TAG];
 		int flags;
@@ -192,15 +202,11 @@ class Ucm : public UcmBase {
 		void check_state_machine(Ucm *other, int this_state, int other_state);
 		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
-			vector<Mapping *> &this_variant_mappings, vector<Mapping *> &other_variant_mappings);
+			vector<Mapping *> &this_variant_mappings);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
-			private:
-				Ucm &source;
-				bool iterating_simple_mappings;
-				size_t idx;
 			public:
-				CodepageBytesStateMachineInfo(Ucm &_source);
+				CodepageBytesStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
 				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
@@ -208,12 +214,8 @@ class Ucm : public UcmBase {
 		};
 
 		class UnicodeStateMachineInfo : public StateMachineInfo {
-			private:
-				Ucm &source;
-				bool iterating_simple_mappings;
-				size_t idx;
 			public:
-				UnicodeStateMachineInfo(Ucm &_source);
+				UnicodeStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
 				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
@@ -241,6 +243,9 @@ class Ucm : public UcmBase {
 		void check_compatibility(Ucm *other);
 		void prepare_subtract(void);
 		void subtract(Ucm *other);
+		void fixup_variants(void);
+		void merge_variants(Ucm *other);
+		void variants_done(void);
 };
 
 extern "C" int line_number;
@@ -254,9 +259,9 @@ extern bool option_verbose, option_internal_table;
 
 Ucm::tag_t string_to_tag(const char *str);
 void parse_byte_sequence(char *charseq, vector<uint8_t> &store);
-void minimize_state_machine(StateMachineInfo *info, int flags);
 void print_state_machine(const vector<State *> &states);
 const char *sprint_sequence(vector<uint8_t> &bytes);
 const char *sprint_codepoints(vector<uint32_t> &codepoints);
 uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
+void minimize_state_machine(Ucm::StateMachineInfo *info, int flags);
 #endif

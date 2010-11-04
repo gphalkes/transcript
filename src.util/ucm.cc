@@ -447,10 +447,6 @@ void Ucm::minimize_state_machines(void) {
 }
 
 
-Ucm::CodepageBytesStateMachineInfo::CodepageBytesStateMachineInfo(Ucm &_source) : source(_source),
-	iterating_simple_mappings(true), idx(0)
-{}
-
 const vector<State *> &Ucm::CodepageBytesStateMachineInfo::get_state_machine(void) {
 	return source.codepage_states;
 }
@@ -464,48 +460,47 @@ void Ucm::CodepageBytesStateMachineInfo::replace_state_machine(vector<State *> &
 }
 
 bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+	vector<Mapping *> *mappings;
 
-	if (iterating_simple_mappings) {
-next_simple_mapping:
-		if (idx < source.simple_mappings.size()) {
-			if (source.simple_mappings[idx]->precision != 0 && source.simple_mappings[idx]->precision != 3) {
+	while (1) {
+		if (variant_iter != source.variants.end())
+			mappings = iterating_simple_mappings ? &(*variant_iter)->simple_mappings : &(*variant_iter)->multi_mappings;
+		else
+			mappings = iterating_simple_mappings ? &source.simple_mappings : &source.multi_mappings;
+
+		for (; idx < mappings->size(); idx++) {
+			if (iterating_simple_mappings) {
+				if ((*mappings)[idx]->precision != 0 && (*mappings)[idx]->precision != 3)
+					continue;
+				copy((*mappings)[idx]->codepage_bytes.begin(), (*mappings)[idx]->codepage_bytes.end(), bytes);
+				length = (*mappings)[idx]->codepage_bytes.size();
+				pair = (*mappings)[idx]->codepoints[0] > UINT32_C(0xffff);
 				idx++;
-				goto next_simple_mapping;
+				return true;
+			} else {
+				if ((*mappings)[idx]->precision != 0 && (*mappings)[idx]->precision != 3)
+					continue;
+				copy((*mappings)[idx]->codepage_bytes.begin(), (*mappings)[idx]->codepage_bytes.end(), bytes);
+				length = (*mappings)[idx]->codepage_bytes.size();
+				pair = false;
+				idx++;
+				return true;
 			}
-			copy(source.simple_mappings[idx]->codepage_bytes.begin(), source.simple_mappings[idx]->codepage_bytes.end(), bytes);
-			length = source.simple_mappings[idx]->codepage_bytes.size();
-			pair = source.simple_mappings[idx]->codepoints[0] > UINT32_C(0xffff);
-			idx++;
-			return true;
-		} else {
-			iterating_simple_mappings = false;
-			idx = 0;
 		}
+		if (!iterating_simple_mappings) {
+			if (variant_iter == source.variants.end())
+				return false;
+			else
+				variant_iter++;
+		}
+		iterating_simple_mappings = !iterating_simple_mappings;
+		idx = 0;
 	}
-
-next_multi_mapping:
-	if (idx >= source.multi_mappings.size())
-		return false;
-
-	if (source.multi_mappings[idx]->precision != 0 && source.multi_mappings[idx]->precision != 3) {
-		idx++;
-		goto next_multi_mapping;
-	}
-
-	copy(source.multi_mappings[idx]->codepage_bytes.begin(), source.multi_mappings[idx]->codepage_bytes.end(), bytes);
-	length = source.multi_mappings[idx]->codepage_bytes.size();
-	pair = false;
-	idx++;
-	return true;
 }
 
 double Ucm::CodepageBytesStateMachineInfo::get_single_cost(void) {
 	return source.to_flag_costs + 2;
 }
-
-Ucm::UnicodeStateMachineInfo::UnicodeStateMachineInfo(Ucm &_source) : source(_source),
-	iterating_simple_mappings(true), idx(0)
-{}
 
 const vector<State *> &Ucm::UnicodeStateMachineInfo::get_state_machine(void) {
 	return source.unicode_states;
@@ -520,42 +515,45 @@ void Ucm::UnicodeStateMachineInfo::replace_state_machine(vector<State *> &states
 }
 
 bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+	vector<Mapping *> *mappings;
 	uint32_t codepoint;
 
-	if (iterating_simple_mappings) {
-next_simple_mapping:
-		if (idx < source.simple_mappings.size()) {
-			if (source.simple_mappings[idx]->precision == 3) {
+	while (1) {
+		if (variant_iter != source.variants.end())
+			mappings = iterating_simple_mappings ? &(*variant_iter)->simple_mappings : &(*variant_iter)->multi_mappings;
+		else
+			mappings = iterating_simple_mappings ? &source.simple_mappings : &source.multi_mappings;
+
+		for (; idx < mappings->size(); idx++) {
+			if (iterating_simple_mappings) {
+				if ((*mappings)[idx]->precision == 3)
+					continue;
+				codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
+				memcpy(bytes, 1 + (char *) &codepoint, 3);
+				length = 3;
+				pair = source.simple_mappings[idx]->codepage_bytes.size() > (size_t) source.single_bytes;
 				idx++;
-				goto next_simple_mapping;
+				return true;
+			} else {
+				if ((*mappings)[idx]->precision != 0 && (*mappings)[idx]->precision != 1)
+					continue;
+				codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
+				memcpy(bytes, 1 + (char *) &codepoint, 3);
+				length = 3;
+				pair = false;
+				idx++;
+				return true;
 			}
-			codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
-			memcpy(bytes, 1 + (char *) &codepoint, 3);
-			length = 3;
-			pair = source.simple_mappings[idx]->codepage_bytes.size() > (size_t) source.single_bytes;
-			idx++;
-			return true;
-		} else {
-			iterating_simple_mappings = false;
-			idx = 0;
 		}
+		if (!iterating_simple_mappings) {
+			if (variant_iter == source.variants.end())
+				return false;
+			else
+				variant_iter++;
+		}
+		iterating_simple_mappings = !iterating_simple_mappings;
+		idx = 0;
 	}
-
-next_multi_mapping:
-	if (idx >= source.multi_mappings.size())
-		return false;
-
-	if (source.multi_mappings[idx]->precision != 0 && source.multi_mappings[idx]->precision != 1) {
-		idx++;
-		goto next_multi_mapping;
-	}
-
-	codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
-	memcpy(bytes, 1 + (char *) &codepoint, 3);
-	length = 3;
-	pair = false;
-	idx++;
-	return true;
 }
 
 double Ucm::UnicodeStateMachineInfo::get_single_cost(void) {

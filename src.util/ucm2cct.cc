@@ -39,9 +39,8 @@ void fatal(const char *fmt, ...) {
 	va_end(args);
 #ifdef DEBUG
 	abort();
-#else
-	exit(EXIT_FAILURE);
 #endif
+	exit(EXIT_FAILURE);
 }
 
 Ucm::tag_t string_to_tag(const char *str) {
@@ -272,6 +271,8 @@ int main(int argc, char *argv[]) {
 
 	if (argc - optind == 0)
 		print_usage();
+	else if (argc - optind > 1 && option_output_name == NULL)
+		fatal("-o is required when using multiple input files\n");
 
 	for (; optind != argc; optind++) {
 		if ((yyin = fopen(argv[optind], "r")) == NULL)
@@ -284,30 +285,41 @@ int main(int argc, char *argv[]) {
 		ucm->ensure_ascii_controls();
 		ucm->remove_fullwidth_fallbacks();
 		ucm->remove_private_use_fallbacks();
-		//FIXME: check that variants don't collide with base table
 
 		ucms.push_back(ucm);
 		fclose(yyin);
 	}
 
 	ucm = ucms.front();
-	if (ucms.size() > 0) {
+	if (ucms.size() > 1) {
 		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
 			ucm->check_compatibility(*iter);
 
 		for (vector<Ucm *>::iterator iter = ucms.begin(); iter != ucms.end(); iter++)
 			(*iter)->prepare_subtract();
 
+		/* Remove from ucm all the mappings that are different from mappings in other
+		   Ucms or that are only present in ucm. */
 		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
 			ucm->subtract(*iter);
-
-		/* FIXME: find ucm with empty variant if it exists. This should be the base of all variants.
-		   This will result in a different output name than expected, so this presents a problem. */
-		//FIXME: add "base variant" to all other variants in the list
+		ucm->fixup_variants();
+		/* If there is only a single map defined in the .ucm file, add it to the list of
+		   variants now. */
+		ucm->variants_done();
+		/* ucm now contains the largest common set. Now we must make sure that all other
+		   sets are properly split such that their base sets contain nothing but the
+		   largest common set. */
+		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++) {
+			(*iter)->subtract(ucm);
+			(*iter)->fixup_variants();
+			ucm->merge_variants(*iter);
+		}
+		ucms.clear();
 
 		fatal("Finish variant coding!\n");
+	} else {
+		ucm->variants_done();
 	}
-
 	ucm->calculate_item_costs();
 
 	ucm->minimize_state_machines();

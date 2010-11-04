@@ -423,7 +423,7 @@ void Ucm::prepare_subtract(void) {
 }
 
 void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
-		vector<Mapping *> &this_variant_mappings, vector<Mapping *> &other_variant_mappings)
+		vector<Mapping *> &this_variant_mappings)
 {
 	int bytes_result, codepoints_result;
 	vector<Mapping *>::iterator this_iter = this_mappings.begin();
@@ -436,21 +436,18 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 		if (bytes_result < 0) {
 			this_variant_mappings.push_back(*this_iter);
 			this_iter = this_mappings.erase(this_iter);
-		} else if (bytes_result > 0) {
-			other_variant_mappings.push_back(*other_iter);
-			other_iter = other_mappings.erase(other_iter);
+		} else if (bytes_result == 0) {
+			other_iter++;
 		} else if (codepoints_result < 0) {
 			this_variant_mappings.push_back(*this_iter);
 			this_iter = this_mappings.erase(this_iter);
 		} else if (codepoints_result > 0) {
-			other_variant_mappings.push_back(*other_iter);
-			other_iter = other_mappings.erase(other_iter);
+			other_iter++;
 		} else if ((*this_iter)->precision < (*other_iter)->precision) {
 			this_variant_mappings.push_back(*this_iter);
 			this_iter = this_mappings.erase(this_iter);
 		} else if ((*this_iter)->precision > (*other_iter)->precision) {
-			other_variant_mappings.push_back(*other_iter);
-			other_iter = other_mappings.erase(other_iter);
+			other_iter++;
 		} else {
 			this_iter++;
 			other_iter++;
@@ -459,6 +456,36 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 }
 
 void Ucm::subtract(Ucm *other) {
-	subtract(simple_mappings, other->simple_mappings, variant.simple_mappings, other->variant.simple_mappings);
-	subtract(multi_mappings, other->multi_mappings, variant.multi_mappings, other->variant.multi_mappings);
+	subtract(simple_mappings, other->simple_mappings, variant.simple_mappings);
+	subtract(multi_mappings, other->multi_mappings, variant.multi_mappings);
+}
+
+void Ucm::fixup_variants(void) {
+	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+		(*iter)->simple_mappings.insert((*iter)->simple_mappings.end(), variant.simple_mappings.begin(), variant.simple_mappings.end());
+		(*iter)->multi_mappings.insert((*iter)->multi_mappings.end(), variant.multi_mappings.begin(), variant.multi_mappings.end());
+	}
+}
+
+void Ucm::merge_variants(Ucm *other) {
+	if (other->variants.size() == 0) {
+		variants.push_back(new Variant(other->variant));
+		other->variant.simple_mappings.clear();
+		other->variant.multi_mappings.clear();
+	} else {
+		variants.insert(variants.end(), other->variants.begin(), other->variants.end());
+		other->variants.clear();
+	}
+	delete other;
+}
+
+void Ucm::variants_done(void) {
+	/* Add the local variant, but only if no others are defined. */
+	if (variant.simple_mappings.size() == 0 || variant.multi_mappings.size() == 0) {
+		if (variants.size() != 0)
+			return;
+	}
+	variants.push_back(new Variant(variant));
+	variant.simple_mappings.clear();
+	variant.multi_mappings.clear();
 }

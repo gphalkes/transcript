@@ -45,7 +45,7 @@ struct merge_cost_t {
 	int cost;
 };
 
-static int calculate_state_cost(full_state_t *state, StateMachineInfo *info);
+static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info);
 
 static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
 	bool calculate_cost = true;
@@ -118,6 +118,7 @@ static void mark_entry(full_state_t *start, unsigned char *bytes, int length, bo
 		case ACTION_FINAL:
 			start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
 			return;
+		/* Already marked as pair. Marking will not change this. */
 		case ACTION_FINAL_PAIR:
 			return;
 		default:
@@ -172,7 +173,7 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 	return true;
 }
 
-static int calculate_state_cost(full_state_t *state, StateMachineInfo *info) {
+static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info) {
 	action_t last_action = (action_t) -1;
 	int i;
 	double cost;
@@ -201,7 +202,7 @@ static int calculate_state_cost(full_state_t *state, StateMachineInfo *info) {
 	return cost + 0.9;
 }
 
-static int calculate_merge_cost(full_state_t *a, full_state_t *b, StateMachineInfo *info) {
+static int calculate_merge_cost(full_state_t *a, full_state_t *b, Ucm::StateMachineInfo *info) {
 	full_state_t tmp_state;
 	int i;
 
@@ -228,7 +229,7 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b, StateMachineIn
 	return calculate_state_cost(&tmp_state, info) - (a->cost + b->cost);
 }
 
-static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right, StateMachineInfo *info) {
+static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right, Ucm::StateMachineInfo *info) {
 	full_state_t *ptr;
 	int i;
 
@@ -284,7 +285,7 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	free(right);
 }
 
-static void merge_duplicate_states(full_state_t *head, full_state_t **tail, StateMachineInfo *info) {
+static void merge_duplicate_states(full_state_t *head, full_state_t **tail, Ucm::StateMachineInfo *info) {
 	full_state_t *ptr;
 	bool change;
 
@@ -303,7 +304,7 @@ static void merge_duplicate_states(full_state_t *head, full_state_t **tail, Stat
 	} while (change);
 }
 
-static void minimize_states(full_state_t *head, full_state_t **tail, StateMachineInfo *info) {
+static void minimize_states(full_state_t *head, full_state_t **tail, Ucm::StateMachineInfo *info) {
 	merge_cost_t previous = { NULL, NULL, 0 }, best = { NULL, NULL, INT_MAX };
 	list<merge_cost_t> costs;
 	full_state_t *ptr, *subptr;
@@ -365,7 +366,7 @@ static void minimize_states(full_state_t *head, full_state_t **tail, StateMachin
 	merge_duplicate_states(head, tail, info);
 }
 
-void minimize_state_machine(StateMachineInfo *info, int flags) {
+void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
 	const vector<State *> &states = info->get_state_machine();
 	vector<State *> new_states;
 	full_state_t *head = NULL, *tail = NULL, *ptr;
