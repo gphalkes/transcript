@@ -317,6 +317,10 @@ int main(int argc, char *argv[]) {
 		ucms.clear();
 
 		fatal("Finish variant coding!\n");
+		/* FIXME: what needs to be done:
+		   - add FROM_UNICODE_VARIANT and TO_UNICODE_VARIANT flags
+		   - write tables
+		*/
 	} else {
 		ucm->variants_done();
 	}

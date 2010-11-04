@@ -99,6 +99,7 @@ class UcmBase {
 	public:
 		vector<Mapping *> simple_mappings;
 		vector<Mapping *> multi_mappings;
+		uint8_t used_from_unicode_flags, used_to_unicode_flags;
 
 		enum tag_t {
 			IGNORED = -1,
@@ -115,6 +116,7 @@ class UcmBase {
 			LAST_TAG
 		};
 
+		UcmBase(void) : used_from_unicode_flags(0), used_to_unicode_flags(0) {}
 		void add_mapping(Mapping *mapping);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes) = 0;
 		virtual const char *get_tag_value(tag_t tag) = 0;
@@ -203,6 +205,7 @@ class Ucm : public UcmBase {
 		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
 			vector<Mapping *> &this_variant_mappings);
+		void find_used_flags(vector<Mapping *> &mappings, int *length_counts);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			public:

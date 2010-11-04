@@ -100,6 +100,11 @@ void UcmBase::add_mapping(Mapping *mapping) {
 		simple_mappings.push_back(mapping);
 	} else {
 		//FIXME: check for private-use or non-character codepoints
+		if (codepage_chars > 1)
+			used_to_unicode_flags |= Mapping::TO_UNICODE_MULTI_START;
+		if (mapping->codepoints.size() > 1)
+			used_from_unicode_flags |= Mapping::FROM_UNICODE_MULTI_START;
+
 		multi_mappings.push_back(mapping);
 	}
 }

@@ -196,16 +196,8 @@ void Ucm::check_duplicates(void) {
 	}
 }
 
-void Ucm::calculate_item_costs(void) {
-	from_unicode_flags = simple_mappings[0]->from_unicode_flags;
-	to_unicode_flags = simple_mappings[0]->to_unicode_flags;
-
-	uint8_t used_from_unicode_flags = 0, used_to_unicode_flags = 0;
-	int length_counts[4] = { 0, 0, 0, 0 };
-	int i, j, best_size;
-	double size;
-
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+void Ucm::find_used_flags(vector<Mapping *> &mappings, int *length_counts) {
+	for (vector<Mapping *>::iterator iter = mappings.begin(); iter != mappings.end(); iter++) {
 		uint8_t change = from_unicode_flags ^ (*iter)->from_unicode_flags;
 		if ((*iter)->from_unicode_flags & Mapping::FROM_UNICODE_SUBCHAR1)
 			change &= ~Mapping::FROM_UNICODE_LENGTH_MASK;
@@ -213,12 +205,24 @@ void Ucm::calculate_item_costs(void) {
 
 		used_to_unicode_flags |= to_unicode_flags ^ (*iter)->to_unicode_flags;
 
-		length_counts[(*iter)->codepage_bytes.size() - 1]++;
+		if (length_counts != NULL)
+			length_counts[(*iter)->codepage_bytes.size() - 1]++;
 	}
+}
 
-	if (multi_mappings.size() > 0) {
-		used_from_unicode_flags |= Mapping::FROM_UNICODE_MULTI_START;
-		used_to_unicode_flags |= Mapping::TO_UNICODE_MULTI_START;
+void Ucm::calculate_item_costs(void) {
+	from_unicode_flags = simple_mappings[0]->from_unicode_flags;
+	to_unicode_flags = simple_mappings[0]->to_unicode_flags;
+
+	int i, j, best_size;
+	double size;
+	int length_counts[4] = { 0, 0, 0, 0 };
+
+	find_used_flags(simple_mappings, length_counts);
+	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+		find_used_flags((*iter)->simple_mappings, NULL);
+		used_from_unicode_flags |= (*iter)->used_from_unicode_flags;
+		used_to_unicode_flags |= (*iter)->used_to_unicode_flags;
 	}
 
 	if (option_verbose)
