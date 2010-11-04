@@ -75,12 +75,12 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 					   check the longer mappings. This way we always find the longest match. */
 
 					for (i = 0; i < handle->convertor->nr_multi_mappings; i++) {
-						check_len = min(handle->convertor->multi_mappings[i].bytes_length, *inbytesleft);
+						check_len = min(handle->convertor->codepage_sorted_multi_mappings[i]->bytes_length, *inbytesleft);
 
-						if (memcmp(handle->convertor->multi_mappings[i].bytes, *inbuf, check_len) != 0)
+						if (memcmp(handle->convertor->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
 							continue;
 
-						if (check_len != handle->convertor->multi_mappings[i].bytes_length) {
+						if (check_len != handle->convertor->codepage_sorted_multi_mappings[i]->bytes_length) {
 							if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
 								continue;
 							return CHARCONV_INCOMPLETE;
@@ -88,13 +88,13 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 
 						outbuf_tmp = *outbuf;
 						outbytesleft_tmp = *outbytesleft;
-						for (j = 0; j < handle->convertor->multi_mappings[i].codepoints_length; j++) {
-							codepoint = handle->convertor->multi_mappings[i].codepoints[j];
+						for (j = 0; j < handle->convertor->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
+							codepoint = handle->convertor->codepage_sorted_multi_mappings[i]->codepoints[j];
 							if (codepoint >= UINT32_C(0xD800) && codepoint <= UINT32_C(0xD8FF)) {
 								j++;
 								codepoint -= UINT32_C(0xD800);
 								codepoint <<= 10;
-								codepoint += handle->convertor->multi_mappings[i].codepoints[j] - UINT32_C(0xDC00);
+								codepoint += handle->convertor->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xDC00);
 								codepoint += 0x10000;
 							}
 							if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)

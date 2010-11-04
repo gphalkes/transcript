@@ -96,6 +96,7 @@ typedef struct convertor_t {
 	uint16_t *codepage_mappings;
 	uint8_t *unicode_mappings;
 	multi_mapping_t *multi_mappings;
+	multi_mapping_t **codepage_sorted_multi_mappings;
 	multi_mapping_t **codepoint_sorted_multi_mappings;
 
 	uint32_t codepage_range;

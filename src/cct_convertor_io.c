@@ -26,7 +26,7 @@ static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t fl
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
 static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
-static int compare_multi_mapping_bytes(const multi_mapping_t *a, const multi_mapping_t *b);
+static int compare_multi_mapping_codepage(const multi_mapping_t **a, const multi_mapping_t **b);
 static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const multi_mapping_t **b);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
@@ -158,13 +158,19 @@ convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error) {
 			READ_BYTE(convertor->multi_mappings[i].bytes_length);
 			READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
 		}
-		qsort(convertor->multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t),
-			(compar_func_t) compare_multi_mapping_bytes);
+
+		if ((convertor->codepage_sorted_multi_mappings =
+				malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
 		if ((convertor->codepoint_sorted_multi_mappings =
 				malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
 			ERROR(CHARCONV_OUT_OF_MEMORY);
-		for (i = 0; i < convertor->nr_multi_mappings; i++)
+		for (i = 0; i < convertor->nr_multi_mappings; i++) {
+			convertor->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
 			convertor->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
+		}
+		qsort(convertor->codepage_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
+			(compar_func_t) compare_multi_mapping_codepage);
 		qsort(convertor->codepoint_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
 			(compar_func_t) compare_multi_mapping_codepoints);
 	}
@@ -461,10 +467,10 @@ end_error:
 	return false;
 }
 
-static int compare_multi_mapping_bytes(const multi_mapping_t *a, const multi_mapping_t *b) {
-	if (a->bytes_length < b->bytes_length)
+static int compare_multi_mapping_codepage(const multi_mapping_t **a, const multi_mapping_t **b) {
+	if ((*a)->bytes_length < (*b)->bytes_length)
 		return 1;
-	if (a->bytes_length > b->bytes_length)
+	if ((*a)->bytes_length > (*b)->bytes_length)
 		return -1;
 	return 0;
 }
