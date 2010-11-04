@@ -20,6 +20,12 @@
 #include <inttypes.h>
 #include <cstdio>
 
+#ifdef _WIN32
+#define DIRSEPS "/\\"
+#else
+#define DIRSEPS "/"
+#endif
+
 using namespace std;
 
 enum action_t {
@@ -125,10 +131,10 @@ class Ucm;
 class Variant : public UcmBase {
 	public:
 		Ucm *base;
-		uint32_t id;
+		char *id;
 
 	public:
-		Variant(Ucm *_base, uint32_t _id = 0);
+		Variant(Ucm *_base, const char *_id);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		virtual const char *get_tag_value(tag_t tag);
 };

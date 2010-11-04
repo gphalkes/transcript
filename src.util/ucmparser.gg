@@ -18,7 +18,6 @@
 %label VARIANT, "VARIANT";
 %label END, "END";
 %label HEXNUM, "hexadecimal number";
-%label HEXNUMBER, "hexadecimal number";
 %label CHARSEQ, "character sequence";
 %label _INITIAL, "initial";
 %label _STATE, "state";
@@ -91,13 +90,9 @@ ucm<void *> {
 		|
 			[
 				VARIANT
-				[
-					NUMBER
-				|
-					HEXNUMBER
-				]
+				STRING
 				{
-					variant = new Variant(ucm, strtol(yytext, NULL, 0));
+					variant = new Variant(ucm, yytext);
 					ucm->add_variant(variant);
 				}
 				'\n'+

@@ -15,7 +15,19 @@
 
 #include "ucm2cct.h"
 
-Variant::Variant(Ucm *_base, uint32_t _id) : base(_base), id(_id) {}
+Variant::Variant(Ucm *_base, const char *_id) : base(_base) {
+	size_t len;
+
+	while (strpbrk(_id, DIRSEPS) != NULL)
+		_id = strpbrk(_id, DIRSEPS) + 1;
+
+	if ((id = strdup(_id)) == NULL)
+		OOM();
+
+	len = strlen(id);
+	if (len < 4 || strcmp(id + len - 4, ".ucm") == 0)
+		id[len - 4] = 0;
+}
 
 int Variant::check_codepage_bytes(vector<uint8_t> &bytes) {
 	return base->check_codepage_bytes(bytes);
