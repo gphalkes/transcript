@@ -318,7 +318,6 @@ int main(int argc, char *argv[]) {
 
 		fatal("Finish variant coding!\n");
 		/* FIXME: what needs to be done:
-		   - add FROM_UNICODE_VARIANT and TO_UNICODE_VARIANT flags
 		   - write tables
 		*/
 	} else {
