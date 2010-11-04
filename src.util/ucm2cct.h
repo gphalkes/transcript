@@ -228,6 +228,7 @@ class Ucm : public UcmBase {
 		void find_shift_sequences(void);
 		void write_table(FILE *output);
 		void add_variant(Variant *variant);
+		bool is_compatible(Ucm *other);
 };
 
 extern "C" int line_number;

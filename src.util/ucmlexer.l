@@ -33,6 +33,7 @@ extern "C" void fatal(const char *fmt, ...);
  /*--                          return MACHINE_SEPARATOR;*/
 \<[^>]+>                    return TAG;
 (\\[xX][0-9a-fA-F]+\+?)+    return CHARSEQ;
+0x[0-9A-Fa-f]+              return HEXNUMBER;
 [0-9]+                      return NUMBER;
 CHARMAP                     return CHARMAP;
 END                         return END;

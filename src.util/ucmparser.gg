@@ -18,6 +18,7 @@
 %label VARIANT, "VARIANT";
 %label END, "END";
 %label HEXNUM, "hexadecimal number";
+%label HEXNUMBER, "hexadecimal number";
 %label CHARSEQ, "character sequence";
 %label _INITIAL, "initial";
 %label _STATE, "state";
@@ -76,34 +77,39 @@ ucm<void *> {
 	[
 		'\n'+
 		[
-			CHARMAP '\n'+
-			{
-				variant = new Variant(ucm);
-				ucm->add_variant(variant);
-			}
 			[
-				mapping(variant)
+				[
+					CHARMAP '\n'+
+					[
+						mapping(ucm)
+						'\n'+
+					]+
+					END CHARMAP
+					'\n'*
+				]?
+			]
+		|
+			[
+				VARIANT
+				[
+					NUMBER
+				|
+					HEXNUMBER
+				]
+				{
+					variant = new Variant(ucm, strtol(yytext, NULL, 0));
+					ucm->add_variant(variant);
+				}
 				'\n'+
+				[
+					mapping(variant)
+					'\n'+
+				]+
+				END VARIANT
+				['\n'+]..?
 			]+
-			END CHARMAP
-			'\n'*
-		]?
+		]
 	]?
-	[
-		VARIANT
-		NUMBER
-		{
-			variant = new Variant(ucm, strtol(yytext, NULL, 0));
-			ucm->add_variant(variant);
-		}
-		'\n'+
-		[
-			mapping(variant)
-			'\n'+
-		]+
-		END VARIANT
-		['\n'+]..?
-	]*
 ;
 
 

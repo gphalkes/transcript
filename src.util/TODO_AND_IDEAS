@@ -4,7 +4,12 @@
   disk space is not expensive.
 - perhaps it is a good idea to save the data such that we can simply use a
   read-only mmap and a small set of pointers into the file.
-- allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also set
+- allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also
+  set
+- for large tables it is useful to create a shared library format such that
+  the data can be shared between processes. For single byte tables the
+  resulting shared library will be so much larger than the cct file that it
+  makes little sense, unless we bunch several together (the overhead is ~6KB).
 
 Conversion issues:
 - fullwidth to half-width fallbacks and vice-versa
