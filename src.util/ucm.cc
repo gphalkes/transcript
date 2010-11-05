@@ -527,12 +527,12 @@ bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &leng
 				if ((*mappings)[idx]->precision != 0 && (*mappings)[idx]->precision != 1)
 					continue;
 			}
-			codepoint = htonl(source.simple_mappings[idx]->codepoints[0]);
+			codepoint = htonl((*mappings)[idx]->codepoints[0]);
 			memcpy(bytes, 1 + (char *) &codepoint, 3);
 			length = 3;
 
 			pair = iterating_simple_mappings ?
-				source.simple_mappings[idx]->codepage_bytes.size() > (size_t) source.single_bytes : false;
+				(*mappings)[idx]->codepage_bytes.size() > (size_t) source.single_bytes : false;
 			idx++;
 			return true;
 		}

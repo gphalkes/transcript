@@ -303,7 +303,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 	memset(save_flags, 0, codepage_range + 7);
 
 	for (mapping_iter = simple_mappings.begin(); mapping_iter != simple_mappings.end(); mapping_iter++) {
-		if ((*mapping_iter)->precision == 1)
+		if ((*mapping_iter)->precision == 1 || (*mapping_iter)->precision == 2)
 			continue;
 
 		copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
@@ -321,7 +321,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		for (mapping_iter = (*variant_iter)->simple_mappings.begin();
 				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 		{
-			if ((*mapping_iter)->precision == 1)
+			if ((*mapping_iter)->precision != 0 || (*mapping_iter)->precision != 3)
 				continue;
 
 			copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
@@ -332,6 +332,8 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		for (mapping_iter = (*variant_iter)->multi_mappings.begin();
 				mapping_iter != (*variant_iter)->multi_mappings.end(); mapping_iter++)
 		{
+			if ((*mapping_iter)->precision != 0 && (*mapping_iter)->precision != 3)
+				continue;
 			copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
 			idx = map_charseq(codepage_states, buffer, (*mapping_iter)->codepage_bytes.size(), flags);
 			save_flags[idx] |= Mapping::TO_UNICODE_MULTI_START;
@@ -385,6 +387,8 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 		for (mapping_iter = (*variant_iter)->multi_mappings.begin();
 				mapping_iter != (*variant_iter)->multi_mappings.end(); mapping_iter++)
 		{
+			if ((*mapping_iter)->precision != 0 && (*mapping_iter)->precision != 1)
+				continue;
 			codepoint = htonl((*mapping_iter)->codepoints[0]);
 			idx = map_charseq(unicode_states, 1 + (uint8_t *) &codepoint, 3, 0);
 			save_flags[idx] |= Mapping::FROM_UNICODE_MULTI_START;

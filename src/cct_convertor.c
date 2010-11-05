@@ -23,6 +23,7 @@ typedef struct _charconv_cct_state_t save_state_t;
 typedef struct {
 	charconv_common_t common;
 	convertor_t *convertor;
+	variant_t *variant;
 	save_state_t state;
 } convertor_state_t;
 
@@ -39,6 +40,43 @@ static put_unicode_func_t put_utf16;
 
 static inline size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
+}
+
+static void find_to_unicode_variant(const variant_t *variant, const uint8_t *bytes, size_t length,
+		uint8_t *conv_flags, uint_fast32_t *codepoint)
+{
+	variant_mapping_t *mapping;
+	uint32_t value = 0;
+	uint_fast16_t low, high, mid;
+
+	memcpy(&value, bytes, length);
+	/* The length field as encoded in the from_unicode_flags field is the length - 1,
+	   and we need to compare with that. So we decrease length here, so we don't have to
+	   add 1 in the comparisons below. */
+	length--;
+
+	low = 0;
+	high = variant->nr_simple_mappings;
+	while (low < high) {
+		mid = low + ((high - low) / 2);
+		mapping = variant->simple_mappings + variant->simple_mappings[mid].sort_idx;
+		if (mapping->codepage_bytes < value || (mapping->codepage_bytes == value &&
+				(mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) < length))
+			low = mid + 1;
+		else
+			high = mid;
+	}
+	/* Check whether we actually found a mapping. */
+	if (low == variant->nr_simple_mappings || mapping->codepage_bytes != value ||
+			(mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) != length ||
+			(mapping->from_unicode_flags & FROM_UNICODE_FALLBACK))
+		return;
+	/* Note that the items are sorted such that the first in the list has
+	   precision 0, the second has precision 3 and the last has precision 1
+	   (in as far as they exist of course). We already checked that we don't
+	   have a precision 1 mapping, so this mapping is the one we want. */
+	*conv_flags = mapping->to_unicode_flags;
+	*codepoint = mapping->codepoint;
 }
 
 static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
@@ -119,6 +157,12 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 						continue;
 				}
 
+				codepoint = handle->convertor->codepage_mappings[idx];
+				if (conv_flags & TO_UNICODE_VARIANT) {
+					find_to_unicode_variant(handle->variant, (uint8_t *) *inbuf, *inbytesleft - _inbytesleft,
+						&conv_flags, &codepoint);
+				}
+
 				if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
 					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_PRIVATE_USE;
@@ -128,7 +172,6 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 				if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
 					return CHARCONV_FALLBACK;
 
-				codepoint = handle->convertor->codepage_mappings[idx];
 				if (codepoint == UINT32_C(0xFFFF)) {
 					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_UNASSIGNED;
@@ -365,6 +408,34 @@ check_next_mapping: ;
 	return -1;
 }
 
+
+static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoint,
+		uint8_t *conv_flags, uint8_t **bytes)
+{
+	variant_mapping_t *mapping;
+	uint_fast16_t low, high, mid;
+
+	low = 0;
+	high = variant->nr_simple_mappings;
+	while (low < high) {
+		mid = low + ((high - low) / 2);
+		mapping = variant->simple_mappings + mid;
+		if (mapping->codepoint < codepoint)
+			low = mid + 1;
+		else
+			high = mid;
+	}
+	/* Check whether we actually found a mapping. */
+	if (low == variant->nr_simple_mappings || mapping->codepoint != codepoint || (mapping->to_unicode_flags & TO_UNICODE_FALLBACK))
+		return;
+	/* Note that the items are sorted such that the first in the list has
+	   precision 0, the second has precision 1 and the last has precision 3
+	   (in as far as they exist of course). We already checked that we don't
+	   have a precision 3 mapping, so this mapping is the one we want. */
+	*conv_flags = mapping->from_unicode_flags;
+	*bytes = (uint8_t *) &mapping->codepage_bytes;
+}
+
 static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
 		char **outbuf, size_t *outbytesleft, int flags)
 {
@@ -377,6 +448,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	int_fast16_t i;
 	uint_fast8_t byte;
 	uint_fast8_t conv_flags;
+	uint8_t *bytes;
 
 	_inbuf = (uint8_t *) *inbuf;
 	_inbytesleft = *inbytesleft;
@@ -429,6 +501,10 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 						}
 					}
 
+					bytes = &handle->convertor->unicode_mappings[idx * handle->convertor->single_size];
+					if (conv_flags & FROM_UNICODE_VARIANT)
+						find_from_unicode_variant(handle->variant, codepoint, &conv_flags, &bytes);
+
 					if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
 						return CHARCONV_FALLBACK;
 
@@ -440,8 +516,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 						else
 							PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 					} else {
-						PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1,
-							&handle->convertor->unicode_mappings[idx * handle->convertor->single_size]);
+						PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
 					}
 					goto sequence_done;
 				case ACTION_VALID:

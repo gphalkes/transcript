@@ -11,6 +11,15 @@
   resulting shared library will be so much larger than the cct file that it
   makes little sense, unless we bunch several together (the overhead is ~6KB).
 
+- when a variant contains a |1 or |3 mapping, it must also contain the |0
+  mapping
+- The following checks have to be implemented:
+	- for each |3 fallback there is at least a |0 mapping as well
+	- for each |1 fallback there is at least a |0 mapping as well
+	- the above must hold for variants as well
+	- the subchar and subchar1 characters may not appear in variants for
+		to_unicode mappings.
+
 Conversion issues:
 - fullwidth to half-width fallbacks and vice-versa
 - what to do with the mu versus micro sign? In latin-1 the character is the mu

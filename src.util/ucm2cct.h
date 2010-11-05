@@ -198,7 +198,8 @@ class Ucm : public UcmBase {
 
 		bool check_map(int state, int byte, action_t action, int next_state);
 		void set_default_codepage_states(void);
-		void check_duplicates(vector<Mapping *> &mappings);
+		void check_duplicates(vector<Mapping *> &mappings, const char *variant_name);
+		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		int calculate_depth(Entry *entry);
 		void trace_back(size_t idx, shift_sequence_t &shift_sequence);
 		void write_multi_mappings(FILE *output, vector<Mapping *> &mappings);
@@ -207,7 +208,6 @@ class Ucm : public UcmBase {
 		void write_to_unicode_flags(FILE *output);
 		void write_from_unicode_flags(FILE *output);
 		void check_state_machine(Ucm *other, int this_state, int other_state);
-		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
 			vector<Mapping *> &this_variant_mappings);
 		void find_used_flags(vector<Mapping *> &mappings, int *length_counts);
@@ -273,6 +273,6 @@ const char *sprint_codepoints(vector<uint32_t> &codepoints);
 uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
 void minimize_state_machine(Ucm::StateMachineInfo *info, int flags);
 
-bool compareCodepageBytes(Mapping *a, Mapping *b);
-bool compareCodepoints(Mapping *a, Mapping *b);
+bool compare_codepage_bytes(Mapping *a, Mapping *b);
+bool compare_codepoints(Mapping *a, Mapping *b);
 #endif

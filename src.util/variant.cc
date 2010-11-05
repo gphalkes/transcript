@@ -60,11 +60,21 @@ uint32_t Variant::size(void) {
 }
 
 void Variant::sort_simple_mappings(void) {
-	sort(simple_mappings.begin(), simple_mappings.end(), compareCodepageBytes);
+	uint16_t *indices;
+	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepage_bytes);
 	for (size_t idx = 0; idx < simple_mappings.size(); idx++)
 		simple_mappings[idx]->idx = idx;
 
-	sort(simple_mappings.begin(), simple_mappings.end(), compareCodepoints);
+	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
+	if ((indices = (uint16_t *) malloc(sizeof(uint16_t) * simple_mappings.size())) == NULL)
+		OOM();
+
+	for (size_t idx = 0; idx < simple_mappings.size(); idx++)
+		indices[simple_mappings[idx]->idx] = idx;
+	for (size_t idx = 0; idx < simple_mappings.size(); idx++)
+		simple_mappings[idx]->idx = indices[idx];
+
+	free(indices);
 }
 
 void Variant::dump(void) {

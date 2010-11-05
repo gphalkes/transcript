@@ -1,2 +1,5 @@
-==== Testcase ../tests/variant_duplicate.test ====
-map00.ucm: Variant TEST2 defines a duplicate mapping for \x42
+==== Testcase ../tests/variant_duplicate01.test ====
+map00.ucm: Duplicate mapping defined for \x42 in variant TEST2
+==== Testcase ../tests/variant_duplicate02.test ====
+map00.ucm: Duplicate mapping defined for <U0042> in variant TEST2
+==== Testcase ../tests/variant_duplicate03.test ====

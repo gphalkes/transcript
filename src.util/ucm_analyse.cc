@@ -98,7 +98,7 @@ void Ucm::validate_states(void) {
 
 
 static const int reorder_precision[4] = {0, 2, 3, 1};
-static int compareCodepageBytesSimple(Mapping *a, Mapping *b) {
+static int compare_codepage_bytes_simple(Mapping *a, Mapping *b) {
 	size_t i;
 
 	for (i = 0; i < a->codepage_bytes.size() && i < b->codepage_bytes.size(); i++) {
@@ -115,15 +115,15 @@ static int compareCodepageBytesSimple(Mapping *a, Mapping *b) {
 	return 0;
 }
 
-bool compareCodepageBytes(Mapping *a, Mapping *b) {
-	int result = compareCodepageBytesSimple(a, b);
+bool compare_codepage_bytes(Mapping *a, Mapping *b) {
+	int result = compare_codepage_bytes_simple(a, b);
 
 	if (result == 0)
 		return reorder_precision[a->precision] < reorder_precision[b->precision];
 	return result < 0;
 }
 
-static int compareCodepointsSimple(Mapping *a, Mapping *b) {
+static int compare_codepoints_simple(Mapping *a, Mapping *b) {
 	size_t i;
 
 	for (i = 0; i < a->codepoints.size() && i < b->codepoints.size(); i++) {
@@ -140,57 +140,54 @@ static int compareCodepointsSimple(Mapping *a, Mapping *b) {
 	return 0;
 }
 
-bool compareCodepoints(Mapping *a, Mapping *b) {
-	int result = compareCodepointsSimple(a, b);
+bool compare_codepoints(Mapping *a, Mapping *b) {
+	int result = compare_codepoints_simple(a, b);
 
 	if (result == 0)
 		return a->precision < b->precision;
 	return result < 0;
 }
 
-void Ucm::check_duplicates(vector<Mapping *> &mappings) {
+void Ucm::check_duplicates(vector<Mapping *> &mappings, const char *variant_name) {
 	vector<Mapping *>::iterator iter;
 	if (mappings.size() != 0) {
-		sort(mappings.begin(), mappings.end(), compareCodepoints);
+		sort(mappings.begin(), mappings.end(), compare_codepoints);
 		for (iter = mappings.begin() + 1; iter != mappings.end(); iter++) {
-			if (compareCodepointsSimple(*iter, *(iter - 1)) == 0) {
+			if (compare_codepoints_simple(*iter, *(iter - 1)) == 0) {
 				if ((*iter)->precision > 1 || (*(iter - 1))->precision > 1)
 					continue;
-				fatal("%s: Duplicate mapping defined for %s\n", name, sprint_codepoints((*iter)->codepoints));
+				fatal("%s: Duplicate mapping defined for %s%s%s\n", name, sprint_codepoints((*iter)->codepoints),
+					variant_name == NULL ? "" : " in variant ", variant_name == NULL ? "" : variant_name);
 			}
 		}
 
-		sort(mappings.begin(), mappings.end(), compareCodepageBytes);
+		sort(mappings.begin(), mappings.end(), compare_codepage_bytes);
 		for (iter = mappings.begin() + 1; iter != mappings.end(); iter++) {
-			if (compareCodepageBytesSimple(*iter, *(iter - 1)) == 0) {
+			if (compare_codepage_bytes_simple(*iter, *(iter - 1)) == 0) {
 				if (reorder_precision[(*iter)->precision] > 1 || reorder_precision[(*(iter - 1))->precision] > 1)
 					continue;
-				fatal("%s: Duplicate mapping defined for %s\n", name, sprint_sequence((*iter)->codepage_bytes));
+				fatal("%s: Duplicate mapping defined for %s%s%s\n", name, sprint_sequence((*iter)->codepage_bytes),
+					variant_name == NULL ? "" : " in variant ", variant_name == NULL ? "" : variant_name);
 			}
 		}
 	}
 }
 
 void Ucm::check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id) {
-	sort(base_mappings.begin(), base_mappings.end(), compareCodepoints);
-	for (vector<Mapping *>::iterator iter = variant_mappings.begin(); iter != variant_mappings.end(); iter++)
-		if (binary_search(base_mappings.begin(), base_mappings.end(), (*iter), compareCodepoints))
-			fatal("%s: Variant %s defines a duplicate mapping for %s\n", name, variant_id, sprint_codepoints((*iter)->codepoints));
+	/* We use the simple way to check the consistency of the combination: combine and check. */
+	vector<Mapping *> combined;
 
-	sort(base_mappings.begin(), base_mappings.end(), compareCodepageBytes);
-	for (vector<Mapping *>::iterator iter = variant_mappings.begin(); iter != variant_mappings.end(); iter++)
-		if (binary_search(base_mappings.begin(), base_mappings.end(), (*iter), compareCodepageBytes))
-			fatal("%s: Variant %s defines a duplicate mapping for %s\n", name, variant_id, sprint_sequence((*iter)->codepage_bytes));
+	combined.insert(combined.end(), base_mappings.begin(), base_mappings.end());
+	combined.insert(combined.end(), variant_mappings.begin(), variant_mappings.end());
+	check_duplicates(combined, variant_id);
 }
 
 void Ucm::check_duplicates(void) {
 	if (option_verbose)
 		fprintf(stderr, "Checking for duplicate mappings\n");
-	check_duplicates(simple_mappings);
-	check_duplicates(multi_mappings);
+	check_duplicates(simple_mappings, NULL);
+	check_duplicates(multi_mappings, NULL);
 	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
-		check_duplicates((*iter)->simple_mappings);
-		check_duplicates((*iter)->multi_mappings);
 		check_variant_duplicates(simple_mappings, (*iter)->simple_mappings, (*iter)->id);
 		check_variant_duplicates(multi_mappings, (*iter)->multi_mappings, (*iter)->id);
 	}
@@ -415,11 +412,11 @@ void Ucm::check_compatibility(Ucm *other) {
 
 
 static bool compareMapping(Mapping *a, Mapping *b) {
-	int result = compareCodepageBytesSimple(a, b);
+	int result = compare_codepage_bytes_simple(a, b);
 
 	if (result != 0)
 		return result < 0;
-	result = compareCodepointsSimple(a, b);
+	result = compare_codepoints_simple(a, b);
 	if (result != 0)
 		return result < 0;
 
@@ -438,8 +435,8 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 	vector<Mapping *>::iterator other_iter = other_mappings.begin();
 
 	while (this_iter != this_mappings.end() && other_iter != other_mappings.end()) {
-		bytes_result = compareCodepageBytesSimple(*this_iter, *other_iter);
-		codepoints_result = compareCodepointsSimple(*this_iter, *other_iter);
+		bytes_result = compare_codepage_bytes_simple(*this_iter, *other_iter);
+		codepoints_result = compare_codepoints_simple(*this_iter, *other_iter);
 
 		if (bytes_result < 0) {
 			this_variant_mappings.push_back(*this_iter);

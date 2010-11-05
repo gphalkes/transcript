@@ -23,6 +23,10 @@
 #include "ucmparser.h"
 
 bool option_verbose = false, option_internal_table = false;
+#ifdef DEBUG
+#define NO_ABORT_OPTION "a"
+bool option_abort = true;
+#endif
 const char *option_output_name = NULL;
 char *output_name;
 extern FILE *yyin;
@@ -38,7 +42,8 @@ void fatal(const char *fmt, ...) {
 	vfprintf(stderr, fmt, args);
 	va_end(args);
 #ifdef DEBUG
-	abort();
+	if (option_abort)
+		abort();
 #endif
 	exit(EXIT_FAILURE);
 }
@@ -250,7 +255,7 @@ int main(int argc, char *argv[]) {
 	Ucm *ucm;
 	int c;
 
-	while ((c = getopt(argc, argv, "hio:v")) != -1) {
+	while ((c = getopt(argc, argv, "hio:v" NO_ABORT_OPTION)) != -1) {
 		switch (c) {
 			case 'h':
 				print_usage();
@@ -263,6 +268,11 @@ int main(int argc, char *argv[]) {
 			case 'v':
 				option_verbose = true;
 				break;
+#ifdef DEBUG
+			case 'a':
+				option_abort = false;
+				break;
+#endif
 			default:
 				fatal("Error in option parsing\n");
 		}
@@ -315,17 +325,13 @@ int main(int argc, char *argv[]) {
 			ucm->merge_variants(*iter);
 		}
 		ucms.clear();
-
-		fatal("Finish variant coding!\n");
-		/* FIXME: what needs to be done:
-		   - write tables
-		*/
 	} else {
 		ucm->variants_done();
 	}
 	ucm->calculate_item_costs();
 
 	ucm->minimize_state_machines();
+
 	if (option_verbose) {
 		printf("Codepage state machine\n");
 		print_state_machine(ucm->codepage_states);
@@ -357,6 +363,9 @@ int main(int argc, char *argv[]) {
 
 	if ((output = fopen(output_name, "w+b")) == NULL)
 		fatal("Could not open output file: %s\n", strerror(errno));
+
+/*	for (list<Variant *>::iterator iter = ucm->variants.begin(); iter != ucm->variants.end(); iter++)
+		(*iter)->dump(); */
 
 	ucm->write_table(output);
 	return EXIT_SUCCESS;
