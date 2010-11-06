@@ -488,10 +488,8 @@ void Ucm::merge_variants(Ucm *other) {
 
 void Ucm::variants_done(void) {
 	/* Add the local variant, but only if no others are defined. */
-	if (variant.simple_mappings.size() == 0 || variant.multi_mappings.size() == 0) {
-		if (variants.size() != 0)
+	if (variants.size() != 0)
 			return;
-	}
 	variants.push_back(new Variant(variant));
 	variant.simple_mappings.clear();
 	variant.multi_mappings.clear();

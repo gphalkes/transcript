@@ -16,6 +16,7 @@
 %options "generate-symbol-table lowercase-symbols generate-lexer-wrapper reentrant";
 %label CHARMAP, "CHARMAP";
 %label VARIANT, "VARIANT";
+%label INTERNAL, "INTERNAL";
 %label END, "END";
 %label HEXNUM, "hexadecimal number";
 %label CHARSEQ, "character sequence";
@@ -52,6 +53,7 @@ void LLmessage(int _class) {
 ucm<void *> {
 	Ucm *ucm;
 	Variant *variant;
+	bool internal = false;
 }:
 	{
 		if (option_verbose)
@@ -90,9 +92,14 @@ ucm<void *> {
 		|
 			[
 				VARIANT
+				[
+					INTERNAL
+					{ internal = true; }
+				]?
 				STRING
 				{
-					variant = new Variant(ucm, yytext);
+					variant = new Variant(ucm, yytext, internal);
+					internal = false;
 					ucm->add_variant(variant);
 				}
 				'\n'+

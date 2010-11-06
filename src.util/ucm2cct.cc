@@ -63,8 +63,8 @@ Ucm::tag_t string_to_tag(const char *str) {
 		return UcmBase::MB_MIN;
 	if (strcmp(str, "<icu:charsetFamily>") == 0)
 		return UcmBase::CHARSET_FAMILY;
-	if (strcmp(str, "<base>") == 0)
-		return UcmBase::BASE;
+	if (strcmp(str, "<cct:internal>") == 0)
+		return UcmBase::_INTERNAL;
 	return Ucm::IGNORED;
 }
 
@@ -87,6 +87,7 @@ void parse_byte_sequence(char *charseq, vector<uint8_t> &store) {
 static void print_usage(void) {
 	printf("Usage: ucm2ctt [<options>] <ucm file>+\n"
 		"  -h                  Display this help message\n"
+		"  -i                  The ucm file is an internal use table\n"
 		"  -o <output>         Specify the output file name\n"
 		"  -v                  Increase verbosity\n");
 	exit(EXIT_SUCCESS);
@@ -291,6 +292,8 @@ int main(int argc, char *argv[]) {
 		line_number = 1;
 
 		parse_ucm((void **) &ucm);
+		if (ucm->variants.size() == 1)
+			fatal("%s: Only a single variant defined\n", ucm->name);
 		ucm->check_duplicates();
 		ucm->ensure_ascii_controls();
 		ucm->remove_fullwidth_fallbacks();
@@ -325,8 +328,6 @@ int main(int argc, char *argv[]) {
 			ucm->merge_variants(*iter);
 		}
 		ucms.clear();
-	} else {
-		ucm->variants_done();
 	}
 	ucm->calculate_item_costs();
 

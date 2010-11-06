@@ -177,6 +177,9 @@ void Ucm::process_header(void) {
 	if (tag_values[SUBCHAR] == NULL)
 		fatal("%s: <subchar> unspecified\n", name);
 
+	if (tag_values[_INTERNAL] != NULL)
+		flags |= INTERNAL_TABLE;
+
 	if (tag_values[SUBCHAR1] != NULL)
 		flags |= SUBCHAR1_VALID;
 

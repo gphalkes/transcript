@@ -111,7 +111,7 @@ class UcmBase {
 			MB_MAX,
 			MB_MIN,
 			CHARSET_FAMILY,
-			BASE,
+			_INTERNAL,
 
 			/* All tags must be defined before this value. */
 			LAST_TAG
@@ -129,9 +129,10 @@ class Variant : public UcmBase {
 	public:
 		Ucm *base;
 		char *id;
+		uint8_t flags;
 
 	public:
-		Variant(Ucm *_base, const char *_id);
+		Variant(Ucm *_base, const char *_id, bool internal = false);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		virtual const char *get_tag_value(tag_t tag);
 		void sort_simple_mappings(void);
@@ -150,6 +151,7 @@ class Ucm : public UcmBase {
 		uint32_t unicode_range;
 
 		const char *name;
+		int flags;
 
 		enum {
 			CLASS_MBCS = 1,
@@ -186,7 +188,6 @@ class Ucm : public UcmBase {
 
 	private:
 		char *tag_values[LAST_TAG];
-		int flags;
 		int single_bytes;
 		int uconv_class;
 

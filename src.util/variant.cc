@@ -16,7 +16,7 @@
 
 #include "ucm2cct.h"
 
-Variant::Variant(Ucm *_base, const char *_id) : base(_base) {
+Variant::Variant(Ucm *_base, const char *_id, bool internal) : base(_base) {
 	size_t len;
 
 	while (strpbrk(_id, DIRSEPS) != NULL)
@@ -30,6 +30,10 @@ Variant::Variant(Ucm *_base, const char *_id) : base(_base) {
 		len -= 4;
 		id[len] = 0;
 	}
+
+	flags = (base->flags & Ucm::INTERNAL_TABLE);
+	if (internal)
+		flags |= Ucm::INTERNAL_TABLE;
 
 	if (len > 255)
 		fatal("%s: Variant name %s too long\n", file_name, id);
