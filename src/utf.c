@@ -234,7 +234,7 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 	uint_fast32_t codepoint;
 
 	codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, false);
-	if (codepoint >= UINT32_C(0xd800) && codepoint < UINT32_C(0xdc00)) {
+	if ((codepoint & UINT32_C(0x1ffc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
 		char *_inbuf_save = _inbuf;
 		size_t _inbytesleft_save = _inbytesleft;
@@ -244,7 +244,7 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 		if (next_codepoint > UINT32_C(0xffff0000))
 			return next_codepoint;
 
-		if (!(next_codepoint >= UINT32_C(0xdc00) && next_codepoint <= UINT32_C(0xdfff))) {
+		if ((next_codepoint & UINT32_C(0x1ffc00)) != UINT32_C(0xdc00)) {
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
 			*inbytesleft = _inbytesleft_save;

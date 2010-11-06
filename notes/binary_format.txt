@@ -226,16 +226,26 @@ Each variant consists of:
 
 Field                      | Bytes
 ---------------------------------------------------
-Variant identifier         | 4 (CSID if available, a number > 65535 otherwise)
-Size of mappings table     | 4 After reading this, skip this many bytes to arrive at the next variant
+Name of the variant        | 1 (length) + 0..255 data
+Flags                      | 1 (See below)
 Number of simple mappings  | 4
-Simple mappings as tuples :
-  Codepage bytes           | string
-  Codepoint                | UTF-16BE (1 or 2)
-  To unicode flags         | 1
-  From unicode flags       | 1
+Simple mappings as tuples:
+  To-unicode flags         | 1
+  From-unicode flags       | 1
+  Codepage bytes           | 1..4 (length encoded in from-unicode flags)
+  Codepoint                | 2/4 (UTF-16)
+  Sort index (codepage)    | 2
 Number of M:N mappings     | 4
 M:N mappings, as before
 
 Note that if M:N mappings are included, the flag tables should also be updated
 to reflect this.
+
+The Flags field is a bit mask. The following flags are defined (0 is least
+significant bit).
+
+Bit   | Meaning
+---------------------------------------------------
+0-4   | Reserved (must be 0)
+5     | Conversion information is for internal converter use only
+6-7   | Reserved (must be 0)

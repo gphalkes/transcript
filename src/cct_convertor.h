@@ -27,7 +27,8 @@ enum {
 	MULTI_MAPPINGS_AVAILABLE = (1<<2),
 	SUBCHAR1_VALID = (1<<3),
 	MULTIBYTE_START_STATE_1 = (1<<4),
-	INTERNAL_TABLE = (1<<5)
+	INTERNAL_TABLE = (1<<5),
+	VARIANTS_AVAILABLE = (1<<6)
 };
 
 enum {
@@ -100,9 +101,12 @@ typedef struct {
 typedef struct {
 	variant_mapping_t *simple_mappings;
 	multi_mapping_t *multi_mappings;
+	multi_mapping_t **codepage_sorted_multi_mappings;
+	multi_mapping_t **codepoint_sorted_multi_mappings;
+	char *id;
 	uint16_t nr_simple_mappings;
 	uint16_t nr_multi_mappings;
-	char *variant_name;
+	uint8_t flags;
 } variant_t;
 
 
@@ -144,6 +148,6 @@ typedef struct convertor_t {
 	flags_t unicode_flags;
 } convertor_t;
 
-CHARCONV_LOCAL convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error);
+CHARCONV_LOCAL convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error, variant_t **variant);
 CHARCONV_LOCAL void _charconv_unload_cct_convertor(convertor_t *convertor);
 #endif

@@ -110,26 +110,36 @@ void Ucm::write_table(FILE *output) {
 		write_multi_mappings(output, multi_mappings);
 	}
 
-	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
-		WRITE_BYTE(strlen((*variant_iter)->id));
-		WRITE(strlen((*variant_iter)->id), (*variant_iter)->id);
-		WRITE_DWORD((*variant_iter)->size());
-		WRITE_WORD((*variant_iter)->simple_mappings.size());
-		for (vector<Mapping *>::iterator mapping_iter = (*variant_iter)->simple_mappings.begin();
-				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
-		{
-			uint8_t buffer[4];
-			memset(buffer, 0, sizeof(buffer));
-			WRITE_DWORD((*mapping_iter)->codepoints[0]);
-			copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
-			WRITE(4, buffer);
-			WRITE_BYTE((*mapping_iter)->to_unicode_flags);
-			WRITE_BYTE((*mapping_iter)->from_unicode_flags);
-			WRITE_WORD((*mapping_iter)->idx);
-		}
+	if (variants.size() > 1) {
+		WRITE_WORD(variants.size());
+		for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
+			WRITE_BYTE(strlen((*variant_iter)->id));
+			WRITE(strlen((*variant_iter)->id), (*variant_iter)->id);
+			//FIXME: write variant flags (interal use is the only flag we have so far!
+			WRITE_BYTE(0);
+			WRITE_WORD((*variant_iter)->simple_mappings.size());
+			for (vector<Mapping *>::iterator mapping_iter = (*variant_iter)->simple_mappings.begin();
+					mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
+			{
+				uint8_t buffer[4];
 
-		WRITE_WORD((*variant_iter)->multi_mappings.size());
-		write_multi_mappings(output, (*variant_iter)->multi_mappings);
+				WRITE_BYTE((*mapping_iter)->to_unicode_flags);
+				WRITE_BYTE((*mapping_iter)->from_unicode_flags);
+
+				copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);
+				WRITE((*mapping_iter)->codepage_bytes.size(), buffer);
+				if ((*mapping_iter)->codepoints[0] < UINT32_C(0x10000)) {
+					WRITE_WORD((*mapping_iter)->codepoints[0]);
+				} else {
+					uint32_t codepoint = ((*mapping_iter)->codepoints[0]) - 0x10000;
+					WRITE_WORD(UINT32_C(0xd800) + (codepoint >> 10));
+					WRITE_WORD(UINT32_C(0xdc00) + (codepoint & 0x3ff));
+				}
+				WRITE_WORD((*mapping_iter)->idx);
+			}
+			WRITE_WORD((*variant_iter)->multi_mappings.size());
+			write_multi_mappings(output, (*variant_iter)->multi_mappings);
+		}
 	}
 }
 

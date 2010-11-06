@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <errno.h>
 
 #include "charconv_internal.h"
 #include "cct_convertor.h"
@@ -28,6 +29,8 @@ static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
 static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
 static int compare_multi_mapping_codepage(const multi_mapping_t **a, const multi_mapping_t **b);
 static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const multi_mapping_t **b);
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, int *error);
+static bool load_variants(FILE *file, convertor_t *convertor, int *error);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 #define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(CHARCONV_TRUNCATED_MAP); } while (0)
@@ -38,17 +41,42 @@ static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const mul
 static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
 static convertor_t *cct_head = NULL;
 
-convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error) {
+convertor_t *_charconv_load_cct_convertor(const char *name, int *error, variant_t **variant) {
 	convertor_t *convertor = NULL;
 	FILE *file;
 	char magic[4];
 	uint32_t version;
-	uint_fast32_t i, j;
+	uint_fast32_t i;
+	size_t len;
+	char *file_name = NULL;
 
 	for (convertor = cct_head; convertor != NULL; convertor = convertor->next) {
-		if (strcmp(convertor->name, file_name) == 0)
+		if (strcmp(convertor->name, name) == 0) {
+			*variant = NULL;
+			convertor->refcount++;
 			return convertor;
+		}
+
+		if (convertor->variants == NULL)
+			continue;
+
+		for (i = 0; i < convertor->nr_variants; i++) {
+			if (strcmp(convertor->variants[i].id, name) == 0) {
+				*variant = &convertor->variants[i];
+				convertor->refcount++;
+				return convertor;
+			}
+		}
 	}
+
+	len = strlen(DB_DIRECTORY) + strlen(name) + 6;
+	if ((file_name = malloc(len)) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+
+	strcpy(file_name, DB_DIRECTORY);
+	strcat(file_name, "/");
+	strcat(file_name, name);
+	strcat(file_name, ".cct");
 
 	if ((file = fopen(file_name, "r")) == NULL)
 		ERROR(CHARCONV_ERRNO);
@@ -83,6 +111,7 @@ convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error) {
 
 	convertor->codepage_flags.get_flags = get_default_flags;
 	convertor->unicode_flags.get_flags = get_default_flags;
+	convertor->refcount = 1;
 
 	READ_WORD(convertor->flags);
 	READ_BYTE(convertor->subchar_len);
@@ -146,57 +175,52 @@ convertor_t *_charconv_load_cct_convertor(const char *file_name, int *error) {
 			!read_flags(file, &convertor->unicode_flags, convertor->unicode_range, error))
 		goto end_error;
 
-	if (convertor->flags & MULTI_MAPPINGS_AVAILABLE) {
-		READ_DWORD(convertor->nr_multi_mappings);
+	if ((convertor->flags & MULTI_MAPPINGS_AVAILABLE) && !load_multi_mappings(file, convertor, error))
+		goto end_error;
 
-		if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
-		for (i = 0; i < convertor->nr_multi_mappings; i++) {
-			READ_BYTE(convertor->multi_mappings[i].codepoints_length);
-			for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
-				READ_WORD(convertor->multi_mappings[i].codepoints[j]);
-			READ_BYTE(convertor->multi_mappings[i].bytes_length);
-			READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
-		}
-
-		if ((convertor->codepage_sorted_multi_mappings =
-				malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
-		if ((convertor->codepoint_sorted_multi_mappings =
-				malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
-		for (i = 0; i < convertor->nr_multi_mappings; i++) {
-			convertor->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
-			convertor->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
-		}
-		qsort(convertor->codepage_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
-			(compar_func_t) compare_multi_mapping_codepage);
-		qsort(convertor->codepoint_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
-			(compar_func_t) compare_multi_mapping_codepoints);
-	}
-
+	if ((convertor->flags & VARIANTS_AVAILABLE) && !load_variants(file, convertor, error))
+		goto end_error;
 
 	if (fread(magic, 1, 1, file) != 0 || !feof(file))
 		ERROR(CHARCONV_INVALID_FORMAT);
 
-	if ((convertor->name = strdup(file_name)) == NULL)
+	if ((convertor->name = strdup(name)) == NULL)
 		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	fclose(file);
 	convertor->next = cct_head;
 	cct_head = convertor;
-	return convertor;
 
+	if (strcmp(convertor->name, name) == 0) {
+		*variant = NULL;
+		return convertor;
+	}
+
+	if (convertor->variants != NULL) {
+		for (i = 0; i < convertor->nr_variants; i++) {
+			if (strcmp(convertor->variants[i].id, name) == 0) {
+				*variant = &convertor->variants[i];
+				return convertor;
+			}
+		}
+	}
+
+	if (error != NULL) {
+		errno = ENOENT;
+		*error = CHARCONV_ERRNO;
+	}
 end_error:
+	free(file_name);
 	if (file != NULL)
 		fclose(file);
-	if (convertor == NULL)
-		return NULL;
-	_charconv_unload_cct_convertor(convertor);
+	if (convertor != NULL)
+		_charconv_unload_cct_convertor(convertor);
 	return NULL;
 }
 
 void _charconv_unload_cct_convertor(convertor_t *convertor) {
+	if (--convertor->refcount > 0)
+		return;
 	if (cct_head == convertor) {
 		cct_head = cct_head->next;
 	} else {
@@ -218,6 +242,17 @@ void _charconv_unload_cct_convertor(convertor_t *convertor) {
 	free(convertor->unicode_flags.indices);
 	free(convertor->multi_mappings);
 	free(convertor->codepoint_sorted_multi_mappings);
+	if (convertor->variants != NULL) {
+		uint_fast32_t i;
+		for (i = 0; i < convertor->nr_variants; i++) {
+			free(convertor->variants[i].simple_mappings);
+			free(convertor->variants[i].multi_mappings);
+			free(convertor->variants[i].codepage_sorted_multi_mappings);
+			free(convertor->variants[i].codepoint_sorted_multi_mappings);
+			free(convertor->variants[i].id);
+		}
+		free(convertor->variants);
+	}
 	free(convertor);
 }
 
@@ -481,4 +516,122 @@ static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const mul
 	if ((*a)->codepoints_length > (*b)->codepoints_length)
 		return -1;
 	return 0;
+}
+
+
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, int *error) {
+	uint_fast32_t i, j;
+
+	READ_DWORD(convertor->nr_multi_mappings);
+
+	if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+	for (i = 0; i < convertor->nr_multi_mappings; i++) {
+		READ_BYTE(convertor->multi_mappings[i].codepoints_length);
+		for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
+			READ_WORD(convertor->multi_mappings[i].codepoints[j]);
+		READ_BYTE(convertor->multi_mappings[i].bytes_length);
+		READ(convertor->multi_mappings[i].bytes_length, convertor->multi_mappings[i].bytes);
+	}
+
+	if ((convertor->codepage_sorted_multi_mappings =
+			malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+	if ((convertor->codepoint_sorted_multi_mappings =
+			malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+	for (i = 0; i < convertor->nr_multi_mappings; i++) {
+		convertor->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
+		convertor->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
+	}
+	qsort(convertor->codepage_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
+		(compar_func_t) compare_multi_mapping_codepage);
+	qsort(convertor->codepoint_sorted_multi_mappings, convertor->nr_multi_mappings, sizeof(multi_mapping_t *),
+		(compar_func_t) compare_multi_mapping_codepoints);
+	return true;
+end_error:
+	return false;
+}
+
+
+static bool load_variants(FILE *file, convertor_t *convertor, int *error) {
+	uint_fast32_t i, j;
+	variant_t *variant;
+	size_t id_len;
+
+	READ_WORD(convertor->nr_variants);
+	if ((convertor->variants = malloc(convertor->nr_variants * sizeof(variant_t))) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+	for (i = 0; i < convertor->nr_variants; i++) {
+		convertor->variants[i].simple_mappings = NULL;
+		convertor->variants[i].multi_mappings = NULL;
+		convertor->variants[i].id = NULL;
+	}
+
+	for (i = 0; i < convertor->nr_variants; i++) {
+		variant = convertor->variants + i;
+
+		READ_BYTE(id_len);
+		if ((variant->id = malloc(id_len + 1)) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
+		READ(id_len, variant->id);
+		variant->id[id_len] = 0;
+		READ_BYTE(variant->flags);
+
+		READ_WORD(variant->nr_simple_mappings);
+		if ((variant->simple_mappings =
+				calloc(variant->nr_simple_mappings, sizeof(variant_mapping_t))) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
+		for (j = 0; j < variant->nr_simple_mappings; j++) {
+			READ_BYTE(variant->simple_mappings[j].to_unicode_flags);
+			READ_BYTE(variant->simple_mappings[j].from_unicode_flags);
+			READ((variant->simple_mappings[j].from_unicode_flags & FROM_UNICODE_LENGTH_MASK) + 1,
+				&variant->simple_mappings[j].codepage_bytes);
+			READ_WORD(variant->simple_mappings[j].codepoint);
+			if ((variant->simple_mappings[j].codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+				uint_fast32_t next_codepoint;
+				READ_WORD(next_codepoint);
+				variant->simple_mappings[j].codepoint -= UINT32_C(0xd800);
+				variant->simple_mappings[j].codepoint += 0x10000 + next_codepoint - UINT32_C(0xdc00);
+			}
+			READ_WORD(variant->simple_mappings[j].sort_idx);
+		}
+
+		READ_WORD(variant->nr_multi_mappings);
+		if (variant->nr_multi_mappings == 0)
+			continue;
+
+		if ((variant->multi_mappings =
+				malloc(variant->nr_multi_mappings * sizeof(multi_mapping_t))) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
+		for (j = 0; j < variant->nr_multi_mappings; j++) {
+			READ_BYTE(variant->multi_mappings[j].codepoints_length);
+			for (j = 0; j < variant->multi_mappings[j].codepoints_length; j++)
+				READ_WORD(variant->multi_mappings[j].codepoints[j]);
+			READ_BYTE(variant->multi_mappings[j].bytes_length);
+			READ(variant->multi_mappings[j].bytes_length, variant->multi_mappings[j].bytes);
+		}
+
+		if ((variant->codepage_sorted_multi_mappings =
+				malloc((convertor->nr_multi_mappings + variant->nr_multi_mappings) * sizeof(multi_mapping_t *))) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
+		if ((variant->codepoint_sorted_multi_mappings =
+				malloc((convertor->nr_multi_mappings + variant->nr_multi_mappings) * sizeof(multi_mapping_t *))) == NULL)
+			ERROR(CHARCONV_OUT_OF_MEMORY);
+		for (i = 0; i < convertor->nr_multi_mappings; i++) {
+			variant->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
+			variant->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
+		}
+		for (i = 0; i < variant->nr_multi_mappings; i++) {
+			variant->codepage_sorted_multi_mappings[i + convertor->nr_multi_mappings] = &variant->multi_mappings[i];
+			variant->codepoint_sorted_multi_mappings[i + convertor->nr_multi_mappings] = &variant->multi_mappings[i];
+		}
+		qsort(variant->codepage_sorted_multi_mappings, convertor->nr_multi_mappings + variant->nr_multi_mappings,
+			sizeof(multi_mapping_t *), (compar_func_t) compare_multi_mapping_codepage);
+		qsort(variant->codepoint_sorted_multi_mappings, convertor->nr_multi_mappings + variant->nr_multi_mappings,
+			sizeof(multi_mapping_t *), (compar_func_t) compare_multi_mapping_codepoints);
+	}
+	return true;
+end_error:
+	return false;
 }

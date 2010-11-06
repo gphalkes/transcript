@@ -43,22 +43,6 @@ const char *Variant::get_tag_value(tag_t tag) {
 	return base->get_tag_value(tag);
 }
 
-uint32_t Variant::size(void) {
-	uint32_t result;
-
-	result = 2 + 2; // Simple mappings size + Multi mappings size
-	result += 12 * simple_mappings.size();
-
-	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++) {
-		result += 2; // Byte count + Codepoint count
-		result += (*iter)->codepage_bytes.size();
-		for (vector<uint32_t>::iterator codepoint_iter = (*iter)->codepoints.begin();
-				codepoint_iter != (*iter)->codepoints.end(); codepoint_iter++)
-			result += (*codepoint_iter) > UINT32_C(0xffff) ? 4 : 2;
-	}
-	return result;
-}
-
 void Variant::sort_simple_mappings(void) {
 	uint16_t *indices;
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepage_bytes);

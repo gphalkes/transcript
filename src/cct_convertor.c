@@ -24,6 +24,9 @@ typedef struct {
 	charconv_common_t common;
 	convertor_t *convertor;
 	variant_t *variant;
+	multi_mapping_t **codepage_sorted_multi_mappings;
+	multi_mapping_t **codepoint_sorted_multi_mappings;
+	uint32_t nr_multi_mappings;
 	save_state_t state;
 } convertor_state_t;
 
@@ -112,13 +115,13 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 					/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
 					   check the longer mappings. This way we always find the longest match. */
 
-					for (i = 0; i < handle->convertor->nr_multi_mappings; i++) {
-						check_len = min(handle->convertor->codepage_sorted_multi_mappings[i]->bytes_length, *inbytesleft);
+					for (i = 0; i < handle->nr_multi_mappings; i++) {
+						check_len = min(handle->codepage_sorted_multi_mappings[i]->bytes_length, *inbytesleft);
 
-						if (memcmp(handle->convertor->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
+						if (memcmp(handle->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
 							continue;
 
-						if (check_len != handle->convertor->codepage_sorted_multi_mappings[i]->bytes_length) {
+						if (check_len != handle->codepage_sorted_multi_mappings[i]->bytes_length) {
 							if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
 								continue;
 							return CHARCONV_INCOMPLETE;
@@ -126,13 +129,13 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 
 						outbuf_tmp = *outbuf;
 						outbytesleft_tmp = *outbytesleft;
-						for (j = 0; j < handle->convertor->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
-							codepoint = handle->convertor->codepage_sorted_multi_mappings[i]->codepoints[j];
-							if (codepoint >= UINT32_C(0xD800) && codepoint <= UINT32_C(0xD8FF)) {
+						for (j = 0; j < handle->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
+							codepoint = handle->codepage_sorted_multi_mappings[i]->codepoints[j];
+							if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 								j++;
-								codepoint -= UINT32_C(0xD800);
+								codepoint -= UINT32_C(0xd800);
 								codepoint <<= 10;
-								codepoint += handle->convertor->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xDC00);
+								codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
 								codepoint += 0x10000;
 							}
 							if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
@@ -153,7 +156,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 							return CHARCONV_SUCCESS;
 						break;
 					}
-					if (i != handle->convertor->nr_multi_mappings)
+					if (i != handle->nr_multi_mappings)
 						continue;
 				}
 
@@ -166,21 +169,21 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 				if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
 					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_PRIVATE_USE;
-					PUT_UNICODE(UINT32_C(0xFFFD));
+					PUT_UNICODE(UINT32_C(0xfffd));
 					goto sequence_done;
 				}
 				if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
 					return CHARCONV_FALLBACK;
 
-				if (codepoint == UINT32_C(0xFFFF)) {
+				if (codepoint == UINT32_C(0xffff)) {
 					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_UNASSIGNED;
-					PUT_UNICODE(UINT32_C(0xFFFD));
+					PUT_UNICODE(UINT32_C(0xfffd));
 				} else {
-					if (entry->action == ACTION_FINAL_PAIR && codepoint >= UINT32_C(0xD800) && codepoint <= UINT32_C(0xD8FF)) {
-						codepoint -= UINT32_C(0xD800);
+					if (entry->action == ACTION_FINAL_PAIR && (codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+						codepoint -= UINT32_C(0xd800);
 						codepoint <<= 10;
-						codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xDC00);
+						codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
 						codepoint += 0x10000;
 					}
 					PUT_UNICODE(codepoint);
@@ -192,12 +195,12 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 			case ACTION_ILLEGAL:
 				if (!(flags & CHARCONV_SUBST_ILLEGAL))
 					return CHARCONV_ILLEGAL;
-				PUT_UNICODE(UINT32_C(0xFFFD));
+				PUT_UNICODE(UINT32_C(0xfffd));
 				goto sequence_done;
 			case ACTION_UNASSIGNED:
 				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 					return CHARCONV_UNASSIGNED;
-				PUT_UNICODE(UINT32_C(0xFFFD));
+				PUT_UNICODE(UINT32_C(0xfffd));
 				/* FALLTHROUGH */
 			case ACTION_SHIFT:
 			sequence_done:
@@ -330,12 +333,12 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	if (put_utf16(codepoint, &ptr, &codepoints_left) != 0)
 		return CHARCONV_INTERNAL_ERROR;
 
-	for (i = 0; i < handle->convertor->nr_multi_mappings; i++) {
-		mapping_check_len = handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
+	for (i = 0; i < handle->nr_multi_mappings; i++) {
+		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(19 * 2 - codepoints_left, mapping_check_len);
 
 		/* No need to read more of the input if we already know that the start doesn't match. */
-		if (memcmp(codepoints, handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints, check_len) != 0)
+		if (memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, check_len) != 0)
 			continue;
 
 		/* If we already read enough codepoints, then the comparison already verified that
@@ -380,12 +383,12 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		if (check_len < mapping_check_len)
 			continue;
 
-		if (memcmp(codepoints, handle->convertor->codepoint_sorted_multi_mappings[i]->codepoints, check_len) == 0) {
+		if (memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, check_len) == 0) {
 check_complete:
-			if (*outbytesleft < handle->convertor->codepoint_sorted_multi_mappings[i]->bytes_length)
+			if (*outbytesleft < handle->codepoint_sorted_multi_mappings[i]->bytes_length)
 				return CHARCONV_NO_SPACE;
-			PUT_BYTES(handle->convertor->codepoint_sorted_multi_mappings[i]->bytes_length,
-				handle->convertor->codepoint_sorted_multi_mappings[i]->bytes);
+			PUT_BYTES(handle->codepoint_sorted_multi_mappings[i]->bytes_length,
+				handle->codepoint_sorted_multi_mappings[i]->bytes);
 
 			if (19 * 2 - codepoints_left != mapping_check_len) {
 				/* Re-read codepoints up to the number in the mapping. */
@@ -581,42 +584,35 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 }
 
 void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
-	size_t len = strlen(DB_DIRECTORY) + strlen(name) + 6;
 	convertor_state_t *retval;
+	variant_t *variant;
 	convertor_t *ptr;
-	char *file_name;
-
-	if ((file_name = malloc(len)) == NULL) {
-		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
-		return NULL;
-	}
-
-	strcpy(file_name, DB_DIRECTORY);
-	strcat(file_name, "/");
-	strcat(file_name, name);
-	strcat(file_name, ".cct");
 
 	pthread_mutex_lock(&cct_list_mutex);
 	/* Initialisation of global function. */
 	if (put_utf16 == NULL)
 		put_utf16 = _charconv_get_put_unicode(UTF16);
 
-	if ((ptr = _charconv_load_cct_convertor(file_name, error)) == NULL) {
+	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
 		pthread_mutex_unlock(&cct_list_mutex);
 		return NULL;
 	}
-	free(file_name);
 
-	if ((!internal_use && (ptr->flags & INTERNAL_TABLE)) || (retval = malloc(sizeof(convertor_state_t))) == NULL) {
-		if (ptr->refcount == 0)
-			_charconv_unload_cct_convertor(ptr);
+	if (!internal_use && ((variant == NULL ? ptr->flags : variant->flags) & (INTERNAL_TABLE | VARIANTS_AVAILABLE))) {
+		_charconv_unload_cct_convertor(ptr);
 		if (error != NULL)
-			*error = !internal_use && (ptr->flags & INTERNAL_TABLE) ? CHARCONV_INTERNAL_TABLE : CHARCONV_OUT_OF_MEMORY;
+			*error = CHARCONV_INTERNAL_TABLE;
 		pthread_mutex_unlock(&cct_list_mutex);
 		return NULL;
 	}
-	ptr->refcount++;
+
+	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+		_charconv_unload_cct_convertor(ptr);
+		if (error != NULL)
+			*error = CHARCONV_OUT_OF_MEMORY;
+		pthread_mutex_unlock(&cct_list_mutex);
+		return NULL;
+	}
 	pthread_mutex_unlock(&cct_list_mutex);
 
 	retval->convertor = ptr;
@@ -633,6 +629,18 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *er
 	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_cct_state;
 	retval->common.load = (load_func_t) load_cct_state;
+	retval->variant = NULL;
+	retval->codepage_sorted_multi_mappings = ptr->codepage_sorted_multi_mappings;
+	retval->codepoint_sorted_multi_mappings = ptr->codepoint_sorted_multi_mappings;
+	retval->nr_multi_mappings = ptr->nr_multi_mappings;
+	if (variant != NULL) {
+		retval->variant = variant;
+		if (retval->nr_multi_mappings != 0) {
+			retval->codepage_sorted_multi_mappings = variant->codepage_sorted_multi_mappings;
+			retval->codepoint_sorted_multi_mappings = variant->codepoint_sorted_multi_mappings;
+			retval->nr_multi_mappings += variant->nr_multi_mappings;
+		}
+	}
 	return retval;
 }
 

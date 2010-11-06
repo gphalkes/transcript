@@ -331,7 +331,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				return _inbuf[-1];
 
 			handle_surrogates:
-				if ((codepoint & 0xdc00) == 0xdc00) {
+				if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xdc00)) {
 					/* Codepoint is a low surrogate. */
 					if (high_surrogate == 0) {
 						if (skip)
@@ -352,7 +352,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				}
 
 				handle->state.utf7_get_mode = next_mode;
-				if ((codepoint & 0xdc00) == 0xd800) {
+				if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 					high_surrogate = codepoint;
 					break;
 				}

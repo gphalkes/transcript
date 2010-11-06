@@ -52,14 +52,14 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 
 	codepoint = ALT(swaps)(*(uint16_t *) *inbuf);
 
-	if (codepoint >= UINT32_C(0xd800) && codepoint < UINT32_C(0xdc00)) {
+	if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
 		/* Codepoint is high surrogate. */
 		if (*inbytesleft < 2)
 			return CHARCONV_UTF_INCOMPLETE;
 
 		next_codepoint = ALT(swaps)(((uint16_t *) *inbuf)[1]);
-		if (!(next_codepoint >= UINT32_C(0xdc00) && next_codepoint <= UINT32_C(0xdfff))) {
+		if ((next_codepoint & UINT32_C(0xfc00)) != UINT32_C(0xdc00)) {
 			/* Next codepoint is not a low surrogate. */
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
@@ -78,7 +78,7 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 		*inbuf += 4;
 		*inbytesleft -= 4;
 		return codepoint;
-	} else if (!skip && codepoint >= UINT32_C(0xdc00) && codepoint <= UINT32_C(0xdfff)) {
+	} else if (!skip && (codepoint & UINT32_C(0xfc00)) == UINT32_C(0xdc00)) {
 		/* Codepoint is a low surrogate. */
 		return CHARCONV_UTF_ILLEGAL;
 	}

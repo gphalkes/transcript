@@ -296,6 +296,8 @@ void Ucm::calculate_item_costs(void) {
 		flags |= TO_UNICODE_FLAGS_TABLE_INCLUDED;
 	if (!multi_mappings.empty())
 		flags |= MULTI_MAPPINGS_AVAILABLE;
+	if (variants.size() > 1)
+		flags |= VARIANTS_AVAILABLE;
 }
 
 void Ucm::trace_back(size_t idx, shift_sequence_t &shift_sequence) {

@@ -134,7 +134,6 @@ class Variant : public UcmBase {
 		Variant(Ucm *_base, const char *_id);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		virtual const char *get_tag_value(tag_t tag);
-		uint32_t size(void);
 		void sort_simple_mappings(void);
 		void dump(void);
 };
@@ -165,7 +164,8 @@ class Ucm : public UcmBase {
 			MULTI_MAPPINGS_AVAILABLE = (1<<2),
 			SUBCHAR1_VALID = (1<<3),
 			MULTIBYTE_START_STATE_1 = (1<<4),
-			INTERNAL_TABLE = (1<<5)
+			INTERNAL_TABLE = (1<<5),
+			VARIANTS_AVAILABLE = (1<<6)
 		};
 
 		class StateMachineInfo {

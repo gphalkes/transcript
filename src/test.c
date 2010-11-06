@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
 	enum { FROM, TO } dir = FROM;
 	charconv_error_t (*convert)(charconv_t *, char **, size_t *, char **, size_t *, int) = charconv_from_unicode;
 	int utf_type = UTF8;
+	int option_dump = 0;
 
 	static struct { const char *name; int type; } utf_list[] = {
 		{ "UTF-8", UTF8 },
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", UTF32BE },
 		{ "UTF-32LE", UTF32LE }};
 
-	while ((c = getopt(argc, argv, "d:u:")) != EOF) {
+	while ((c = getopt(argc, argv, "d:u:D")) != EOF) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
@@ -60,13 +61,16 @@ int main(int argc, char *argv[]) {
 				if (i == sizeof(utf_list) / sizeof(utf_list[0]))
 					fatal("Invalid argument for -u\n");
 				break;
+			case 'D':
+				option_dump = 1;
+				break;
 			default:
 				fatal("Error processing options\n");
 		}
 	}
 
 	if (argc - optind != 1)
-		fatal("Usage: test [-d <direction>] [-u <utf type>] <codepage name>\n");
+		fatal("Usage: test [-d <direction>] [-u <utf type>] [-D] <codepage name>\n");
 
 	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening convertor: %s\n", charconv_strerror(error));
@@ -78,11 +82,14 @@ int main(int argc, char *argv[]) {
 		outleft = 1024;
 		if ((error = convert(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
 			fatal("conversion result: %s\n", charconv_strerror(error));
-		printf("fill: %zd, outleft: %zd\n", fill, outleft);
-		for (i = 0; i < 1024 - outleft; i++)
-			printf("\\x%02X", (uint8_t) outbuf[i]);
-		if (dir == TO && utf_type == UTF8)
-			printf("\n%.*s", (int) i, outbuf);
+		if (!option_dump) {
+			printf("fill: %zd, outleft: %zd\n", fill, outleft);
+			for (i = 0; i < 1024 - outleft; i++)
+				printf("\\x%02X", (uint8_t) outbuf[i]);
+			putchar('\n');
+		}
+		if (option_dump || (dir == TO && utf_type == UTF8))
+			printf("%.*s", (int) (1024 - outleft), outbuf);
 	}
 	putchar('\n');
 	return 0;
