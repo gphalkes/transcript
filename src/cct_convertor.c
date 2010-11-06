@@ -70,7 +70,10 @@ static void find_to_unicode_variant(const variant_t *variant, const uint8_t *byt
 			high = mid;
 	}
 	/* Check whether we actually found a mapping. */
-	if (low == variant->nr_simple_mappings || mapping->codepage_bytes != value ||
+	if (low == variant->nr_simple_mappings)
+		return;
+	mapping = variant->simple_mappings + variant->simple_mappings[low].sort_idx;
+	if (mapping->codepage_bytes != value ||
 			(mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) != length ||
 			(mapping->from_unicode_flags & FROM_UNICODE_FALLBACK))
 		return;
@@ -428,6 +431,7 @@ static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoi
 		else
 			high = mid;
 	}
+	mapping = variant->simple_mappings + low;
 	/* Check whether we actually found a mapping. */
 	if (low == variant->nr_simple_mappings || mapping->codepoint != codepoint || (mapping->to_unicode_flags & TO_UNICODE_FALLBACK))
 		return;
@@ -583,7 +587,7 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
-void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *error, bool internal_use) {
+void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use) {
 	convertor_state_t *retval;
 	variant_t *variant;
 	convertor_t *ptr;
@@ -591,7 +595,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *er
 	pthread_mutex_lock(&cct_list_mutex);
 	/* Initialisation of global function. */
 	if (put_utf16 == NULL)
-		put_utf16 = _charconv_get_put_unicode(UTF16);
+		put_utf16 = _charconv_get_put_unicode(CHARCONV_UTF16);
 
 	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
 		pthread_mutex_unlock(&cct_list_mutex);
@@ -644,7 +648,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, int *er
 	return retval;
 }
 
-void *_charconv_open_cct_convertor(const char *name, int flags, int *error) {
+void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error) {
 	return _charconv_open_cct_convertor_internal(name, flags, error, false);
 }
 

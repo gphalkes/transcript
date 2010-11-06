@@ -276,24 +276,24 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
 
-put_unicode_func_t _charconv_get_put_unicode(int type) {
+put_unicode_func_t _charconv_get_put_unicode(charconv_utf_t type) {
 	switch (type) {
-		case UTF8:
+		case CHARCONV_UTF8:
 		case UTF8_LOOSE:
 		case UTF8_BOM:
 			return put_utf8;
-		case UTF16:
+		case CHARCONV_UTF16:
 			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
-		case UTF32:
+		case CHARCONV_UTF32:
 			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
 
-		case UTF16BE:
+		case CHARCONV_UTF16BE:
 			return htons(1) == swaps_a(1) ? put_utf16_a : put_utf16_b;
-		case UTF16LE:
+		case CHARCONV_UTF16LE:
 			return htons(1) == swaps_a(1) ? put_utf16_b : put_utf16_a;
-		case UTF32BE:
+		case CHARCONV_UTF32BE:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
-		case UTF32LE:
+		case CHARCONV_UTF32LE:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 
 		case CESU8:
@@ -303,13 +303,13 @@ put_unicode_func_t _charconv_get_put_unicode(int type) {
 	}
 }
 
-get_unicode_func_t _charconv_get_get_unicode(int type) {
+get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 	switch (type) {
-		case UTF8:
+		case CHARCONV_UTF8:
 			return get_utf8strict;
-		case UTF16:
+		case CHARCONV_UTF16:
 			return swaps_a(1) == 1 ? get_utf16_a : get_utf16_b;
-		case UTF32:
+		case CHARCONV_UTF32:
 			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
 
 		case UTF8_LOOSE:
@@ -317,13 +317,13 @@ get_unicode_func_t _charconv_get_get_unicode(int type) {
 		case CESU8:
 			return get_utf8;
 
-		case UTF16BE:
+		case CHARCONV_UTF16BE:
 			return htons(1) == swaps_a(1) ? get_utf16_a : get_utf16_b;
-		case UTF16LE:
+		case CHARCONV_UTF16LE:
 			return htons(1) == swaps_a(1) ? get_utf16_b : get_utf16_a;
-		case UTF32BE:
+		case CHARCONV_UTF32BE:
 			return htons(1) == swaps_a(1) ? get_utf32_a : get_utf32_b;
-		case UTF32LE:
+		case CHARCONV_UTF32LE:
 			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
 
 		default:

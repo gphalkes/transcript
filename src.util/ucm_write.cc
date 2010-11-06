@@ -118,6 +118,7 @@ void Ucm::write_table(FILE *output) {
 			//FIXME: write variant flags (interal use is the only flag we have so far!
 			WRITE_BYTE(0);
 			WRITE_WORD((*variant_iter)->simple_mappings.size());
+			(*variant_iter)->sort_simple_mappings();
 			for (vector<Mapping *>::iterator mapping_iter = (*variant_iter)->simple_mappings.begin();
 					mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 			{
@@ -331,7 +332,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		for (mapping_iter = (*variant_iter)->simple_mappings.begin();
 				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 		{
-			if ((*mapping_iter)->precision != 0 || (*mapping_iter)->precision != 3)
+			if ((*mapping_iter)->precision != 0 && (*mapping_iter)->precision != 3)
 				continue;
 
 			copy((*mapping_iter)->codepage_bytes.begin(), (*mapping_iter)->codepage_bytes.end(), buffer);

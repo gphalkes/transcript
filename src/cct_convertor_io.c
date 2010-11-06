@@ -22,15 +22,17 @@
 
 typedef int (*compar_func_t)(const void *, const void *);
 
-static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error);
+static FILE *cct_open(const char *name, charconv_error_t *error);
+static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries,
+	uint_fast32_t max_entries, charconv_error_t *error);
 static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
-static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error);
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv_error_t *error);
 static int compare_multi_mapping_codepage(const multi_mapping_t **a, const multi_mapping_t **b);
 static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const multi_mapping_t **b);
-static bool load_multi_mappings(FILE *file, convertor_t *convertor, int *error);
-static bool load_variants(FILE *file, convertor_t *convertor, int *error);
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_error_t *error);
+static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *error);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 #define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(CHARCONV_TRUNCATED_MAP); } while (0)
@@ -41,45 +43,33 @@ static bool load_variants(FILE *file, convertor_t *convertor, int *error);
 static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
 static convertor_t *cct_head = NULL;
 
-convertor_t *_charconv_load_cct_convertor(const char *name, int *error, variant_t **variant) {
+convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *error, variant_t **variant) {
 	convertor_t *convertor = NULL;
 	FILE *file;
 	char magic[4];
 	uint32_t version;
 	uint_fast32_t i;
-	size_t len;
-	char *file_name = NULL;
 
 	for (convertor = cct_head; convertor != NULL; convertor = convertor->next) {
-		if (strcmp(convertor->name, name) == 0) {
-			*variant = NULL;
-			convertor->refcount++;
-			return convertor;
-		}
-
-		if (convertor->variants == NULL)
-			continue;
-
-		for (i = 0; i < convertor->nr_variants; i++) {
-			if (strcmp(convertor->variants[i].id, name) == 0) {
-				*variant = &convertor->variants[i];
+		if (convertor->variants == NULL) {
+			if (strcmp(convertor->name, name) == 0) {
+				*variant = NULL;
 				convertor->refcount++;
 				return convertor;
+			}
+		} else {
+			for (i = 0; i < convertor->nr_variants; i++) {
+				if (strcmp(convertor->variants[i].id, name) == 0) {
+					*variant = &convertor->variants[i];
+					convertor->refcount++;
+					return convertor;
+				}
 			}
 		}
 	}
 
-	len = strlen(DB_DIRECTORY) + strlen(name) + 6;
-	if ((file_name = malloc(len)) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
-
-	strcpy(file_name, DB_DIRECTORY);
-	strcat(file_name, "/");
-	strcat(file_name, name);
-	strcat(file_name, ".cct");
-
-	if ((file = fopen(file_name, "r")) == NULL)
-		ERROR(CHARCONV_ERRNO);
+	if ((file = cct_open(name, error)) == NULL)
+		goto end_error;
 
 	READ(4, magic);
 	if (memcmp(magic, "T3CM", 4) != 0)
@@ -191,12 +181,13 @@ convertor_t *_charconv_load_cct_convertor(const char *name, int *error, variant_
 	convertor->next = cct_head;
 	cct_head = convertor;
 
-	if (strcmp(convertor->name, name) == 0) {
-		*variant = NULL;
-		return convertor;
-	}
 
-	if (convertor->variants != NULL) {
+	if (convertor->variants == NULL) {
+		if (strcmp(convertor->name, name) == 0) {
+			*variant = NULL;
+			return convertor;
+		}
+	} else {
 		for (i = 0; i < convertor->nr_variants; i++) {
 			if (strcmp(convertor->variants[i].id, name) == 0) {
 				*variant = &convertor->variants[i];
@@ -210,7 +201,6 @@ convertor_t *_charconv_load_cct_convertor(const char *name, int *error, variant_
 		*error = CHARCONV_ERRNO;
 	}
 end_error:
-	free(file_name);
 	if (file != NULL)
 		fclose(file);
 	if (convertor != NULL)
@@ -256,7 +246,42 @@ void _charconv_unload_cct_convertor(convertor_t *convertor) {
 	free(convertor);
 }
 
-static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries, uint_fast32_t max_entries, int *error) {
+static FILE *try_open(const char *name, const char *dir, charconv_error_t *error) {
+	char *file_name = NULL;
+	FILE *file = NULL;
+	size_t len;
+
+	len = strlen(dir) + strlen(name) + 6;
+	if ((file_name = malloc(len)) == NULL)
+		ERROR(CHARCONV_OUT_OF_MEMORY);
+
+	strcpy(file_name, dir);
+	//FIXME: dir separator may not be /
+	strcat(file_name, "/");
+	strcat(file_name, name);
+	strcat(file_name, ".cct");
+
+	if ((file = fopen(file_name, "r")) == NULL)
+		ERROR(CHARCONV_ERRNO);
+
+end_error:
+	free(file_name);
+	return file;
+}
+
+static FILE *cct_open(const char *name, charconv_error_t *error) {
+	FILE *result;
+	const char *dir = getenv("CHARCONV_PATH");
+	//FIXME: allow colon delimited list
+	if (dir != NULL && (result = try_open(name, dir, error)) != NULL)
+		return result;
+	return try_open(name, DB_DIRECTORY, error);
+}
+
+
+static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries,
+		uint_fast32_t max_entries, charconv_error_t *error)
+{
 	uint_fast32_t i, j, entries_idx = 0;
 
 	nr_states++;
@@ -471,7 +496,7 @@ static uint8_t (* const get_flags_trie[16])(const flags_t *flags, uint_fast32_t 
 	get_flags_15_trie
 };
 
-static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, int *error) {
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv_error_t *error) {
 	uint_fast32_t nr_flag_bytes, nr_blocks, i;
 	uint8_t flag_info;
 	READ_BYTE(flag_info);
@@ -519,7 +544,7 @@ static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const mul
 }
 
 
-static bool load_multi_mappings(FILE *file, convertor_t *convertor, int *error) {
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_error_t *error) {
 	uint_fast32_t i, j;
 
 	READ_DWORD(convertor->nr_multi_mappings);
@@ -554,7 +579,7 @@ end_error:
 }
 
 
-static bool load_variants(FILE *file, convertor_t *convertor, int *error) {
+static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *error) {
 	uint_fast32_t i, j;
 	variant_t *variant;
 	size_t id_len;

@@ -579,9 +579,9 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 		return CHARCONV_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(desc->name, 0, error), UTF32);
+		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(desc->name, 0, error), CHARCONV_UTF32);
 	else
-		ext_handle = _charconv_fill_utf(_charconv_open_cct_convertor_internal(desc->name, 0, error, true), UTF32);
+		ext_handle = _charconv_fill_utf(_charconv_open_cct_convertor_internal(desc->name, 0, error, true), CHARCONV_UTF32);
 
 	if (ext_handle == NULL)
 		return false;

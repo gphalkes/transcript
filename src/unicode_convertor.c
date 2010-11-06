@@ -94,18 +94,18 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 		uint8_t *_inbuf = (uint8_t *) *inbuf;
 		size_t _inbytesleft = *inbytesleft;
 
-		if (handle->utf_type == UTF32 || handle->utf_type == UTF16) {
-			codepoint = _charconv_get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE)(
+		if (handle->utf_type == CHARCONV_UTF32 || handle->utf_type == CHARCONV_UTF16) {
+			codepoint = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE)(
 					(char **) &_inbuf, &_inbytesleft, false);
 			if (codepoint == UINT32_C(0xFEFF)) {
-				handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE);
+				handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE);
 			} else if (codepoint == CHARCONV_ILLEGAL) {
-				codepoint = _charconv_get_get_unicode(handle->utf_type == UTF32 ? UTF32LE : UTF16LE)(
+				codepoint = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32LE : CHARCONV_UTF16LE)(
 						(char **) &_inbuf, &_inbytesleft, false);
 				if (codepoint == UINT32_C(0xFEFF))
-					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == UTF32 ? UTF32LE : UTF16LE);
+					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32LE : CHARCONV_UTF16LE);
 				else
-					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == UTF32 ? UTF32BE : UTF16BE);
+					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE);
 			}
 		} else {
 			codepoint = handle->to_unicode_get((char **) &_inbuf, &_inbytesleft, false);
@@ -130,11 +130,11 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf,
 
 static void to_unicode_reset(convertor_state_t *handle) {
 	switch (handle->utf_type) {
-		case UTF16:
-			handle->to_unicode_get = _charconv_get_get_unicode(UTF16BE);
+		case CHARCONV_UTF16:
+			handle->to_unicode_get = _charconv_get_get_unicode(CHARCONV_UTF16BE);
 			break;
-		case UTF32:
-			handle->to_unicode_get = _charconv_get_get_unicode(UTF32BE);
+		case CHARCONV_UTF32:
+			handle->to_unicode_get = _charconv_get_get_unicode(CHARCONV_UTF32BE);
 			break;
 		case UTF7:
 			handle->state.utf7_get_mode = UTF7_MODE_DIRECT;
@@ -152,8 +152,8 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 
 	if (flags & CHARCONV_FILE_START) {
 		switch (handle->utf_type) {
-			case UTF32:
-			case UTF16:
+			case CHARCONV_UTF32:
+			case CHARCONV_UTF16:
 			case UTF8_BOM:
 				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbytesleft) == CHARCONV_NO_SPACE)
 					return CHARCONV_NO_SPACE;
@@ -192,12 +192,12 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	static const name_to_utftype map[] = {
 		{ "UTF-8", UTF8_LOOSE },
 		{ "UTF-8_BOM", UTF8_BOM },
-		{ "UTF-16", UTF16 },
-		{ "UTF-16BE", UTF16BE },
-		{ "UTF-16LE", UTF16LE },
-		{ "UTF-32", UTF32 },
-		{ "UTF-32BE", UTF32BE },
-		{ "UTF-32LE", UTF32LE },
+		{ "UTF-16", CHARCONV_UTF16 },
+		{ "UTF-16BE", CHARCONV_UTF16BE },
+		{ "UTF-16LE", CHARCONV_UTF16LE },
+		{ "UTF-32", CHARCONV_UTF32 },
+		{ "UTF-32BE", CHARCONV_UTF32BE },
+		{ "UTF-32LE", CHARCONV_UTF32LE },
 		{ "CESU-8", CESU8 },
 		{ "GB-18030", GB18030 },
 		{ "SCSU", SCSU },
@@ -233,13 +233,13 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 
 	retval->utf_type = ptr->utf_type;
 	switch (retval->utf_type) {
-		case UTF16:
-			retval->to_unicode_get = _charconv_get_get_unicode(UTF16BE);
-			retval->from_unicode_put = _charconv_get_put_unicode(UTF16BE);
+		case CHARCONV_UTF16:
+			retval->to_unicode_get = _charconv_get_get_unicode(CHARCONV_UTF16BE);
+			retval->from_unicode_put = _charconv_get_put_unicode(CHARCONV_UTF16BE);
 			break;
-		case UTF32:
-			retval->to_unicode_get = _charconv_get_get_unicode(UTF32BE);
-			retval->from_unicode_put = _charconv_get_put_unicode(UTF32BE);
+		case CHARCONV_UTF32:
+			retval->to_unicode_get = _charconv_get_get_unicode(CHARCONV_UTF32BE);
+			retval->from_unicode_put = _charconv_get_put_unicode(CHARCONV_UTF32BE);
 			break;
 		case GB18030:
 		case SCSU:
@@ -253,7 +253,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	switch (retval->utf_type) {
 		case GB18030:
 			if ((retval->gb18030_cct = _charconv_fill_utf(
-					_charconv_open_cct_convertor_internal("gb18030", flags, error, true), UTF32)) == NULL) {
+					_charconv_open_cct_convertor_internal("gb18030", flags, error, true), CHARCONV_UTF32)) == NULL) {
 				free(retval);
 				return NULL;
 			}

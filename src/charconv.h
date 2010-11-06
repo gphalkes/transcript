@@ -77,6 +77,18 @@ typedef enum {
 	CHARCONV_INTERNAL_TABLE /**< Tried to load a table that is for internal use only. */
 } charconv_error_t;
 
+typedef enum {
+	CHARCONV_UTF8,
+	CHARCONV_UTF16,
+	CHARCONV_UTF32,
+	CHARCONV_UTF16BE,
+	CHARCONV_UTF16LE,
+	CHARCONV_UTF32BE,
+	CHARCONV_UTF32LE,
+	_CHARCONV_UTFLAST
+} charconv_utf_t;
+
+
 /* I would rather not define these here, but I need them for the definition of
    CHARCONV_SAVE_STATE_SIZE. */
 struct _charconv_cct_state_t {
@@ -101,7 +113,7 @@ struct _charconv_iso2022_state_t {
 #define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
 	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
 
-CHARCONV_API charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error);
+CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
 CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
 CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);

@@ -61,7 +61,7 @@ struct _cc_iconv_t {
 	charconv_t *from, *to;
 };
 
-CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, int utf_type);
+CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type);
 CHARCONV_LOCAL int _charconv_element_strcmp(const void *a, const void *b);
 
 #endif

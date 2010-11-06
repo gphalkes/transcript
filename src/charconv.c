@@ -60,7 +60,7 @@ static name_mapping convertors[] = {
 };
 
 /*================ API functions ===============*/
-charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, charconv_error_t *error) {
+charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
 	bool last_was_digit = false;
 	name_mapping *convertor;
 	char name_buffer[128];
@@ -68,7 +68,7 @@ charconv_t *charconv_open_convertor(const char *name, int utf_type, int flags, c
 	size_t array_size = ARRAY_SIZE(convertors);
 	const char *ptr;
 
-	if (utf_type < 0 || utf_type > UTF32LE) {
+	if (utf_type > CHARCONV_UTF32LE) {
 		if (error != NULL)
 			*error = CHARCONV_BAD_ARG;
 		return NULL;
@@ -150,7 +150,7 @@ void charconv_load_state(charconv_t *handle, void *state) {
 
 /*================ Internal functions ===============*/
 
-charconv_t *_charconv_fill_utf(charconv_t *handle, int utf_type) {
+charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type) {
 	if (handle == NULL)
 		return NULL;
 	handle->get_unicode = _charconv_get_get_unicode(utf_type);
