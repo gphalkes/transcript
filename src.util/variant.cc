@@ -66,7 +66,7 @@ void Variant::sort_simple_mappings(void) {
 }
 
 void Variant::dump(void) {
-	printf("VARIANT %s\n", id);
+	printf("VARIANT %s\"%s\"\n", flags & Ucm::INTERNAL_TABLE ? "INTERNAL " : "", id);
 
 	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);

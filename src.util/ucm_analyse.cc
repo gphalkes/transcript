@@ -395,7 +395,7 @@ void Ucm::check_compatibility(Ucm *other) {
 		fatal("%s: Convertor in %s has different mb_cur_max\n", name, other->name);
 	if (strcmp(tag_values[MB_MIN], other->tag_values[MB_MIN]) != 0)
 		fatal("%s: Convertor in %s has different mb_cur_min\n", name, other->name);
-	if (flags != other->flags)
+	if ((flags & ~INTERNAL_TABLE) != (other->flags & ~INTERNAL_TABLE))
 		fatal("%s: Convertor in %s is incompatible\n", name, other->name);
 	if (strcmp(tag_values[SUBCHAR], other->tag_values[SUBCHAR]) != 0)
 		fatal("%s: Convertor in %s has different subchar\n", name, other->name);
