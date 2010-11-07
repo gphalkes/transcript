@@ -100,9 +100,9 @@ void Ucm::write_table(FILE *output) {
 	write_to_unicode_table(output);
 	write_from_unicode_table(output);
 
-	if (to_unicode_flags_save != 0)
+	if (used_to_unicode_flags != 0)
 		write_to_unicode_flags(output);
-	if (from_unicode_flags_save != 0)
+	if (used_from_unicode_flags != 0)
 		write_from_unicode_flags(output);
 
 	if (multi_mappings.size() > 0) {
@@ -226,45 +226,57 @@ void Ucm::write_from_unicode_table(FILE *output) {
 	free(codepage_bytes);
 }
 
-static uint8_t convert_flags(uint8_t flags_save, uint8_t flags) {
-	static uint8_t mask[16] = { 0x00, 0x03, 0x0c, 0x0f, 0x30, 0x33, 0x3c, 0x00, 0xc0, 0xc3, 0xcc, 0x00, 0xf0, 0x00, 0x00, 0xff };
-	static int shift_1[16] = { 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 2, 0, 0, 0, 0, 0 };
-	static int shift_2[16] = { 0, 0, 0, 0, 4, 2, 2, 0, 0, 0, 0, 0, 4, 0, 0, 0 };
-	static int shift_3[16] = { 0, 0, 0, 0, 0, 0, 0, 0, 6, 4, 4, 0, 4, 0, 0, 0 };
-	uint8_t parts[4];
+static void fill_conversion_table(uint8_t *table, int mask) {
+	int entry;
+	int i, j, k;
 
-	flags &= mask[flags_save];
-	parts[0] = flags & mask[1];
-	parts[1] = flags & mask[2];
-	parts[2] = flags & mask[4];
-	parts[3] = flags & mask[8];
+	for (i = 0; i < 256; i++) {
+		entry = 0;
+		if ((i & mask) == i) {
+			for (j = 0, k = 0; j < 8; j++) {
+				if (!(mask & (1 << j)))
+					continue;
 
-	return parts[0] | (parts[1] >> shift_1[flags_save]) | (parts[2] >> shift_2[flags_save]) | (parts[3] >> shift_3[flags_save]);
+				if (i & (1 << j))
+					entry |= (1 << k);
+				k++;
+			}
+		}
+		table[i] = entry;
+	}
 }
 
-static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, uint8_t flags_save) {
-	static int shift[16] = {0, 2, 2, 4, 2, 4, 4, 0, 2, 4, 4, 0, 4, 0, 0, 8};
-	static int step[16] = {0, 4, 4, 2, 4, 2, 2, 0, 4, 2, 2, 0, 2, 0, 0, 1};
+#define BLOCKSIZE 16
+static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, uint8_t used_flags) {
+	static uint8_t conversion_table[256];
 	size_t store_idx = 0;
-	uint8_t byte;
+	uint8_t byte, mask;
 	uint32_t i;
-	int j;
+	int j, bits;
+	uint16_t *indices;
+	uint8_t *blocks;
+	uint32_t nr_of_blocks;
+	int saved_blocks = 0;
+	uint8_t flag_code;
+
+	/*
+		- create mask
+		- create convertion table
+		- store bytes
+	*/
+	mask = create_mask(used_flags);
+	bits = popcount(mask);
+	fill_conversion_table(conversion_table, mask);
+	ASSERT(bits == 1 || bits == 2 || bits == 4 || bits == 8);
 
 	for (i = 0; i < range; ) {
 		byte = 0;
-		for (j = 0; j < step[flags_save]; j++)
-			byte |= convert_flags(flags_save, data[i++]) << (shift[flags_save] * j);
+		for (j = 0; j < (8 / bits); j++)
+			byte |= conversion_table[data[i++] & used_flags] << (bits * j);
 		data[store_idx++] = byte;
 	}
 
-	//FIXME: clean this code up. It is a mess!
-
-	#define BLOCKSIZE 16
-	uint16_t *indices;
-	uint8_t *blocks;
-	uint32_t nr_of_blocks = (store_idx + BLOCKSIZE - 1) / BLOCKSIZE;
-	int saved_blocks = 0;
-
+	nr_of_blocks = (store_idx + BLOCKSIZE - 1) / BLOCKSIZE;
 	if ((indices = (uint16_t *) malloc(nr_of_blocks * 2)) == NULL)
 		OOM();
 	if ((blocks = (uint8_t *) malloc(nr_of_blocks * BLOCKSIZE)) == NULL)
@@ -273,6 +285,7 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 	// Ensure that the last block is filled up with 0 bytes
 	memset(data + store_idx, 0, nr_of_blocks * BLOCKSIZE - store_idx);
 
+	// Find all unique blocks.
 	for (i = 0; i < nr_of_blocks; i++) {
 		for (j = 0; j < saved_blocks; j++) {
 			if (memcmp(data + i * BLOCKSIZE, blocks + j * BLOCKSIZE, BLOCKSIZE) == 0)
@@ -286,13 +299,38 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 	}
 
 	if (option_verbose)
-		fprintf(stderr, "Trie info: %d, %zd\n", nr_of_blocks * 2 + saved_blocks * BLOCKSIZE, store_idx);
+		fprintf(stderr, "Trie size: %d, flat table size: %zd\n", nr_of_blocks * 2 + saved_blocks * BLOCKSIZE, store_idx);
+
+	switch (bits) {
+		case 8:
+			flag_code = 0;
+			break;
+		case 4:
+			flag_code = 1;
+			break;
+		case 2:
+			flag_code = 71;
+			break;
+		case 1:
+			flag_code = 99;
+			break;
+		default:
+			PANIC();
+	}
+
+
+	for (i = 0; i < 256; i++) {
+		if (i == mask)
+			break;
+		if (popcount(i) == bits)
+			flag_code++;
+	}
 
 	if (nr_of_blocks * 2 + saved_blocks * BLOCKSIZE > store_idx) {
-		WRITE_BYTE(flags_save);
+		WRITE_BYTE(flag_code);
 		WRITE(store_idx, data);
 	} else {
-		WRITE_BYTE(flags_save | 0x80);
+		WRITE_BYTE(flag_code | 0x80);
 		for (i = 0; i < nr_of_blocks; i++)
 			WRITE_WORD(indices[i]);
 		WRITE_WORD(saved_blocks - 1);
@@ -301,6 +339,7 @@ static void merge_and_write_flags(FILE *output, uint8_t *data, uint32_t range, u
 	free(indices);
 	free(blocks);
 }
+#undef BLOCKSIZE
 
 void Ucm::write_to_unicode_flags(FILE *output) {
 	uint32_t idx;
@@ -351,7 +390,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		}
 	}
 
-	merge_and_write_flags(output, save_flags, codepage_range, to_unicode_flags_save);
+	merge_and_write_flags(output, save_flags, codepage_range, used_to_unicode_flags);
 	free(save_flags);
 }
 
@@ -405,6 +444,6 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 			save_flags[idx] |= Mapping::FROM_UNICODE_MULTI_START;
 		}
 	}
-	merge_and_write_flags(output, save_flags, unicode_range, from_unicode_flags_save);
+	merge_and_write_flags(output, save_flags, unicode_range, used_from_unicode_flags);
 	free(save_flags);
 }

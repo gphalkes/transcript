@@ -76,7 +76,8 @@ void UcmBase::add_mapping(Mapping *mapping) {
 				break;
 			case 2:
 				if (get_tag_value(SUBCHAR1) == NULL) {
-					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n", file_name, line_number - 1);
+					fprintf(stderr, "%s:%d: WARNING: subchar1 is not defined, but mapping with precision 2 was found. Ignoring.\n",
+						file_name, line_number - 1);
 					return;
 				} else {
 					mapping->from_unicode_flags |= Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_NOT_AVAIL;
@@ -109,8 +110,8 @@ void UcmBase::add_mapping(Mapping *mapping) {
 	}
 }
 
-Ucm::Ucm(const char *_name) : variant(this, _name), name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0),
-		to_unicode_flags(0), from_unicode_flags_save(0), to_unicode_flags_save(0)
+Ucm::Ucm(const char *_name) : variant(this, _name), name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0),
+		from_unicode_flags(0), to_unicode_flags(0)
 {
 	for (int i = 0; i < LAST_TAG; i++)
 		tag_values[i] = NULL;

@@ -193,7 +193,7 @@ class Ucm : public UcmBase {
 
 		double from_flag_costs, to_flag_costs;
 		uint8_t from_unicode_flags, to_unicode_flags;
-		uint8_t from_unicode_flags_save, to_unicode_flags_save;
+		/* uint8_t from_unicode_flags_save, to_unicode_flags_save; */
 
 		vector<shift_sequence_t> shift_sequences;
 
@@ -263,6 +263,7 @@ extern "C" char *file_name;
 extern "C" void fatal(const char *fmt, ...);
 #define PANIC() fatal("Program logic error at line: %s:%d\n", __FILE__, __LINE__)
 #define OOM() fatal("Out of memory\n")
+#define ASSERT(x) do { if (!(x)) PANIC(); } while (0)
 
 extern bool option_verbose, option_internal_table;
 
@@ -272,6 +273,9 @@ void print_state_machine(const vector<State *> &states);
 const char *sprint_sequence(vector<uint8_t> &bytes);
 const char *sprint_codepoints(vector<uint32_t> &codepoints);
 uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int flags);
+int popcount(int x);
+uint8_t create_mask(uint8_t used_flags);
+
 void minimize_state_machine(Ucm::StateMachineInfo *info, int flags);
 
 bool compare_codepage_bytes(Mapping *a, Mapping *b);

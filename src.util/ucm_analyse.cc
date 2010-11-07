@@ -229,45 +229,36 @@ void Ucm::calculate_item_costs(void) {
 	if (option_verbose)
 		fprintf(stderr, "Items to save:\n");
 
-	from_flag_costs = to_flag_costs = 0.0;
-	from_flag_costs += 0.25; /* FIXME: when there are no unassigned mappings in the range, and there
-		are no FROM_UNICODE_FALLBACK characters, this should be 0. However, we don't know whether there
-		are unassigned mappings, because that will be calculated based on the costs calculated here.
-		Chicken, egg, etc. */
-	from_unicode_flags &= ~(Mapping::FROM_UNICODE_NOT_AVAIL | Mapping::FROM_UNICODE_FALLBACK);
-	from_unicode_flags_save = 2;
-	if (option_verbose)
-		fprintf(stderr, "- from unicode not available/fallback flags\n");
-	if (used_from_unicode_flags & (Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START)) {
-		from_flag_costs += 0.25;
-		from_unicode_flags &= ~(Mapping::FROM_UNICODE_SUBCHAR1 | Mapping::FROM_UNICODE_MULTI_START);
-		from_unicode_flags_save |= 4;
-		if (option_verbose)
-			fprintf(stderr, "- from unicode M:N mappings/subchar1 flags\n");
-	}
-	if (used_from_unicode_flags & Mapping::FROM_UNICODE_LENGTH_MASK) {
-		from_flag_costs += 0.25;
-		from_unicode_flags &= ~Mapping::FROM_UNICODE_LENGTH_MASK;
-		from_unicode_flags_save |= 1;
-		if (option_verbose)
-			fprintf(stderr, "- from unicode length\n");
-	}
-	if (from_unicode_flags_save == 7)
-		from_unicode_flags_save = 15;
+	/* FIXME: when there are no unassigned mappings in the range, this isn't necessary. However, we
+		don't know whether there are unassigned mappings, because that will be calculated based on
+		the costs calculated here. Chicken, egg, etc. */
+	used_from_unicode_flags |= Mapping::FROM_UNICODE_NOT_AVAIL;
+	from_flag_costs = 0.25 * popcount(create_mask(used_from_unicode_flags));
+	to_flag_costs = 0.25 * popcount(create_mask(used_to_unicode_flags));
 
-	if (used_to_unicode_flags & (Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_MULTI_START)) {
-		to_flag_costs += 0.25;
-		to_unicode_flags &= ~(Mapping::TO_UNICODE_FALLBACK | Mapping::TO_UNICODE_MULTI_START);
-		to_unicode_flags_save |= 1;
-		if (option_verbose)
-			fprintf(stderr, "- to unicode fallback/M:N mappings\n");
-	}
-	if (used_to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE) {
-		to_flag_costs += 0.25;
-		to_unicode_flags &= ~Mapping::TO_UNICODE_PRIVATE_USE;
-		to_unicode_flags_save |= 2;
-		if (option_verbose)
-			fprintf(stderr, "- to unicode private use\n");
+	if (option_verbose) {
+		fprintf(stderr, "- from unicode not available flags\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_FALLBACK)
+			fprintf(stderr, "- from unicode fallback flags\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_MULTI_START)
+			fprintf(stderr, "- from unicode M:N mappings flags\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_SUBCHAR1)
+			fprintf(stderr, "- from unicode subchar1 flags\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_LENGTH_MASK & (Mapping::FROM_UNICODE_LENGTH_MASK >> 1))
+			fprintf(stderr, "- from unicode length low bit\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_LENGTH_MASK & (Mapping::FROM_UNICODE_LENGTH_MASK << 1))
+			fprintf(stderr, "- from unicode length high bit\n");
+		if (used_from_unicode_flags & Mapping::FROM_UNICODE_VARIANT)
+			fprintf(stderr, "- from unicode variant flags\n");
+
+		if (used_to_unicode_flags & Mapping::TO_UNICODE_FALLBACK)
+			fprintf(stderr, "- to unicode fallback flags\n");
+		if (used_to_unicode_flags & Mapping::TO_UNICODE_MULTI_START)
+			fprintf(stderr, "- to unicode M:N mappings flags\n");
+		if (used_to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE)
+			fprintf(stderr, "- to unicode private use flags\n");
+		if (used_to_unicode_flags & Mapping::TO_UNICODE_VARIANT)
+			fprintf(stderr, "- to unicode variant flags\n");
 	}
 
 	best_size = INT_MAX;
@@ -290,9 +281,9 @@ void Ucm::calculate_item_costs(void) {
 		}
 	}
 
-	if (from_unicode_flags_save != 0)
+	if (used_from_unicode_flags != 0)
 		flags |= FROM_UNICODE_FLAGS_TABLE_INCLUDED;
-	if (to_unicode_flags_save != 0)
+	if (used_to_unicode_flags != 0)
 		flags |= TO_UNICODE_FLAGS_TABLE_INCLUDED;
 	if (!multi_mappings.empty())
 		flags |= MULTI_MAPPINGS_AVAILABLE;

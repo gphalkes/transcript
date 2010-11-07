@@ -79,6 +79,7 @@ typedef struct {
 typedef struct flags_t {
 	uint8_t *flags;
 	uint16_t *indices;
+	uint8_t *bits2flags;
 	uint8_t (*get_flags)(const struct flags_t *flags, uint_fast32_t idx);
 	uint8_t default_flags;
 } flags_t;

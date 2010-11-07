@@ -249,6 +249,34 @@ next_char:;
 	return true;
 }
 
+int popcount(int x) {
+	int result = 0;
+	while (x) {
+		result++;
+		x &= x - 1;
+	}
+	return result;
+}
+
+uint8_t create_mask(uint8_t used_flags) {
+	int bits = popcount(used_flags);
+	int i;
+
+	if (bits == 1 || bits == 2 || bits == 4 || bits == 8)
+		return used_flags;
+
+	/* Two possible cases left: bits == 5-7, or bits == 3. */
+	if (bits > 4)
+		return 0xff;
+
+	/* Bits == 3: pick the first bit that is not set in used_flags to make it 4. */
+	for (i = 0; i < 8; i++) {
+		if (!(used_flags & (1 << i)))
+			break;
+	}
+	return used_flags | (1 << i);
+}
+
 
 int main(int argc, char *argv[]) {
 	FILE *output;
