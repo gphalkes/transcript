@@ -15,6 +15,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <arpa/inet.h>
+#include <algorithm>
 #include "ucm2cct.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
@@ -562,4 +563,38 @@ void Ucm::add_variant(Variant *_variant) {
 		if (_variant->id == (*iter)->id)
 			fatal("%s:%d: Multiple _variants with the same ID specified\n", file_name, line_number);
 	variants.push_back(_variant);
+}
+
+void Ucm::dump(void) {
+	if (tag_values[CODE_SET_NAME] != NULL)
+		printf("<code_set_name>\t\"%s\"\n", tag_values[CODE_SET_NAME]);
+	if (tag_values[UCONV_CLASS] != NULL)
+		printf("<uconv_class>\t\"%s\"\n", tag_values[UCONV_CLASS]);
+	if (tag_values[SUBCHAR] != NULL)
+		printf("<subchar>\t\"%s\"\n", tag_values[SUBCHAR]);
+	if (tag_values[SUBCHAR1] != NULL)
+		printf("<subchar1>\t\"%s\"\n", tag_values[SUBCHAR1]);
+	if (tag_values[MB_MAX] != NULL)
+		printf("<mb_cur_max>\t\"%s\"\n", tag_values[MB_MAX]);
+	if (tag_values[MB_MIN] != NULL)
+		printf("<mb_cur_min>\t\"%s\"\n", tag_values[MB_MIN]);
+	if (tag_values[CHARSET_FAMILY] != NULL)
+		printf("<charset_family>\t\"%s\"\n", tag_values[CHARSET_FAMILY]);
+	if (tag_values[_INTERNAL] != NULL && variants.size() < 2)
+		printf("<cct:internal>\t\"%s\"\n", tag_values[_INTERNAL]);
+
+	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
+	sort(multi_mappings.begin(), multi_mappings.end(), compare_codepoints);
+	printf("\nCHARMAP\n");
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
+		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
+
+	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
+		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
+	printf("END CHARMAP\n");
+
+	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+		printf("\n");
+		(*iter)->dump();
+	}
 }

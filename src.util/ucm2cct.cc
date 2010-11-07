@@ -86,6 +86,7 @@ void parse_byte_sequence(char *charseq, vector<uint8_t> &store) {
 
 static void print_usage(void) {
 	printf("Usage: ucm2ctt [<options>] <ucm file>+\n"
+		"  -D                  Dump a ucm file representing the input\n"
 		"  -h                  Display this help message\n"
 		"  -i                  The ucm file is an internal use table\n"
 		"  -o <output>         Specify the output file name\n"
@@ -279,12 +280,13 @@ uint8_t create_mask(uint8_t used_flags) {
 
 
 int main(int argc, char *argv[]) {
+	bool option_dump = false;
 	FILE *output;
 	vector<Ucm *> ucms;
 	Ucm *ucm;
 	int c;
 
-	while ((c = getopt(argc, argv, "hio:v" NO_ABORT_OPTION)) != -1) {
+	while ((c = getopt(argc, argv, "hio:vD" NO_ABORT_OPTION)) != -1) {
 		switch (c) {
 			case 'h':
 				print_usage();
@@ -296,6 +298,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'v':
 				option_verbose = true;
+				break;
+			case 'D':
+				option_dump = true;
 				break;
 #ifdef DEBUG
 			case 'a':
@@ -358,6 +363,12 @@ int main(int argc, char *argv[]) {
 		ucms.clear();
 	}
 	ucm->calculate_item_costs();
+
+	if (option_dump) {
+		ucm->dump();
+		exit(EXIT_SUCCESS);
+	}
+
 
 	ucm->minimize_state_machines();
 

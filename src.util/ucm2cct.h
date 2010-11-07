@@ -255,6 +255,8 @@ class Ucm : public UcmBase {
 		void fixup_variants(void);
 		void merge_variants(Ucm *other);
 		void variants_done(void);
+
+		void dump(void);
 };
 
 extern "C" int line_number;
