@@ -639,7 +639,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	retval->nr_multi_mappings = ptr->nr_multi_mappings;
 	if (variant != NULL) {
 		retval->variant = variant;
-		if (retval->nr_multi_mappings != 0) {
+		if (variant->nr_multi_mappings != 0) {
 			retval->codepage_sorted_multi_mappings = variant->codepage_sorted_multi_mappings;
 			retval->codepoint_sorted_multi_mappings = variant->codepoint_sorted_multi_mappings;
 			retval->nr_multi_mappings += variant->nr_multi_mappings;

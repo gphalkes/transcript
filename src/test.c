@@ -3,6 +3,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <strings.h>
+#include <string.h>
 
 #include "charconv.h"
 #include "utf.h"
@@ -90,6 +91,7 @@ int main(int argc, char *argv[]) {
 		}
 		if (option_dump || (dir == TO && utf_type == CHARCONV_UTF8))
 			printf("%.*s", (int) (1024 - outleft), outbuf);
+		memmove(inbuf, inbuf_ptr, fill);
 	}
 	putchar('\n');
 	return 0;
