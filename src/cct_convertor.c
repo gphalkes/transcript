@@ -477,71 +477,62 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 		idx += entry->base + (byte - entry->low) * entry->mul;
 
 
-		switch (entry->action) {
-			case ACTION_FINAL:
-			case ACTION_FINAL_PAIR:
-				conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
-				if ((conv_flags & FROM_UNICODE_MULTI_START) &&
-						(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
-				{
-					switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags)) {
-						case CHARCONV_SUCCESS:
-							_inbuf = (uint8_t *) *inbuf;
-							_inbytesleft = *inbytesleft;
-							if (flags & CHARCONV_SINGLE_CONVERSION)
-								return CHARCONV_SUCCESS;
-							continue;
-						case CHARCONV_INCOMPLETE:
-							return CHARCONV_INCOMPLETE;
-						case CHARCONV_INTERNAL_ERROR:
-						default:
-							return CHARCONV_INTERNAL_ERROR;
-						case CHARCONV_NO_SPACE:
-							return CHARCONV_NO_SPACE;
-						case -1:
-							break;
-					}
+		if (entry->action == ACTION_FINAL) {
+			conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
+			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
+					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+			{
+				switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags)) {
+					case CHARCONV_SUCCESS:
+						_inbuf = (uint8_t *) *inbuf;
+						_inbytesleft = *inbytesleft;
+						if (flags & CHARCONV_SINGLE_CONVERSION)
+							return CHARCONV_SUCCESS;
+						continue;
+					case CHARCONV_INCOMPLETE:
+						return CHARCONV_INCOMPLETE;
+					case CHARCONV_INTERNAL_ERROR:
+					default:
+						return CHARCONV_INTERNAL_ERROR;
+					case CHARCONV_NO_SPACE:
+						return CHARCONV_NO_SPACE;
+					case -1:
+						break;
 				}
+			}
 
-				bytes = &handle->convertor->unicode_mappings[idx * handle->convertor->single_size];
-				if (conv_flags & FROM_UNICODE_VARIANT)
-					find_from_unicode_variant(handle->variant, codepoint, &conv_flags, &bytes);
+			bytes = &handle->convertor->unicode_mappings[idx * handle->convertor->single_size];
+			if (conv_flags & FROM_UNICODE_VARIANT)
+				find_from_unicode_variant(handle->variant, codepoint, &conv_flags, &bytes);
 
-				if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
-					return CHARCONV_FALLBACK;
+			if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
+				return CHARCONV_FALLBACK;
 
-				if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
-					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-						return CHARCONV_UNASSIGNED;
-					if (conv_flags & FROM_UNICODE_SUBCHAR1)
-						PUT_BYTES(1, &handle->convertor->subchar1);
-					else
-						PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
-				} else {
-					PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
-				}
-				goto sequence_done;
-			case ACTION_ILLEGAL:
-				if (!(flags & CHARCONV_SUBST_ILLEGAL))
-					return CHARCONV_ILLEGAL;
-				PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
-				goto sequence_done;
-			case ACTION_UNASSIGNED:
+			if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
 				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 					return CHARCONV_UNASSIGNED;
-				PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
-				/* FALLTHROUGH */
-			sequence_done:
-				*inbuf = (char *) _inbuf;
-				*inbytesleft = _inbytesleft;
-				if (flags & CHARCONV_SINGLE_CONVERSION)
-					return CHARCONV_SUCCESS;
-				break;
-			case ACTION_VALID:
-			case ACTION_SHIFT:
-			default:
-				return CHARCONV_INTERNAL_ERROR;
+				if (conv_flags & FROM_UNICODE_SUBCHAR1)
+					PUT_BYTES(1, &handle->convertor->subchar1);
+				else
+					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+			} else {
+				PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
+			}
+		} else if (entry->action == ACTION_ILLEGAL) {
+			if (!(flags & CHARCONV_SUBST_ILLEGAL))
+				return CHARCONV_ILLEGAL;
+			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+		} else if (entry->action == ACTION_UNASSIGNED) {
+			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+				return CHARCONV_UNASSIGNED;
+			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+		} else {
+			return CHARCONV_INTERNAL_ERROR;
 		}
+		*inbuf = (char *) _inbuf;
+		*inbytesleft = _inbytesleft;
+		if (flags & CHARCONV_SINGLE_CONVERSION)
+			return CHARCONV_SUCCESS;
 	}
 
 	if (*inbytesleft != 0) {
