@@ -366,6 +366,7 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 				sum += (high - states[idx].entries[i].low) * states[idx].entries[i].mul;
 				break;
 			case ACTION_FINAL_PAIR:
+				states[idx].entries[i].action = ACTION_FINAL;
 				states[idx].entries[i].mul = 2;
 				goto action_final_shared;
 			case ACTION_FINAL:

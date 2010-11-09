@@ -103,120 +103,109 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 		_inbuf++;
 		_inbytesleft--;
 
-		switch (entry->action) {
-			case ACTION_FINAL:
-			case ACTION_FINAL_PAIR:
-				conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
-				if ((conv_flags & TO_UNICODE_MULTI_START) &&
-						(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
-				{
-					size_t outbytesleft_tmp, check_len;
-					uint_fast32_t i, j;
-					char *outbuf_tmp;
-					int result;
+		if (entry->action == ACTION_FINAL) {
+			conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
+			if ((conv_flags & TO_UNICODE_MULTI_START) &&
+					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+			{
+				size_t outbytesleft_tmp, check_len;
+				uint_fast32_t i, j;
+				char *outbuf_tmp;
+				int result;
 
-					/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
-					   check the longer mappings. This way we always find the longest match. */
+				/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
+				   check the longer mappings. This way we always find the longest match. */
 
-					for (i = 0; i < handle->nr_multi_mappings; i++) {
-						check_len = min(handle->codepage_sorted_multi_mappings[i]->bytes_length, *inbytesleft);
+				for (i = 0; i < handle->nr_multi_mappings; i++) {
+					check_len = min(handle->codepage_sorted_multi_mappings[i]->bytes_length, *inbytesleft);
 
-						if (memcmp(handle->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
-							continue;
-
-						if (check_len != handle->codepage_sorted_multi_mappings[i]->bytes_length) {
-							if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
-								continue;
-							return CHARCONV_INCOMPLETE;
-						}
-
-						outbuf_tmp = *outbuf;
-						outbytesleft_tmp = *outbytesleft;
-						for (j = 0; j < handle->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
-							codepoint = handle->codepage_sorted_multi_mappings[i]->codepoints[j];
-							if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
-								j++;
-								codepoint -= UINT32_C(0xd800);
-								codepoint <<= 10;
-								codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
-								codepoint += 0x10000;
-							}
-							if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
-								return result;
-						}
-						*outbuf = outbuf_tmp;
-						*outbytesleft = outbytesleft_tmp;
-
-						handle->state.to = state = entry->next_state;
-						*inbuf = (char *) _inbuf;
-						check_len = (*inbytesleft) - check_len;
-						*inbytesleft = _inbytesleft;
-						while (*inbytesleft > check_len)
-							if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
-								return CHARCONV_INTERNAL_ERROR;
-						idx = handle->convertor->codepage_states[handle->state.to].base;
-						if (flags & CHARCONV_SINGLE_CONVERSION)
-							return CHARCONV_SUCCESS;
-						break;
-					}
-					if (i != handle->nr_multi_mappings)
+					if (memcmp(handle->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
 						continue;
-				}
 
-				codepoint = handle->convertor->codepage_mappings[idx];
-				if (conv_flags & TO_UNICODE_VARIANT) {
-					find_to_unicode_variant(handle->variant, (uint8_t *) *inbuf, *inbytesleft - _inbytesleft,
-						&conv_flags, &codepoint);
-				}
-
-				if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
-					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-						return CHARCONV_PRIVATE_USE;
-					PUT_UNICODE(UINT32_C(0xfffd));
-					goto sequence_done;
-				}
-				if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
-					return CHARCONV_FALLBACK;
-
-				if (codepoint == UINT32_C(0xffff)) {
-					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-						return CHARCONV_UNASSIGNED;
-					PUT_UNICODE(UINT32_C(0xfffd));
-				} else {
-					if (entry->action == ACTION_FINAL_PAIR && (codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
-						codepoint -= UINT32_C(0xd800);
-						codepoint <<= 10;
-						codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
-						codepoint += 0x10000;
+					if (check_len != handle->codepage_sorted_multi_mappings[i]->bytes_length) {
+						if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
+							continue;
+						return CHARCONV_INCOMPLETE;
 					}
-					PUT_UNICODE(codepoint);
+
+					outbuf_tmp = *outbuf;
+					outbytesleft_tmp = *outbytesleft;
+					for (j = 0; j < handle->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
+						codepoint = handle->codepage_sorted_multi_mappings[i]->codepoints[j];
+						if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+							j++;
+							codepoint -= UINT32_C(0xd800);
+							codepoint <<= 10;
+							codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
+							codepoint += 0x10000;
+						}
+						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
+							return result;
+					}
+					*outbuf = outbuf_tmp;
+					*outbytesleft = outbytesleft_tmp;
+
+					handle->state.to = state = entry->next_state;
+					*inbuf = (char *) _inbuf;
+					check_len = (*inbytesleft) - check_len;
+					*inbytesleft = _inbytesleft;
+					while (*inbytesleft > check_len)
+						if (to_unicode_skip(handle, inbuf, inbytesleft) != 0)
+							return CHARCONV_INTERNAL_ERROR;
+					idx = handle->convertor->codepage_states[handle->state.to].base;
+					if (flags & CHARCONV_SINGLE_CONVERSION)
+						return CHARCONV_SUCCESS;
+					break; /* Break from multi-mapping search. */
 				}
-				goto sequence_done;
-			case ACTION_VALID:
-				state = entry->next_state;
-				break;
-			case ACTION_ILLEGAL:
-				if (!(flags & CHARCONV_SUBST_ILLEGAL))
-					return CHARCONV_ILLEGAL;
+				if (i != handle->nr_multi_mappings)
+					continue;
+			}
+
+			codepoint = handle->convertor->codepage_mappings[idx];
+			if (conv_flags & TO_UNICODE_VARIANT) {
+				find_to_unicode_variant(handle->variant, (uint8_t *) *inbuf, *inbytesleft - _inbytesleft,
+					&conv_flags, &codepoint);
+			}
+
+			if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
+				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+					return CHARCONV_PRIVATE_USE;
 				PUT_UNICODE(UINT32_C(0xfffd));
-				goto sequence_done;
-			case ACTION_UNASSIGNED:
+			} else if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK)) {
+				return CHARCONV_FALLBACK;
+			} else if (codepoint == UINT32_C(0xffff)) {
 				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 					return CHARCONV_UNASSIGNED;
 				PUT_UNICODE(UINT32_C(0xfffd));
-				/* FALLTHROUGH */
-			case ACTION_SHIFT:
-			sequence_done:
-				*inbuf = (char *) _inbuf;
-				*inbytesleft = _inbytesleft;
-				handle->state.to = state = entry->next_state;
-				idx = handle->convertor->codepage_states[handle->state.to].base;
-				if (flags & CHARCONV_SINGLE_CONVERSION)
-					return CHARCONV_SUCCESS;
-				break;
-			default:
-				return CHARCONV_INTERNAL_ERROR;
+			} else {
+				if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+					codepoint -= UINT32_C(0xd800);
+					codepoint <<= 10;
+					codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
+					codepoint += 0x10000;
+				}
+				PUT_UNICODE(codepoint);
+			}
+		} else if (entry->action == ACTION_VALID) {
+			state = entry->next_state;
+			continue;
+		} else if (entry->action == ACTION_ILLEGAL) {
+			if (!(flags & CHARCONV_SUBST_ILLEGAL))
+				return CHARCONV_ILLEGAL;
+			PUT_UNICODE(UINT32_C(0xfffd));
+		} else if (entry->action == ACTION_UNASSIGNED) {
+			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+				return CHARCONV_UNASSIGNED;
+			PUT_UNICODE(UINT32_C(0xfffd));
+		} else if (entry->action != ACTION_SHIFT) {
+			return CHARCONV_INTERNAL_ERROR;
 		}
+		*inbuf = (char *) _inbuf;
+		*inbytesleft = _inbytesleft;
+		handle->state.to = state = entry->next_state;
+		idx = handle->convertor->codepage_states[handle->state.to].base;
+		if (flags & CHARCONV_SINGLE_CONVERSION)
+			return CHARCONV_SUCCESS;
 	}
 
 	if (*inbytesleft != 0) {
