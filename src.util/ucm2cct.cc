@@ -118,9 +118,11 @@ void print_state_machine(const vector<State *> &states) {
 				printf(":%x", states[i]->entries[j].next_state);
 
 			switch (states[i]->entries[j].action) {
+				case ACTION_FINAL_NOFLAGS:
 				case ACTION_FINAL:
 					putchar('.');
 					break;
+				case ACTION_FINAL_PAIR_NOFLAGS:
 				case ACTION_FINAL_PAIR:
 					printf(".p");
 					break;
@@ -175,9 +177,11 @@ static void update_state_attributes(vector<State *> &states, size_t idx) {
 				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) *
 					states[idx]->entries[i].mul;
 				break;
+			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_FINAL_PAIR:
 				states[idx]->entries[i].mul = 2;
 				goto action_final_shared;
+			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL:
 				states[idx]->entries[i].mul = 1;
 			action_final_shared:
@@ -236,6 +240,8 @@ uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int 
 				case ACTION_VALID:
 					state = states[state]->entries[j].next_state;
 					goto next_char;
+				case ACTION_FINAL_PAIR_NOFLAGS:
+				case ACTION_FINAL_NOFLAGS:
 				case ACTION_FINAL_PAIR:
 				case ACTION_FINAL:
 					return value;

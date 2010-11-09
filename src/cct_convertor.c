@@ -103,7 +103,21 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 		_inbuf++;
 		_inbytesleft--;
 
-		if (entry->action == ACTION_FINAL) {
+		if (entry->action == ACTION_FINAL_NOFLAGS) {
+			PUT_UNICODE(handle->convertor->codepage_mappings[idx]);
+		} else if (entry->action == ACTION_VALID) {
+			state = entry->next_state;
+			continue;
+		} else if (entry->action == ACTION_FINAL_PAIR_NOFLAGS) {
+			codepoint = handle->convertor->codepage_mappings[idx];
+			if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+				codepoint -= UINT32_C(0xd800);
+				codepoint <<= 10;
+				codepoint += handle->convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
+				codepoint += 0x10000;
+			}
+			PUT_UNICODE(codepoint);
+		} else if (entry->action == ACTION_FINAL) {
 			conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
 			if ((conv_flags & TO_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
@@ -186,9 +200,6 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 				}
 				PUT_UNICODE(codepoint);
 			}
-		} else if (entry->action == ACTION_VALID) {
-			state = entry->next_state;
-			continue;
 		} else if (entry->action == ACTION_ILLEGAL) {
 			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL;

@@ -34,7 +34,9 @@ enum action_t {
 	ACTION_VALID,
 	ACTION_UNASSIGNED,
 	ACTION_SHIFT,
-	ACTION_ILLEGAL
+	ACTION_ILLEGAL,
+	ACTION_FINAL_NOFLAGS,
+	ACTION_FINAL_PAIR_NOFLAGS
 };
 
 struct Entry {
@@ -182,8 +184,9 @@ class Ucm : public UcmBase {
 					iterating_simple_mappings(true), idx(0) {}
 				virtual const vector<State *> &get_state_machine(void) = 0;
 				virtual void replace_state_machine(vector<State *> &states) = 0;
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) = 0;
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) = 0;
 				virtual double get_single_cost(void) = 0;
+				virtual bool unassigned_needs_flags(void) = 0;
 		};
 
 	private:
@@ -218,8 +221,9 @@ class Ucm : public UcmBase {
 				CodepageBytesStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags);
 				virtual double get_single_cost(void);
+				virtual bool unassigned_needs_flags(void);
 		};
 
 		class UnicodeStateMachineInfo : public StateMachineInfo {
@@ -227,8 +231,9 @@ class Ucm : public UcmBase {
 				UnicodeStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags);
 				virtual double get_single_cost(void);
+				virtual bool unassigned_needs_flags(void);
 		};
 
 	public:

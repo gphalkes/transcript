@@ -471,7 +471,7 @@ void Ucm::CodepageBytesStateMachineInfo::replace_state_machine(vector<State *> &
 	source.codepage_states = states;
 }
 
-bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) {
 	vector<Mapping *> *mappings;
 
 	while (1) {
@@ -486,6 +486,8 @@ bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t
 			copy((*mappings)[idx]->codepage_bytes.begin(), (*mappings)[idx]->codepage_bytes.end(), bytes);
 			length = (*mappings)[idx]->codepage_bytes.size();
 			pair = iterating_simple_mappings ? (*mappings)[idx]->codepoints[0] > UINT32_C(0xffff) : false;
+			has_flags = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end() ||
+				((*mappings)[idx]->to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE) != 0;
 			idx++;
 			return true;
 		}
@@ -504,6 +506,10 @@ double Ucm::CodepageBytesStateMachineInfo::get_single_cost(void) {
 	return source.to_flag_costs + 2;
 }
 
+bool Ucm::CodepageBytesStateMachineInfo::unassigned_needs_flags(void) {
+	return false;
+}
+
 const vector<State *> &Ucm::UnicodeStateMachineInfo::get_state_machine(void) {
 	return source.unicode_states;
 }
@@ -516,7 +522,7 @@ void Ucm::UnicodeStateMachineInfo::replace_state_machine(vector<State *> &states
 	source.unicode_states = states;
 }
 
-bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair) {
+bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) {
 	vector<Mapping *> *mappings;
 	uint32_t codepoint;
 
@@ -540,6 +546,8 @@ bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &leng
 
 			pair = iterating_simple_mappings ?
 				(*mappings)[idx]->codepage_bytes.size() > (size_t) source.single_bytes : false;
+			//has_flags = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end();
+			has_flags = true; // Length flags must always be stored for now
 			idx++;
 			return true;
 		}
@@ -556,6 +564,10 @@ bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &leng
 
 double Ucm::UnicodeStateMachineInfo::get_single_cost(void) {
 	return source.from_flag_costs + source.single_bytes;
+}
+
+bool Ucm::UnicodeStateMachineInfo::unassigned_needs_flags(void) {
+	return true;
 }
 
 void Ucm::add_variant(Variant *_variant) {

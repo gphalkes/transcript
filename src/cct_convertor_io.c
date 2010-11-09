@@ -367,8 +367,10 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 				break;
 			case ACTION_FINAL_PAIR:
 				states[idx].entries[i].action = ACTION_FINAL;
+			case ACTION_FINAL_PAIR_NOFLAGS:
 				states[idx].entries[i].mul = 2;
 				goto action_final_shared;
+			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL:
 				states[idx].entries[i].mul = 1;
 			action_final_shared:

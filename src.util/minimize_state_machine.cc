@@ -107,20 +107,31 @@ static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail
 	return current;
 }
 
-static void mark_entry(full_state_t *start, unsigned char *bytes, int length, bool pair) {
+static void mark_entry(full_state_t *start, unsigned char *bytes, int length, bool pair, bool has_flags) {
 	switch (start->entries[*bytes].action) {
 		case ACTION_VALID:
 			if (length == 1)
 				PANIC();
-			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, pair);
+			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, pair, has_flags);
 			return;
+		case ACTION_FINAL_NOFLAGS:
 		case ACTION_UNASSIGNED:
+			if (has_flags)
+				start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
+			else
+				start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR_NOFLAGS : ACTION_FINAL_NOFLAGS;
+			break;
 		case ACTION_FINAL:
-			start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
+			if (pair)
+				start->entries[*bytes].action = ACTION_FINAL_PAIR;
 			return;
 		/* Already marked as pair. Marking will not change this. */
 		case ACTION_FINAL_PAIR:
 			return;
+		case ACTION_FINAL_PAIR_NOFLAGS:
+			if (has_flags)
+				start->entries[*bytes].action = ACTION_FINAL_PAIR;
+			break;
 		default:
 			PANIC();
 	}
@@ -150,10 +161,14 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 				if (a->entries[i].next_state != b->entries[i].next_state)
 					return false;
 				break;
+			case ACTION_FINAL_PAIR_NOFLAGS:
+			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL_PAIR:
 			case ACTION_FINAL:
 			case ACTION_UNASSIGNED:
 				switch (b->entries[i].action) {
+					case ACTION_FINAL_PAIR_NOFLAGS:
+					case ACTION_FINAL_NOFLAGS:
 					case ACTION_FINAL_PAIR:
 					case ACTION_FINAL:
 					case ACTION_UNASSIGNED:
@@ -188,9 +203,11 @@ static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info
 			case ACTION_SHIFT:
 			case ACTION_UNASSIGNED:
 				break;
+			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_FINAL_PAIR:
 				cost += (double) state->count * 2.0 * info->get_single_cost();
 				break;
+			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL:
 				cost += (double) state->count * info->get_single_cost();
 				break;
@@ -213,14 +230,36 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b, Ucm::StateMach
 		switch (a->entries[i].action) {
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:
+			case ACTION_FINAL_PAIR_NOFLAGS:
+				if (b->entries[i].action == ACTION_FINAL || b->entries[i].action == ACTION_FINAL_PAIR ||
+						(b->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags()))
+					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
+				break;
 			case ACTION_FINAL_PAIR:
 				break;
-			case ACTION_FINAL:
+			case ACTION_FINAL_NOFLAGS:
 				if (b->entries[i].action == ACTION_FINAL_PAIR)
+					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
+				else if (b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
+					tmp_state.entries[i].action = ACTION_FINAL_PAIR_NOFLAGS;
+				else if (b->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags())
+					tmp_state.entries[i].action = ACTION_FINAL;
+				break;
+			case ACTION_FINAL:
+				if (b->entries[i].action == ACTION_FINAL_PAIR || b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
 					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
 				break;
 			case ACTION_UNASSIGNED:
-				tmp_state.entries[i].action = b->entries[i].action;
+				if (info->unassigned_needs_flags()) {
+					if (b->entries[i].action == ACTION_FINAL_NOFLAGS)
+						tmp_state.entries[i].action = ACTION_FINAL;
+					else if (b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
+						tmp_state.entries[i].action = ACTION_FINAL_PAIR;
+					else
+						tmp_state.entries[i].action = b->entries[i].action;
+				} else {
+					tmp_state.entries[i].action = b->entries[i].action;
+				}
 				break;
 			default:
 				PANIC();
@@ -247,16 +286,36 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:
 				break;
+			case ACTION_FINAL_PAIR_NOFLAGS:
+				if (right->entries[i].action == ACTION_FINAL || right->entries[i].action == ACTION_FINAL_PAIR ||
+						(right->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags()))
+					left->entries[i].action = ACTION_FINAL_PAIR;
+				break;
 			case ACTION_FINAL_PAIR:
-			case ACTION_FINAL:
+				break;
+			case ACTION_FINAL_NOFLAGS:
 				if (right->entries[i].action == ACTION_FINAL_PAIR)
+					left->entries[i].action = ACTION_FINAL_PAIR;
+				else if (right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
+					left->entries[i].action = ACTION_FINAL_PAIR_NOFLAGS;
+				else if (right->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags())
+					left->entries[i].action = ACTION_FINAL;
+				break;
+			case ACTION_FINAL:
+				if (right->entries[i].action == ACTION_FINAL_PAIR || right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
 					left->entries[i].action = ACTION_FINAL_PAIR;
 				break;
 			case ACTION_UNASSIGNED:
-				if (right->entries[i].action == ACTION_FINAL)
-					left->entries[i].action = ACTION_FINAL;
-				if (right->entries[i].action == ACTION_FINAL_PAIR)
-					left->entries[i].action = ACTION_FINAL_PAIR;
+				if (info->unassigned_needs_flags()) {
+					if (right->entries[i].action == ACTION_FINAL_NOFLAGS)
+						left->entries[i].action = ACTION_FINAL;
+					else if (right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
+						left->entries[i].action = ACTION_FINAL_PAIR;
+					else
+						left->entries[i].action = right->entries[i].action;
+				} else {
+					left->entries[i].action = right->entries[i].action;
+				}
 				break;
 			case ACTION_VALID:
 				break;
@@ -376,7 +435,7 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
 
 	uint8_t bytes[31];
 	size_t length;
-	bool is_pair;
+	bool is_pair, has_flags;
 	int state;
 
 
@@ -412,9 +471,9 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
 	nr_initial_states = nr_serialized_states;
 
 	// Mark all used entries
-	while (info->get_next_byteseq(bytes, length, is_pair)) {
+	while (info->get_next_byteseq(bytes, length, is_pair, has_flags)) {
 		state = (flags & Ucm::MULTIBYTE_START_STATE_1) && length > 1 ? 1 : 0;
-		mark_entry(initial_states[state].full_state, bytes, length, is_pair);
+		mark_entry(initial_states[state].full_state, bytes, length, is_pair, has_flags);
 	}
 
 	minimize_states(head, &tail, info);
