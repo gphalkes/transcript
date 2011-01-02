@@ -100,6 +100,7 @@ int main(int argc, char *argv[]) {
 			printf("%.*s", (int) (outbuf_ptr - outbuf), outbuf);
 		memmove(inbuf, inbuf_ptr, fill);
 	}
-	putchar('\n');
+	if (!option_dump && dir == TO && utf_type == CHARCONV_UTF8)
+		putchar('\n');
 	return 0;
 }

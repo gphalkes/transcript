@@ -515,6 +515,9 @@ next_codepoint:
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
+
+	if (flags & CHARCONV_END_OF_TEXT)
+		SWITCH_TO_SET(handle->ascii, 0);
 	return CHARCONV_SUCCESS;
 }
 
