@@ -30,6 +30,7 @@ per set:
 enum {
 	CCT_FLAG_WRITE = (1<<0),
 	CCT_FLAG_ASCII = (1<<1),
+	CCT_FLAGS_DUPCCT = (1<<5),
 	CCT_FLAGS_SHORT_SEQ = (1<<6),
 	CCT_FLAG_LARGE_SET = (1<<7)
 };
@@ -538,11 +539,12 @@ static void reset_state_cn(convertor_state_t *handle) {
 	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
 };
 
-static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags)
-{
+static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
 	cct_handle_t *cct_handle, *extra_handle;
 	charconv_t *ext_handle;
 	uint_fast8_t idx = 0;
+
+	printf("table: %s\n", desc->name);
 
 	flags |= desc->flags;
 
@@ -594,6 +596,7 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 			cct_handle->flags &= ~(CCT_FLAG_WRITE);
 		else
 			extra_handle->flags &= ~(CCT_FLAG_WRITE);
+		extra_handle->flags |= CCT_FLAGS_DUPCCT;
 		extra_handle->next = handle->g_sets[g];
 		handle->g_sets[g] = extra_handle;
 	}
@@ -783,12 +786,14 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 }
 
 static void close_convertor(convertor_state_t *handle) {
-	cct_handle_t *ptr;
+	cct_handle_t *ptr, *next;
 	size_t i;
 
 	for (i = 0; i < 4; i++) {
-		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-			charconv_close_convertor(ptr->cct);
+		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = next) {
+			if (!(ptr->flags & CCT_FLAGS_DUPCCT))
+				charconv_close_convertor(ptr->cct);
+			next = ptr->next;
 			free(ptr);
 		}
 	}
