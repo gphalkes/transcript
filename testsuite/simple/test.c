@@ -19,13 +19,14 @@ void fatal(const char *fmt, ...) {
 int main(int argc, char *argv[]) {
 	charconv_error_t error;
 	void *conv;
-	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
+	char inbuf[1024], outbuf[1024], *outbuf_ptr;
+	const char *inbuf_ptr;
 	size_t i;
-	size_t fill = 0, outleft;
+	size_t fill = 0;
 
 	int c;
 	enum { FROM, TO } dir = FROM;
-	charconv_error_t (*convert)(charconv_t *, char **, size_t *, char **, size_t *, int) = charconv_from_unicode;
+	charconv_error_t (*convert)(charconv_t *, const char **, const char *, char **, const char *, int) = charconv_from_unicode;
 	int utf_type = CHARCONV_UTF8;
 	int option_dump = 0;
 	int flags = CHARCONV_FILE_START;
@@ -81,12 +82,12 @@ int main(int argc, char *argv[]) {
 			fill++;
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
-		outleft = 1024;
-		if ((error = convert(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, flags | (feof(stdin) ? CHARCONV_END_OF_TEXT : 0))) != CHARCONV_SUCCESS)
+		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
 			fatal("conversion result: %s\n", charconv_strerror(error));
-		for (i = 0; i < 1024 - outleft; i++)
+		for (i = 0; i < (size_t) (outbuf_ptr - outbuf); i++)
 			printf("%02X", (uint8_t) outbuf[i]);
 		putchar('\n');
+		fill -= (inbuf_ptr - inbuf);
 		memmove(inbuf, inbuf_ptr, fill);
 		flags &= ~CHARCONV_FILE_START;
 	} while (!feof(stdin));
