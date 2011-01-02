@@ -172,7 +172,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 
 			codepoint = handle->convertor->codepage_mappings[idx];
 			if (conv_flags & TO_UNICODE_VARIANT) {
-				find_to_unicode_variant(handle->variant, (const uint8_t *) *inbuf, inbuflimit - *inbuf,
+				find_to_unicode_variant(handle->variant, (const uint8_t *) *inbuf, (const char *) _inbuf - *inbuf,
 					&conv_flags, &codepoint);
 			}
 
