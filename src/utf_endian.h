@@ -55,7 +55,7 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 	if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
 		/* Codepoint is high surrogate. */
-		if (*inbytesleft < 2)
+		if (*inbytesleft < 4)
 			return CHARCONV_UTF_INCOMPLETE;
 
 		next_codepoint = ALT(swaps)(((uint16_t *) *inbuf)[1]);
