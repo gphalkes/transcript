@@ -77,21 +77,28 @@ int main(int argc, char *argv[]) {
 	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening convertor: %s\n", charconv_strerror(error));
 
-	while ((result = fread(inbuf, 1, 1024 - fill, stdin)) != 0) {
+	while ((result = fread(inbuf + fill, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
-		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
-			fatal("conversion result: %s\n", charconv_strerror(error));
+		switch ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0))) {
+			case CHARCONV_SUCCESS:
+			case CHARCONV_INCOMPLETE:
+			case CHARCONV_NO_SPACE:
+				break;
+			default:
+				fatal("conversion result: %s\n", charconv_strerror(error));
+		}
+		fill -= inbuf_ptr - inbuf;
 		if (!option_dump) {
-			printf("fill: %ld, outleft: %ld\n", inbuf + fill - inbuf_ptr, outbuf + 1024 - outbuf_ptr);
+			printf("fill: %ld, outleft: %ld\n", fill, outbuf + 1024 - outbuf_ptr);
 			for (i = 0; i < (size_t) (outbuf_ptr - outbuf); i++)
 				printf("\\x%02X", (uint8_t) outbuf[i]);
 			putchar('\n');
 		}
 		if (option_dump || (dir == TO && utf_type == CHARCONV_UTF8))
 			printf("%.*s", (int) (outbuf_ptr - outbuf), outbuf);
-		memmove(inbuf, inbuf_ptr, fill - (inbuf_ptr - inbuf));
+		memmove(inbuf, inbuf_ptr, fill);
 	}
 	putchar('\n');
 	return 0;

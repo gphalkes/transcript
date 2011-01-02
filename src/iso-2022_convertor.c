@@ -161,8 +161,10 @@ static int check_escapes(convertor_state_t *handle, const char **inbuf, const ch
 	for (; (const char *) _inbuf < inbuflimit; _inbuf++) {
 		if (*_inbuf >= 0x20 && *_inbuf <= 0x2f)
 			continue;
-		if (*_inbuf >= 0x40 && *_inbuf <= 0x7f)
+		if (*_inbuf >= 0x40 && *_inbuf <= 0x7f) {
+			_inbuf++;
 			goto sequence_found;
+		}
 		if (skip)
 			*inbuf = (const char *) _inbuf - 1;
 		return CHARCONV_ILLEGAL;
@@ -180,13 +182,13 @@ sequence_found:
 	if (!skip) {
 		size_t i, len;
 
-		len = (*inbuf) - (const char *) _inbuf + 1;
+		len = (const char *) _inbuf - (*inbuf);
 		for (i = 0; i < 3; i++) {
 			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
 				if (len != ptr->seq_len)
 					continue;
 
-				if (memcmp(_inbuf - 1, ptr->escape_seq, ptr->seq_len) != 0)
+				if (memcmp(*inbuf, ptr->escape_seq, ptr->seq_len) != 0)
 					continue;
 
 				handle->state.g_to[i] = ptr;
@@ -355,7 +357,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 }
 
 #define PUT_BYTES(count, buffer) do { size_t _i, _count = count; \
-	if ((*outbuf) + _count < outbuflimit) \
+	if ((*outbuf) + _count > outbuflimit) \
 		return CHARCONV_NO_SPACE; \
 	for (_i = 0; _i < _count; _i++) \
 		(*outbuf)[_i] = buffer[_i] & 0x7f; \
@@ -543,8 +545,6 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 	cct_handle_t *cct_handle, *extra_handle;
 	charconv_t *ext_handle;
 	uint_fast8_t idx = 0;
-
-	printf("table: %s\n", desc->name);
 
 	flags |= desc->flags;
 
