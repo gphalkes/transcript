@@ -32,30 +32,29 @@ typedef struct {
 static void close_convertor(convertor_state_t *handle);
 
 
-static int put_common(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
-	return handle->common.put_unicode(codepoint, outbuf, outbytesleft);
+static int put_common(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+	return handle->common.put_unicode(codepoint, outbuf, outbuflimit);
 }
-static uint_fast32_t get_common(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
-	return handle->common.get_unicode(inbuf, inbytesleft, skip);
+static uint_fast32_t get_common(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+	return handle->common.get_unicode(inbuf, inbuflimit, skip);
 }
-static int put_from_unicode(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
-	return handle->from_unicode_put(codepoint, outbuf, outbytesleft);
+static int put_from_unicode(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+	return handle->from_unicode_put(codepoint, outbuf, outbuflimit);
 }
-static uint_fast32_t get_to_unicode(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
-	return handle->to_unicode_get(inbuf, inbytesleft, skip);
+static uint_fast32_t get_to_unicode(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+	return handle->to_unicode_get(inbuf, inbuflimit, skip);
 }
 
 
-static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags, get_func_t get_unicode, put_func_t put_unicode)
+static charconv_error_t unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags, get_func_t get_unicode, put_func_t put_unicode)
 {
 	uint_fast32_t codepoint;
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	int result;
 
-	while (*inbytesleft > 0) {
-		codepoint = get_unicode(handle, (char **) &_inbuf, &_inbytesleft, false);
+	while (*inbuf < inbuflimit) {
+		codepoint = get_unicode(handle, (const char **) &_inbuf, inbuflimit, false);
 		switch (codepoint) {
 			case CHARCONV_UTF_INTERNAL_ERROR:
 				return CHARCONV_INTERNAL_ERROR;
@@ -65,20 +64,18 @@ static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inb
 				if (flags & CHARCONV_END_OF_TEXT) {
 					if (!(flags & CHARCONV_SUBST_ILLEGAL))
 						return CHARCONV_ILLEGAL_END;
-					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbytesleft)) != 0)
+					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbuflimit)) != 0)
 						return result;
-					*inbuf -= *inbytesleft;
-					*inbytesleft = 0;
+					*inbuf = inbuflimit;
 					return CHARCONV_SUCCESS;
 				}
 				return CHARCONV_INCOMPLETE;
 			default:
 				break;
 		}
-		if ((result = put_unicode(handle, codepoint, outbuf, outbytesleft)) != 0)
+		if ((result = put_unicode(handle, codepoint, outbuf, outbuflimit)) != 0)
 			return result;
-		*inbuf = (char *) _inbuf;
-		*inbytesleft = _inbytesleft;
+		*inbuf = (const char *) _inbuf;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
@@ -86,44 +83,40 @@ static charconv_error_t unicode_conversion(convertor_state_t *handle, char **inb
 }
 
 
-static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	if (flags & CHARCONV_FILE_START) {
 		uint_fast32_t codepoint = 0;
-		uint8_t *_inbuf = (uint8_t *) *inbuf;
-		size_t _inbytesleft = *inbytesleft;
+		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 
 		if (handle->utf_type == CHARCONV_UTF32 || handle->utf_type == CHARCONV_UTF16) {
 			codepoint = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE)(
-					(char **) &_inbuf, &_inbytesleft, false);
+					(const char **) &_inbuf, inbuflimit, false);
 			if (codepoint == UINT32_C(0xFEFF)) {
 				handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE);
 			} else if (codepoint == CHARCONV_ILLEGAL) {
 				codepoint = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32LE : CHARCONV_UTF16LE)(
-						(char **) &_inbuf, &_inbytesleft, false);
+						(const char **) &_inbuf, inbuflimit, false);
 				if (codepoint == UINT32_C(0xFEFF))
 					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32LE : CHARCONV_UTF16LE);
 				else
 					handle->to_unicode_get = _charconv_get_get_unicode(handle->utf_type == CHARCONV_UTF32 ? CHARCONV_UTF32BE : CHARCONV_UTF16BE);
 			}
 		} else {
-			codepoint = handle->to_unicode_get((char **) &_inbuf, &_inbytesleft, false);
+			codepoint = handle->to_unicode_get((const char **) &_inbuf, inbuflimit, false);
 		}
 		/* Anything, including bad input, will simply not cause a pointer update,
 		   meaning that only the BOM will be ignored. */
-		if (codepoint == UINT32_C(0xFEFF)) {
-			*inbuf = (char *) _inbuf;
-			*inbytesleft = _inbytesleft;
-		}
+		if (codepoint == UINT32_C(0xFEFF))
+			*inbuf = (const char *) _inbuf;
 	}
 
-	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
-		handle->to_get, put_common);
+	return unicode_conversion(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags, handle->to_get, put_common);
 }
 
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->to_unicode_get(inbuf, inbytesleft, true) == CHARCONV_UTF_INCOMPLETE)
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+	if (handle->to_unicode_get(inbuf, inbuflimit, true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }
@@ -144,8 +137,8 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	if (inbuf == NULL || *inbuf == NULL)
 		return CHARCONV_SUCCESS;
@@ -155,7 +148,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 			case CHARCONV_UTF32:
 			case CHARCONV_UTF16:
 			case UTF8_BOM:
-				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbytesleft) == CHARCONV_NO_SPACE)
+				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == CHARCONV_NO_SPACE)
 					return CHARCONV_NO_SPACE;
 				break;
 			default:
@@ -163,7 +156,7 @@ static int from_unicode_conversion(convertor_state_t *handle, char **inbuf, size
 		}
 	}
 
-	return unicode_conversion(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags,
+	return unicode_conversion(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags,
 		get_common, handle->from_put);
 }
 
@@ -174,9 +167,9 @@ static void from_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->utf_type == UTF7)
-		return _charconv_from_unicode_flush_utf7(handle, outbuf, outbytesleft);
+		return _charconv_from_unicode_flush_utf7(handle, outbuf, outbuflimit);
 	return CHARCONV_SUCCESS;
 }
 

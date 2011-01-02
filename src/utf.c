@@ -53,9 +53,9 @@ static inline uint16_t swaps(uint16_t value) {
 	(codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff))) return CHARCONV_INTERNAL_ERROR; } while (0)
 
 
-#define CHECK_OUTBYTESLEFT(_x) if (*outbytesleft < (_x)) return CHARCONV_NO_SPACE; *outbytesleft -= (_x);
+#define CHECK_OUTBYTESLEFT(_x) if ((*outbuf) + (_x) > outbuflimit) return CHARCONV_NO_SPACE;
 
-static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -80,7 +80,7 @@ static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, size_t 
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -118,8 +118,8 @@ static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, size_t
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return CHARCONV_UTF_ILLEGAL; } while (0)
 
-static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool skip, bool strict) {
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
+static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbuflimit, bool skip, bool strict) {
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast32_t codepoint = *_inbuf, least;
 	size_t bytes;
 
@@ -141,7 +141,6 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 		case 112: case 113: case 114: case 115: case 116: case 117: case 118: case 119:
 		case 120: case 121: case 122: case 123: case 124: case 125: case 126: case 127:
 			(*inbuf)++;
-			(*inbytesleft)--;
 			return codepoint;
 		case 128: case 129: case 130: case 131: case 132: case 133: case 134: case 135:
 		case 136: case 137: case 138: case 139: case 140: case 141: case 142: case 143:
@@ -155,7 +154,6 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
 			(*inbuf)++;
-			(*inbytesleft)--;
 			return 0;
 		case 194: case 195: case 196: case 197: case 198: case 199: case 200: case 201:
 		case 202: case 203: case 204: case 205: case 206: case 207: case 208: case 209:
@@ -180,11 +178,10 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
 			(*inbuf)++;
-			(*inbytesleft)--;
 			return 0;
 	}
 
-	if (*inbytesleft < bytes)
+	if ((*inbuf) + bytes > inbuflimit)
 		return CHARCONV_UTF_INCOMPLETE;
 
 	_inbuf++;
@@ -192,7 +189,6 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 		if ((*_inbuf & 0xc0) != 0x80) {
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
-			*inbytesleft -= _inbuf - (uint8_t *) *inbuf;
 			*inbuf = (char *) inbuf;
 			return 0;
 		}
@@ -204,8 +200,7 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 		if (codepoint < least) {
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
-			*inbytesleft -= _inbuf - (uint8_t *) *inbuf;
-			*inbuf = (char *) _inbuf;
+			*inbuf = (const char *) _inbuf;
 			return 0;
 		}
 		CHECK_CODEPOINT_SURROGATES();
@@ -214,13 +209,12 @@ static uint_fast32_t get_utf8internal(char **inbuf, size_t *inbytesleft, bool sk
 	if (!skip)
 		CHECK_CODEPOINT_ILLEGAL();
 
-	*inbytesleft -= _inbuf - (uint8_t *) *inbuf;
-	*inbuf = (char *) _inbuf;
+	*inbuf = (const char *) _inbuf;
 	return codepoint;
 }
 
-static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, bool skip) {
-	return get_utf8internal(inbuf, inbytesleft, skip, true);
+static uint_fast32_t get_utf8strict(const char **inbuf, const char const *inbuflimit, bool skip) {
+	return get_utf8internal(inbuf, inbuflimit, skip, true);
 }
 
 /** Get the next UTF-8 encoded unicode codepoint from the stream.
@@ -228,18 +222,16 @@ static uint_fast32_t get_utf8strict(char **inbuf, size_t *inbytesleft, bool skip
     This version is permissive in what it accepts, in that it allows overlong
     sequences, and allows CESU-8 encoding using surrogate pairs.
 */
-static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
-	size_t _inbytesleft = *inbytesleft;
-	char *_inbuf = *inbuf;
+static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, bool skip) {
+	const char *_inbuf = *inbuf;
 	uint_fast32_t codepoint;
 
-	codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, false);
+	codepoint = get_utf8internal(&_inbuf, inbuflimit, skip, false);
 	if ((codepoint & UINT32_C(0x1ffc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
-		char *_inbuf_save = _inbuf;
-		size_t _inbytesleft_save = _inbytesleft;
+		const char *_inbuf_save = _inbuf;
 
-		next_codepoint = get_utf8internal(&_inbuf, &_inbytesleft, skip, false);
+		next_codepoint = get_utf8internal(&_inbuf, inbuflimit, skip, false);
 
 		if (next_codepoint > UINT32_C(0xffff0000))
 			return next_codepoint;
@@ -247,7 +239,6 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 		if ((next_codepoint & UINT32_C(0x1ffc00)) != UINT32_C(0xdc00)) {
 			if (!skip)
 				return CHARCONV_UTF_ILLEGAL;
-			*inbytesleft = _inbytesleft_save;
 			*inbuf = _inbuf_save;
 			return 0;
 		}
@@ -255,8 +246,7 @@ static uint_fast32_t get_utf8(char **inbuf, size_t *inbytesleft, bool skip) {
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
 	}
-	*inbuf = (char *) _inbuf;
-	*inbytesleft = _inbytesleft;
+	*inbuf = (const char const *) _inbuf;
 	return codepoint;
 }
 
@@ -331,12 +321,12 @@ get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 	}
 }
 
-uint_fast32_t _charconv_get_utf32_no_check(char **inbuf, size_t *inbytesleft, bool skip) {
-	uint_fast32_t codepoint = *(uint32_t *) *inbuf;
+uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
+	uint_fast32_t codepoint = *(const uint32_t *) *inbuf;
 
+	(void) inbuflimit;
 	(void) skip;
 
 	*inbuf += 4;
-	*inbytesleft -= 4;
 	return codepoint;
 }

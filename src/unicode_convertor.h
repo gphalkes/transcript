@@ -18,8 +18,8 @@
 
 typedef struct convertor_state_t convertor_state_t;
 
-typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
+typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip);
 
 typedef struct _charconv_unicode_state_t state_t;
 
@@ -45,11 +45,11 @@ enum {
 	UTF7_MODE_BASE64_4
 };
 
-CHARCONV_LOCAL int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-CHARCONV_LOCAL uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
-CHARCONV_LOCAL int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *inbytesleft);
+CHARCONV_LOCAL int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+CHARCONV_LOCAL uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
+CHARCONV_LOCAL int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit);
 
-CHARCONV_LOCAL int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-CHARCONV_LOCAL uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip);
+CHARCONV_LOCAL int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+CHARCONV_LOCAL uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
 
 #endif

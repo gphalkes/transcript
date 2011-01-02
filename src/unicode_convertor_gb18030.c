@@ -37,19 +37,18 @@ static const gb_range_map_t gb_range_map[] = {
 	{ UINT32_C(0x99e2), UINT32_C(0x99fb), UINT32_C(0xffe6), UINT32_C(0xffff) },
 	{ UINT32_C(0x2e248), UINT32_C(0x12e247), UINT32_C(0x10000), UINT32_C(0x10ffff) }};
 
-int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
 #else
 	uint32_t _codepoint = codepoint;
 #endif
-	size_t codepoint_bytesleft = 4;
-	char *codepoint_ptr = (char *) &_codepoint;
+	const char *codepoint_ptr = (const char *) &_codepoint;
 	size_t low, mid, high;
 	uint8_t *_outbuf;
 
-	switch (handle->gb18030_cct->convert_from(handle->gb18030_cct, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-			outbytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_1N_CONVERSION))
+	switch (handle->gb18030_cct->convert_from(handle->gb18030_cct, &codepoint_ptr, codepoint_ptr + 4, outbuf,
+			outbuflimit, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_1N_CONVERSION))
 	{
 		case CHARCONV_SUCCESS:
 			return CHARCONV_SUCCESS;
@@ -83,7 +82,7 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 			codepoint < gb_range_map[low].unicode_low)
 		return CHARCONV_INTERNAL_ERROR;
 
-	if (*outbytesleft < 4)
+	if ((*outbuf) + 4 > outbuflimit)
 		return CHARCONV_NO_SPACE;
 
 	_outbuf = (uint8_t *) *outbuf;
@@ -96,26 +95,23 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 	codepoint /= (0x3a - 0x30);
 	_outbuf[0] = 0x81 + codepoint;
 	*outbuf += 4;
-	*outbytesleft -= 4;
 	return CHARCONV_SUCCESS;
 }
 
-uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
+uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	char *codepoint_ptr;
-	size_t codepoint_bytesleft;
 	size_t low, mid, high;
-	uint8_t *_inbuf;
+	const uint8_t *_inbuf;
 	uint32_t codepoint;
 
 	if (skip) {
-		charconv_to_unicode_skip(handle->gb18030_cct, inbuf, inbytesleft);
+		charconv_to_unicode_skip(handle->gb18030_cct, inbuf, inbuflimit);
 		return 0;
 	}
 
 	codepoint_ptr = (char *) &codepoint;
-	codepoint_bytesleft = 4;
-	switch (handle->gb18030_cct->convert_to(handle->gb18030_cct, inbuf, inbytesleft, &codepoint_ptr,
-			&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE | CHARCONV_NO_1N_CONVERSION))
+	switch (handle->gb18030_cct->convert_to(handle->gb18030_cct, inbuf, inbuflimit, &codepoint_ptr,
+			codepoint_ptr + 4, CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE | CHARCONV_NO_1N_CONVERSION))
 	{
 		case CHARCONV_SUCCESS:
 			return codepoint;
@@ -136,10 +132,10 @@ uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, siz
 			break;
 	}
 
-	if (*inbytesleft < 4)
+	if ((*inbuf) + 4 > inbuflimit)
 		return CHARCONV_UTF_ILLEGAL;
 
-	_inbuf = (uint8_t *) *inbuf;
+	_inbuf = (const uint8_t *) *inbuf;
 	if (*_inbuf < 0x81 || *_inbuf > 0xfe)
 		return CHARCONV_ILLEGAL;
 
@@ -163,7 +159,6 @@ uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, char **inbuf, siz
 		return CHARCONV_UTF_ILLEGAL;
 
 	*inbuf += 4;
-	*inbytesleft -= 4;
 	return codepoint - gb_range_map[low].low + gb_range_map[low].unicode_low;
 }
 

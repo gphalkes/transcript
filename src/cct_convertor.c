@@ -30,14 +30,14 @@ typedef struct {
 	save_state_t state;
 } convertor_state_t;
 
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char *inbuflimit);
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
 static void close_convertor(convertor_state_t *handle);
 
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 static put_unicode_func_t put_utf16;
 
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != 0) \
 		return result; \
 } while (0)
 
@@ -85,8 +85,8 @@ static void find_to_unicode_variant(const variant_t *variant, const uint8_t *byt
 	*codepoint = mapping->codepoint;
 }
 
-static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char *inbuflimit,
-		char **outbuf, size_t *outbytesleft, int flags)
+static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
@@ -120,7 +120,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 			if ((conv_flags & TO_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
 			{
-				size_t outbytesleft_tmp, check_len;
+				size_t check_len;
 				uint_fast32_t i, j;
 				char *outbuf_tmp;
 				int result;
@@ -141,7 +141,6 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 					}
 
 					outbuf_tmp = *outbuf;
-					outbytesleft_tmp = *outbytesleft;
 					for (j = 0; j < handle->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
 						codepoint = handle->codepage_sorted_multi_mappings[i]->codepoints[j];
 						if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
@@ -151,11 +150,10 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 							codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
 							codepoint += 0x10000;
 						}
-						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, &outbytesleft_tmp)) != 0)
+						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) != 0)
 							return result;
 					}
 					*outbuf = outbuf_tmp;
-					*outbytesleft = outbytesleft_tmp;
 
 					_inbuf = (const uint8_t *) ((*inbuf) + check_len);
 					handle->state.to = state = entry->next_state;
@@ -228,7 +226,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char *inbuflimit) {
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
 	uint_fast32_t idx = handle->convertor->codepage_states[handle->state.to].base;
@@ -266,7 +264,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 
 
 #define GET_UNICODE() do { \
-	codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, false); \
+	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
 } while (0)
 
 #define PUT_BYTES(count, buffer) do { \
@@ -274,7 +272,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
-static charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, char *outbuflimit, size_t count, uint8_t *bytes) {
+static charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 
@@ -303,18 +301,17 @@ write_bytes:
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, char *outbuflimit, int flags)
+static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 	uint_fast32_t i;
 
-	uint16_t codepoints[19];
+	#define CODEPOINT_BUFLEN 19
+	uint16_t codepoints[CODEPOINT_BUFLEN];
 	char *ptr = (char *) codepoints;
-	size_t codepoints_left = 19 * 2;
 
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	size_t check_len;
 	size_t mapping_check_len;
 	bool can_read_more = flags & CHARCONV_NO_MN_CONVERSION ? false : true;
@@ -323,12 +320,12 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	   the longest possible match. */
 
 	GET_UNICODE();
-	if (put_utf16(codepoint, &ptr, &codepoints_left) != 0)
+	if (put_utf16(codepoint, &ptr, (const char *) (codepoints + CODEPOINT_BUFLEN)) != 0)
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
 		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
-		check_len = min(19 * 2 - codepoints_left, mapping_check_len);
+		check_len = min(ptr - (char *) codepoints, mapping_check_len);
 
 		/* No need to read more of the input if we already know that the start doesn't match. */
 		if (memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, check_len) != 0)
@@ -355,7 +352,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 				goto check_next_mapping;
 			}
 
-			switch (put_utf16(codepoint, &ptr, &codepoints_left)) {
+			switch (put_utf16(codepoint, &ptr, (const char *) (codepoints + CODEPOINT_BUFLEN))) {
 				case CHARCONV_INCOMPLETE:
 					if (flags & CHARCONV_END_OF_TEXT) {
 						can_read_more = false;
@@ -370,7 +367,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 				default:
 					return CHARCONV_INTERNAL_ERROR;
 			}
-			check_len = 19 * 2 - codepoints_left;
+			check_len = ptr - (char *) codepoints;
 		}
 
 		if (check_len < mapping_check_len)
@@ -381,20 +378,13 @@ check_complete:
 			PUT_BYTES(handle->codepoint_sorted_multi_mappings[i]->bytes_length,
 				handle->codepoint_sorted_multi_mappings[i]->bytes);
 
-			if (19 * 2 - codepoints_left != mapping_check_len) {
+			if ((size_t) (ptr - (char *) codepoints) != mapping_check_len) {
 				/* Re-read codepoints up to the number in the mapping. */
-				_inbuf = (uint8_t *) *inbuf;
-				_inbytesleft = *inbytesleft;
-				check_len = 19 * 2 - check_len;
-				codepoints_left = 19 * 2;
-				ptr = (char *) codepoints;
-				while (codepoints_left > check_len) {
+				_inbuf = (const uint8_t *) *inbuf;
+				for (check_len = 0; mapping_check_len > check_len; check_len += codepoint > 0xffff ? 4 : 2)
 					GET_UNICODE();
-					put_utf16(codepoint, &ptr, &codepoints_left);
-				}
 			}
-			*inbuf = (char *) _inbuf;
-			*inbytesleft = _inbytesleft;
+			*inbuf = (const char *) _inbuf;
 			return CHARCONV_SUCCESS;
 		}
 check_next_mapping: ;
@@ -431,11 +421,10 @@ static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoi
 	*bytes = (uint8_t *) &mapping->codepage_bytes;
 }
 
-static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, char *outbuflimit, int flags)
+static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
-	uint8_t *_inbuf;
-	size_t _inbytesleft;
+	const uint8_t *_inbuf;
 	uint_fast8_t state;
 	uint_fast32_t idx;
 	uint_fast32_t codepoint;
@@ -444,10 +433,9 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	uint_fast8_t conv_flags;
 	uint8_t *bytes;
 
-	_inbuf = (uint8_t *) *inbuf;
-	_inbytesleft = *inbytesleft;
+	_inbuf = (const uint8_t *) *inbuf;
 
-	while (_inbytesleft > 0) {
+	while (*inbuf < inbuflimit) {
 		GET_UNICODE();
 		if (codepoint == CHARCONV_UTF_INCOMPLETE)
 			break;
@@ -456,8 +444,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
-			*inbuf = (char *) _inbuf;
-			*inbytesleft = _inbytesleft;
+			*inbuf = (const char *) _inbuf;
 			continue;
 		}
 
@@ -481,10 +468,9 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
 			{
-				switch (from_unicode_check_multi_mappings(handle, inbuf, inbytesleft, outbuf, outbuflimit, flags)) {
+				switch (from_unicode_check_multi_mappings(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags)) {
 					case CHARCONV_SUCCESS:
-						_inbuf = (uint8_t *) *inbuf;
-						_inbytesleft = *inbytesleft;
+						_inbuf = (const uint8_t *) *inbuf;
 						if (flags & CHARCONV_SINGLE_CONVERSION)
 							return CHARCONV_SUCCESS;
 						continue;
@@ -528,19 +514,17 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 		} else {
 			return CHARCONV_INTERNAL_ERROR;
 		}
-		*inbuf = (char *) _inbuf;
-		*inbytesleft = _inbytesleft;
+		*inbuf = (const char *) _inbuf;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
 
-	if (*inbytesleft != 0) {
+	if (*inbuf < inbuflimit) {
 		if (flags & CHARCONV_END_OF_TEXT) {
 			if (!(flags & CHARCONV_SUBST_ILLEGAL))
 				return CHARCONV_ILLEGAL_END;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
-			*inbuf += *inbytesleft;
-			*inbytesleft = 0;
+			*inbuf = inbuflimit;
 		} else {
 			return CHARCONV_INCOMPLETE;
 		}
@@ -548,7 +532,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, char *outbuflimit) {
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
 	return CHARCONV_SUCCESS;

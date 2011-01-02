@@ -20,13 +20,14 @@ void fatal(const char *fmt, ...) {
 int main(int argc, char *argv[]) {
 	charconv_error_t error;
 	void *conv;
-	char inbuf[1024], outbuf[1024], *inbuf_ptr, *outbuf_ptr;
+	char inbuf[1024], outbuf[1024], *outbuf_ptr;
+	const char *inbuf_ptr;
 	size_t result, i;
-	size_t fill = 0, outleft;
+	size_t fill = 0;
 
 	int c;
 	enum { FROM, TO } dir = FROM;
-	charconv_error_t (*convert)(charconv_t *, char **, size_t *, char **, size_t *, int) = charconv_from_unicode;
+	charconv_error_t (*convert)(charconv_t *, const char **, const char *, char **, const char *, int) = charconv_from_unicode;
 	int utf_type = CHARCONV_UTF8;
 	int option_dump = 0;
 
@@ -80,18 +81,17 @@ int main(int argc, char *argv[]) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
-		outleft = 1024;
-		if ((error = convert(conv, &inbuf_ptr, &fill, &outbuf_ptr, &outleft, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
+		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) != CHARCONV_SUCCESS)
 			fatal("conversion result: %s\n", charconv_strerror(error));
 		if (!option_dump) {
-			printf("fill: %zd, outleft: %zd\n", fill, outleft);
-			for (i = 0; i < 1024 - outleft; i++)
+			printf("fill: %ld, outleft: %ld\n", inbuf + fill - inbuf_ptr, outbuf + 1024 - outbuf_ptr);
+			for (i = 0; i < (size_t) (outbuf_ptr - outbuf); i++)
 				printf("\\x%02X", (uint8_t) outbuf[i]);
 			putchar('\n');
 		}
 		if (option_dump || (dir == TO && utf_type == CHARCONV_UTF8))
-			printf("%.*s", (int) (1024 - outleft), outbuf);
-		memmove(inbuf, inbuf_ptr, fill);
+			printf("%.*s", (int) (outbuf_ptr - outbuf), outbuf);
+		memmove(inbuf, inbuf_ptr, fill - (inbuf_ptr - inbuf));
 	}
 	putchar('\n');
 	return 0;

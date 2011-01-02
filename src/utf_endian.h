@@ -16,7 +16,7 @@
 #define _ALT(x, y) __ALT(x, y)
 #define ALT(x) _ALT(x, UTF_ENDIAN_H_VERSION)
 
-static charconv_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint16_t *_outbuf = (uint16_t *) *outbuf;
 
 	CHECK_CODEPOINT_RANGE();
@@ -34,7 +34,7 @@ static charconv_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, s
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint32_t *_outbuf = (uint32_t *) *outbuf;
 	CHECK_CODEPOINT_RANGE();
 
@@ -44,21 +44,21 @@ static charconv_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, s
 	return CHARCONV_SUCCESS;
 }
 
-static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip) {
+static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint_fast32_t codepoint;
 
-	if (*inbytesleft < 2)
+	if ((*inbuf) + 2 > inbuflimit)
 		return CHARCONV_UTF_INCOMPLETE;
 
-	codepoint = ALT(swaps)(*(uint16_t *) *inbuf);
+	codepoint = ALT(swaps)(*(const uint16_t *) *inbuf);
 
 	if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
 		/* Codepoint is high surrogate. */
-		if (*inbytesleft < 2)
+		if ((*inbuf) + 4 > inbuflimit)
 			return CHARCONV_UTF_INCOMPLETE;
 
-		next_codepoint = ALT(swaps)(((uint16_t *) *inbuf)[1]);
+		next_codepoint = ALT(swaps)(((const uint16_t *) *inbuf)[1]);
 		if ((next_codepoint & UINT32_C(0xfc00)) != UINT32_C(0xdc00)) {
 			/* Next codepoint is not a low surrogate. */
 			if (!skip)
@@ -66,7 +66,6 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 
 			/* Only skip the high surrogate. */
 			*inbuf += 2;
-			*inbytesleft -= 2;
 			return codepoint;
 		}
 		codepoint -= UINT32_C(0xd800);
@@ -76,7 +75,6 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 		if (!skip)
 			CHECK_CODEPOINT_ILLEGAL();
 		*inbuf += 4;
-		*inbytesleft -= 4;
 		return codepoint;
 	} else if (!skip && (codepoint & UINT32_C(0xfc00)) == UINT32_C(0xdc00)) {
 		/* Codepoint is a low surrogate. */
@@ -87,24 +85,22 @@ static uint_fast32_t ALT(get_utf16)(char **inbuf, size_t *inbytesleft, bool skip
 		CHECK_CODEPOINT_ILLEGAL();
 
 	*inbuf += 2;
-	*inbytesleft -= 2;
 	return codepoint;
 }
 
-static uint_fast32_t ALT(get_utf32)(char **inbuf, size_t *inbytesleft, bool skip) {
+static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint_fast32_t codepoint;
 
-	if (*inbytesleft < 4)
+	if ((*inbuf) + 4 > inbuflimit)
 		return CHARCONV_UTF_INCOMPLETE;
 
-	codepoint = ALT(swapl)(*(uint32_t *) *inbuf);
+	codepoint = ALT(swapl)(*(const uint32_t *) *inbuf);
 	if (!skip) {
 		CHECK_CODEPOINT_ILLEGAL();
 		CHECK_CODEPOINT_SURROGATES();
 	}
 
 	*inbuf += 4;
-	*inbytesleft -= 4;
 	return codepoint;
 }
 #undef ALT

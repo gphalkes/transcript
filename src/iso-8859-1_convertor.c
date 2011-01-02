@@ -19,42 +19,39 @@
 
 static void close_convertor(charconv_common_t *handle);
 
-static charconv_error_t to_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static charconv_error_t to_unicode_conversion(charconv_common_t *handle, char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 
-	while (*inbytesleft > 0) {
+	while ((*inbuf) < inbuflimit) {
 		codepoint = *(uint8_t *) *inbuf;
-		if (handle->put_unicode(codepoint, outbuf, outbytesleft) == CHARCONV_NO_SPACE)
+		if (handle->put_unicode(codepoint, outbuf, outbuflimit) == CHARCONV_NO_SPACE)
 			return CHARCONV_NO_SPACE;
 		(*inbuf)++;
-		(*inbytesleft)--;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t to_unicode_skip(charconv_common_t *handle, char **inbuf, size_t *inbytesleft) {
+static charconv_error_t to_unicode_skip(charconv_common_t *handle, char **inbuf, const char const *inbuflimit) {
 	(void) handle;
 
-	if (*inbytesleft == 0)
+	if ((*inbuf) >= inbuflimit)
 		return CHARCONV_INCOMPLETE;
 	(*inbuf)++;
-	(*inbytesleft)--;
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
 
-	while (*inbytesleft > 0) {
-		codepoint = handle->get_unicode((char **) &_inbuf, &_inbytesleft, false);
+	while ((*inbuf) < inbuflimit) {
+		codepoint = handle->get_unicode((const char **) &_inbuf, inbuflimit, false);
 		switch (codepoint) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
@@ -76,14 +73,12 @@ static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char 
 				break;
 		}
 
-		if (*outbytesleft == 0)
+		if ((*outbuf) >= outbuflimit)
 			return CHARCONV_NO_SPACE;
 		**outbuf = codepoint;
 		(*outbuf)++;
-		(*outbytesleft)--;
 
 		*inbuf = (char *) _inbuf;
-		*inbytesleft = _inbytesleft;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}

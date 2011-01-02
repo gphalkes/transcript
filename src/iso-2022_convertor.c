@@ -148,84 +148,77 @@ static void to_unicode_reset(convertor_state_t *handle);
 static void from_unicode_reset(convertor_state_t *handle);
 static void close_convertor(convertor_state_t *handle);
 
-static int check_escapes(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
+static int check_escapes(convertor_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip) {
 	cct_handle_t *ptr;
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t i, max;
+	const uint8_t *_inbuf = (const uint8_t *) (*inbuf + 1);
 
 	/* Limit the number of bytes to check to 5. No sequence that large has been
 	   assigned yet, so that won't be a problem. */
-	max = *inbytesleft > 5 ? 5 : *inbytesleft;
+	if (inbuflimit > (*inbuf) + 5)
+		inbuflimit = (*inbuf) + 5;
 
-	for (i = 1; i < max; i++) {
-		if (_inbuf[i] >= 0x20 && _inbuf[i] <= 0x2f)
+	for (; (const char *) _inbuf < inbuflimit; _inbuf++) {
+		if (*_inbuf >= 0x20 && *_inbuf <= 0x2f)
 			continue;
-		if (_inbuf[i] >= 0x40 && _inbuf[i] <= 0x7f)
+		if (*_inbuf >= 0x40 && *_inbuf <= 0x7f)
 			goto sequence_found;
-		if (skip) {
-			*inbuf += i - 1;
-			*inbytesleft -= i - 1;
-		}
+		if (skip)
+			*inbuf = (const char *) _inbuf - 1;
 		return CHARCONV_ILLEGAL;
 	}
 
-	if (i == 5) {
-		if (skip) {
+	if ((const char *) _inbuf == inbuflimit && inbuflimit == (*inbuf) + 5) {
+		if (skip)
 			*inbuf += 5;
-			*inbytesleft -= 5;
-		}
 		return CHARCONV_ILLEGAL;
 	} else {
 		return CHARCONV_INCOMPLETE;
 	}
 
 sequence_found:
-	max = i;
-
 	if (!skip) {
+		size_t i, len;
+
+		len = (*inbuf) - (const char *) _inbuf + 1;
 		for (i = 0; i < 3; i++) {
 			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-				if (max != ptr->seq_len)
+				if (len != ptr->seq_len)
 					continue;
 
-				if (memcmp(_inbuf, ptr->escape_seq, ptr->seq_len) != 0)
+				if (memcmp(_inbuf - 1, ptr->escape_seq, ptr->seq_len) != 0)
 					continue;
 
 				handle->state.g_to[i] = ptr;
-				*inbuf += max;
-				*inbytesleft += max;
+				*inbuf = (const char *) _inbuf;
 				return CHARCONV_SUCCESS;
 			}
 		}
-	}
-	if (skip) {
-		*inbuf += max;
-		*inbytesleft += max;
+	} else {
+		*inbuf = (const char *) _inbuf;
 	}
 	return CHARCONV_ILLEGAL;
 }
 
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbytesleft)) != 0) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != 0) \
 		return result; \
 } while (0)
 
-static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state;
 	int result;
 
-	while (_inbytesleft > 0) {
+	while (*inbuf < inbuflimit) {
 		/* We accept shift sequences even in non-locking shift states. This
 		   follows the 'be liberal in what you accept' policy. */
 		if (*_inbuf < 32) {
 			/* Control characters. */
 			if (*_inbuf == 0x1b) {
 				/* Escape sequence. */
-				if (_inbytesleft == 1)
+				if ((*inbuf) + 1 == inbuflimit)
 					goto incomplete_char;
 
 				/* _inbytesleft at least 2 at this point. */
@@ -248,22 +241,20 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 							return CHARCONV_ILLEGAL;
 						handle->state.to = state;
 
-						_inbuf = (uint8_t *) ((*inbuf) += 2);
-						_inbytesleft = ((*inbytesleft) -= 2);
+						_inbuf = (const uint8_t *) ((*inbuf) += 2);
 						continue;
 
 					default:
 						break;
 				}
 
-				switch (check_escapes(handle, inbuf, inbytesleft, false)) {
+				switch (check_escapes(handle, inbuf, inbuflimit, false)) {
 					case CHARCONV_INCOMPLETE:
 						goto incomplete_char;
 					case CHARCONV_ILLEGAL:
 						return CHARCONV_ILLEGAL;
 					case CHARCONV_SUCCESS:
-						_inbuf = (uint8_t *) *inbuf;
-						_inbytesleft = *inbytesleft;
+						_inbuf = (const uint8_t *) *inbuf;
 						continue;
 					default:
 						return CHARCONV_INTERNAL_ERROR;
@@ -273,14 +264,12 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 				if (handle->state.g_to[1] == NULL)
 					return CHARCONV_ILLEGAL;
 				handle->state.to = 1;
-				_inbuf = (uint8_t *) ++(*inbuf);
-				_inbytesleft = --(*inbytesleft);
+				_inbuf = (const uint8_t *) ++(*inbuf);
 				continue;
 			} else if (*_inbuf == 0xf) {
 				/* Shift in. */
 				handle->state.to = 0;
-				_inbuf = (uint8_t *) ++(*inbuf);
-				_inbytesleft = --(*inbytesleft);
+				_inbuf = (const uint8_t *) ++(*inbuf);
 				continue;
 			}
 			/* Other control.
@@ -289,40 +278,35 @@ static int to_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t
 			   previous state. The input may not conform the the standard that well... */
 			PUT_UNICODE(*_inbuf);
 			_inbuf++;
-			_inbytesleft--;
 		} else if (*_inbuf & 0x80) {
 			/* All ISO-2022 convertors implemented here are 7 bit only. */
 			return CHARCONV_ILLEGAL;
 		} else {
-			char buffer[3];
-			char *buffer_ptr = buffer;
+			char buffer[3]; //FIXME: is this big enough?
+			const char *buffer_ptr = buffer;
 			uint32_t codepoint;
 			char *codepoint_ptr = (char *) &codepoint;
-			size_t codepoint_size = 4;
 			int i;
 
 			state = handle->state.to;
 			if (state > 3)
 				state >>= 2;
 
-			if (_inbytesleft < handle->state.g_to[state]->bytes_per_char)
+			if ((const char *) _inbuf + handle->state.g_to[state]->bytes_per_char > inbuflimit)
 				goto incomplete_char;
 
 			for (i = 0; i < handle->state.g_to[state]->bytes_per_char; i++)
 				buffer[i] = _inbuf[i] | (handle->state.g_to[state]->high_bit << 7);
-			size_t buffer_size = handle->state.g_to[state]->bytes_per_char;
 
-			if ((result = handle->state.g_to[state]->cct->convert_to(handle->state.g_to[state]->cct, &buffer_ptr, &buffer_size,
-					&codepoint_ptr, &codepoint_size, 0)) != CHARCONV_SUCCESS)
+			if ((result = handle->state.g_to[state]->cct->convert_to(handle->state.g_to[state]->cct, &buffer_ptr,
+					buffer + handle->state.g_to[state]->bytes_per_char, &codepoint_ptr, codepoint_ptr + 4, 0)) != CHARCONV_SUCCESS)
 				return result;
 			PUT_UNICODE(codepoint);
 			_inbuf += handle->state.g_to[state]->bytes_per_char;
-			_inbytesleft -= handle->state.g_to[state]->bytes_per_char;
 		}
 
 		handle->state.to &= 3;
-		*inbuf = (char *) _inbuf;
-		*inbytesleft = _inbytesleft;
+		*inbuf = (const char *) _inbuf;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
@@ -332,8 +316,7 @@ incomplete_char:
 	if (flags & CHARCONV_END_OF_TEXT) {
 		if (flags & CHARCONV_SUBST_ILLEGAL) {
 			PUT_UNICODE(0xfffd);
-			(*inbuf) += _inbytesleft;
-			*inbytesleft = 0;
+			(*inbuf) = inbuflimit;
 			return CHARCONV_SUCCESS;
 		}
 		return CHARCONV_ILLEGAL_END;
@@ -341,14 +324,14 @@ incomplete_char:
 	return CHARCONV_INCOMPLETE;
 }
 
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf, size_t *inbytesleft) {
+static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	uint_fast8_t state;
 
-	if (*inbytesleft == 0)
+	if ((*inbuf) == inbuflimit)
 		return CHARCONV_INCOMPLETE;
 
 	if (**inbuf == 0x1b)
-		return check_escapes(handle, inbuf, inbytesleft, true) == CHARCONV_INCOMPLETE ?
+		return check_escapes(handle, inbuf, inbuflimit, true) == CHARCONV_INCOMPLETE ?
 			CHARCONV_INCOMPLETE : CHARCONV_SUCCESS;
 
 	state = handle->state.to;
@@ -356,13 +339,12 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, char **inbuf,
 		state >>= 2;
 
 
-	if (*inbytesleft < handle->state.g_to[state]->bytes_per_char)
+	if ((*inbuf) + handle->state.g_to[state]->bytes_per_char > inbuflimit)
 		return CHARCONV_INCOMPLETE;
 
 	handle->state.to &= 3;
 
 	*inbuf += handle->state.g_to[state]->bytes_per_char;
-	*inbytesleft -= handle->state.g_to[state]->bytes_per_char;
 	return CHARCONV_SUCCESS;
 }
 
@@ -372,16 +354,15 @@ static void to_unicode_reset(convertor_state_t *handle) {
 }
 
 #define PUT_BYTES(count, buffer) do { size_t _i, _count = count; \
-	if (*outbytesleft < _count) \
+	if ((*outbuf) + _count < outbuflimit) \
 		return CHARCONV_NO_SPACE; \
 	for (_i = 0; _i < _count; _i++) \
 		(*outbuf)[_i] = buffer[_i] & 0x7f; \
 	*outbuf += _count; \
-	*outbytesleft -= _count; \
 } while (0)
 
 static charconv_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *cct, uint_fast8_t g,
-		char **outbuf, size_t *outbytesleft)
+		char **outbuf, const char const *outbuflimit)
 {
 	if (handle->state.g_from[g] != cct) {
 		PUT_BYTES(cct->seq_len, cct->escape_seq);
@@ -400,28 +381,25 @@ static charconv_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *c
 }
 
 #define SWITCH_TO_SET(cct, g) do { \
-	if (switch_to_set(handle, cct, g, outbuf, outbytesleft) != CHARCONV_SUCCESS) \
+	if (switch_to_set(handle, cct, g, outbuf, outbuflimit) != CHARCONV_SUCCESS) \
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
 
-static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, size_t *inbytesleft,
-		char **outbuf, size_t *outbytesleft, int flags)
+static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint32_t codepoint;
-	char *codepoint_ptr;
-	size_t codepoint_bytesleft;
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	const char *codepoint_ptr;
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	cct_handle_t *ptr;
 	char buffer[4], *buffer_ptr;
-	size_t buffer_bytesleft;
 	struct { cct_handle_t *cct; uint_fast8_t state; } fallback;
 	uint_fast8_t state;
 	int i;
 
-	while (*inbytesleft > 0) {
-		switch (codepoint = handle->common.get_unicode((char **) &_inbuf, &_inbytesleft, false)) {
+	while ((const char *) _inbuf < inbuflimit) {
+		switch (codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false)) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
 			case CHARCONV_UTF_INCOMPLETE:
@@ -454,15 +432,12 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 		if (state > 3)
 			state >>= 2;
 		ptr = handle->state.g_from[state];
-		codepoint_ptr = (char *) &codepoint;
-		codepoint_bytesleft = 4;
+		codepoint_ptr = (const char *) &codepoint;
 		buffer_ptr = buffer;
-		buffer_bytesleft = 4;
-		switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, &codepoint_bytesleft, &buffer_ptr, &buffer_bytesleft, 0)) {
+		switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, (const char *) &codepoint + 4, &buffer_ptr, buffer + 4, 0)) {
 			case CHARCONV_SUCCESS:
-				PUT_BYTES(4 - buffer_bytesleft, buffer);
-				*inbuf = (char *) _inbuf;
-				*inbytesleft = _inbytesleft;
+				PUT_BYTES(buffer_ptr - buffer, buffer);
+				*inbuf = (const char *) _inbuf;
 				handle->state.from &= 3;
 				continue;
 			case CHARCONV_NO_SPACE:
@@ -483,16 +458,14 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 					continue;
 
 				codepoint_ptr = (char *) &codepoint;
-				codepoint_bytesleft = 4;
 				buffer_ptr = buffer;
-				buffer_bytesleft = 4;
 
-				switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, &codepoint_bytesleft,
-						&buffer_ptr, &buffer_bytesleft, 0))
+				switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, (const char *) &codepoint + 4,
+						&buffer_ptr, buffer + 4, 0))
 				{
 					case CHARCONV_SUCCESS:
 						SWITCH_TO_SET(ptr, i);
-						PUT_BYTES(4 - buffer_bytesleft, buffer);
+						PUT_BYTES(buffer_ptr - buffer, buffer);
 						goto next_codepoint;
 					case CHARCONV_UNASSIGNED:
 						break;
@@ -520,9 +493,8 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 				return CHARCONV_FALLBACK;
 			SWITCH_TO_SET(fallback.cct, fallback.state);
 			codepoint_ptr = (char *) &codepoint;
-			codepoint_bytesleft = 4;
-			switch (fallback.cct->cct->convert_from(fallback.cct->cct, &codepoint_ptr, &codepoint_bytesleft,
-					outbuf, outbytesleft, CHARCONV_ALLOW_FALLBACK))
+			switch (fallback.cct->cct->convert_from(fallback.cct->cct, &codepoint_ptr, (const char *) &codepoint + 4,
+					outbuf, outbuflimit, CHARCONV_ALLOW_FALLBACK))
 			{
 				case CHARCONV_NO_SPACE:
 					return CHARCONV_NO_SPACE;
@@ -534,8 +506,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 		}
 
 next_codepoint:
-		*inbuf = (char *) _inbuf;
-		*inbytesleft = _inbytesleft;
+		*inbuf = (const char *) _inbuf;
 		handle->state.from &= 3;
 
 		if (flags & CHARCONV_SINGLE_CONVERSION)
@@ -544,7 +515,7 @@ next_codepoint:
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	SWITCH_TO_SET(handle->ascii, 0);
 	return CHARCONV_SUCCESS;
 }

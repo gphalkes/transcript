@@ -56,7 +56,7 @@ static const uint8_t value_to_base64[64] = {
 	103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118,
 	119, 120, 121, 122,  48,  49,  50,  51,  52,  53,  54,  55,  56,  57,  43,  47};
 
-#define ENSURE_OUTBYTESLEFT(x) do { if (*outbytesleft < x) return CHARCONV_NO_SPACE; } while (0)
+#define ENSURE_OUTBYTESLEFT(x) do { if ((*outbuf) + (x) > outbuflimit) return CHARCONV_NO_SPACE; } while (0)
 
 #define HANDLE_DIRECT_FROM_BASE64(saved_state) do { \
 	if (codepoint == MINUS) { \
@@ -67,7 +67,6 @@ static const uint8_t value_to_base64[64] = {
 		} \
 		*(*outbuf)++ = MINUS; \
 		*(*outbuf)++ = MINUS; \
-		*outbytesleft -= 2 + saved_state; \
 		handle->state.utf7_put_mode = UTF7_MODE_DIRECT; \
 		return CHARCONV_SUCCESS; \
 	} else if (is_direct(codepoint)) { \
@@ -79,7 +78,6 @@ static const uint8_t value_to_base64[64] = {
 			} \
 			*(*outbuf)++ = MINUS; \
 			*(*outbuf)++ = codepoint; \
-			*outbytesleft -= 3; \
 		} else { \
 			ENSURE_OUTBYTESLEFT(1 + saved_state); \
 			if (saved_state) { \
@@ -87,7 +85,6 @@ static const uint8_t value_to_base64[64] = {
 				handle->state.utf7_put_save = 0; \
 			} \
 			*(*outbuf)++ = codepoint; \
-			(*outbytesleft) -= 1 + saved_state; \
 		} \
 		handle->state.utf7_put_mode = UTF7_MODE_DIRECT; \
 		return CHARCONV_SUCCESS; \
@@ -118,13 +115,12 @@ static const uint8_t value_to_base64[64] = {
 		handle->state.utf7_put_mode = UTF7_MODE_BASE64_2; \
 	} \
 	handle->state.utf7_put_mode = UTF7_MODE_BASE64_2; \
-	*outbytesleft -= 2 + (bits_left != 6) + include_plus; \
 	if (low_surrogate != 0) \
 		goto next_surrogate; \
 	return CHARCONV_SUCCESS; \
 } while (0)
 
-int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft) {
+int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint_fast32_t low_surrogate = 0;
 
 next_surrogate:
@@ -133,12 +129,10 @@ next_surrogate:
 			if (is_direct(codepoint)) {
 				ENSURE_OUTBYTESLEFT(1);
 				*(*outbuf)++ = codepoint;
-				(*outbytesleft)--;
 			} else if (codepoint == PLUS) {
 				ENSURE_OUTBYTESLEFT(2);
 				*(*outbuf)++ = PLUS;
 				*(*outbuf)++ = MINUS;
-				*outbytesleft -= 2;
 			} else {
 				HANDLE_UNICODE(6, 1);
 			}
@@ -157,21 +151,19 @@ next_surrogate:
 	}
 }
 
-int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, size_t *outbytesleft) {
+int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	switch (handle->state.utf7_put_mode) {
 		case UTF7_MODE_DIRECT:
 			break;
 		case UTF7_MODE_BASE64_0:
 			ENSURE_OUTBYTESLEFT(1);
 			*(*outbuf)++ = MINUS;
-			(*outbytesleft)--;
 			break;
 		case UTF7_MODE_BASE64_2:
 		case UTF7_MODE_BASE64_4:
 			ENSURE_OUTBYTESLEFT(2);
 			*(*outbuf)++ = value_to_base64[handle->state.utf7_put_save];
 			*(*outbuf)++ = MINUS;
-			*outbytesleft -= 2;
 			break;
 		default:
 			return CHARCONV_INTERNAL_ERROR;
@@ -179,26 +171,23 @@ int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, 
 	return CHARCONV_SUCCESS;
 }
 
-#define SKIP_BYTES(x) do { *inbytesleft = _inbytesleft - (x); *inbuf = (char *) (_inbuf + (x)); } while (0)
+#define SKIP_BYTES(x) do { *inbuf = (const char *) (_inbuf + (x)); } while (0)
 
-uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t *inbytesleft, bool skip) {
+uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint_fast32_t codepoint, high_surrogate = 0;
-	uint8_t *_inbuf = (uint8_t *) *inbuf;
-	size_t _inbytesleft = *inbytesleft;
+	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t next_mode;
 	int handled, i, extra_skip;
 
-	while (_inbytesleft > 0) {
+	while (*inbuf < inbuflimit) {
 		switch (handle->state.utf7_get_mode) {
 			case UTF7_MODE_DIRECT:
 				if (*_inbuf == PLUS) {
 					handle->state.utf7_get_mode = UTF7_MODE_SWITCHED;
-					*inbytesleft = --_inbytesleft;
-					*inbuf = (char *) (++_inbuf);
+					*inbuf = (const char *) (++_inbuf);
 					break;
 				} else if (is_optionally_direct(*_inbuf)) {
-					*inbytesleft = _inbytesleft - 1;
-					*inbuf = (char *) (_inbuf + 1);
+					*inbuf = (const char *) (_inbuf + 1);
 					return *_inbuf;
 				}
 				if (skip)
@@ -207,8 +196,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 			case UTF7_MODE_SWITCHED:
 				if (*_inbuf == MINUS) {
 					handle->state.utf7_get_mode = UTF7_MODE_DIRECT;
-					*inbytesleft = _inbytesleft - 1;
-					*inbuf = (char *) (_inbuf + 1);
+					*inbuf = (const char *) (_inbuf + 1);
 					return PLUS;
 				} else if (!is_base64(*_inbuf)) {
 					handled = 1;
@@ -217,7 +205,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				/* FALLTHROUGH */
 			case UTF7_MODE_BASE64_0:
 				if (is_base64(*_inbuf)) {
-					if (_inbytesleft < 3)
+					if ((const char *) _inbuf + 3 > inbuflimit)
 						return CHARCONV_UTF_INCOMPLETE;
 
 					if (!is_base64(_inbuf[1]) || !is_base64(_inbuf[2])) {
@@ -234,7 +222,6 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 					codepoint <<= 6;
 					codepoint |= base64_to_value[*_inbuf];
 					codepoint >>= 2;
-					_inbytesleft -= 2;
 
 					next_mode = UTF7_MODE_BASE64_2;
 					goto handle_surrogates;
@@ -242,10 +229,10 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				handled = 1;
 				goto switch_to_direct;
 			case UTF7_MODE_BASE64_2:
-				if (_inbytesleft < 2)
+				if ((const char *) _inbuf + 2 > inbuflimit)
 					return CHARCONV_UTF_INCOMPLETE;
 				if (is_base64(_inbuf[1])) {
-					if (_inbytesleft < 4)
+					if ((const char *) _inbuf + 4 > inbuflimit)
 						return CHARCONV_INCOMPLETE;
 
 					if (!is_base64(_inbuf[2]) || !is_base64(_inbuf[3])) {
@@ -264,7 +251,6 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 					codepoint <<= 6;
 					codepoint |= base64_to_value[*_inbuf];
 					codepoint >>= 4;
-					_inbytesleft -= 3;
 
 					next_mode = UTF7_MODE_BASE64_4;
 					goto handle_surrogates;
@@ -281,10 +267,10 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				goto switch_to_direct;
 
 			case UTF7_MODE_BASE64_4:
-				if (_inbytesleft < 2)
+				if ((const char *) _inbuf + 2 > inbuflimit)
 					return CHARCONV_UTF_INCOMPLETE;
 				if (is_base64(_inbuf[1])) {
-					if (_inbytesleft < 3)
+					if ((const char *) _inbuf + 3 > inbuflimit)
 						return CHARCONV_INCOMPLETE;
 
 					if (!is_base64(_inbuf[2])) {
@@ -297,7 +283,6 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 					codepoint |= base64_to_value[*_inbuf++];
 					codepoint <<= 6;
 					codepoint |= base64_to_value[*_inbuf];
-					_inbytesleft -= 3;
 
 					next_mode = UTF7_MODE_BASE64_0;
 					goto handle_surrogates;
@@ -324,8 +309,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 				}
 
 				handle->state.utf7_get_mode = UTF7_MODE_DIRECT;
-				(*inbytesleft) = _inbytesleft -= handled;
-				(*inbuf) = (char *) (_inbuf += handled);
+				(*inbuf) = (const char *) (_inbuf += handled);
 				if (_inbuf[-1] == MINUS)
 					break;
 				return _inbuf[-1];
@@ -339,8 +323,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 						return CHARCONV_UTF_ILLEGAL;
 					}
 
-					*inbytesleft = _inbytesleft;
-					*inbuf = (char *) _inbuf;
+					*inbuf = (const char *) _inbuf;
 					handle->state.utf7_get_mode = next_mode;
 					return (codepoint - UINT32_C(0xdc00)) + ((high_surrogate - UINT32_C(0xd800)) >> 10) + UINT32_C(0x10000);
 				}
@@ -357,8 +340,7 @@ uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, char **inbuf, size_t
 					break;
 				}
 
-				*inbytesleft = _inbytesleft;
-				*inbuf = (char *) _inbuf;
+				*inbuf = (const char *) _inbuf;
 				return codepoint;
 			default:
 				return CHARCONV_UTF_INTERNAL_ERROR;
@@ -377,7 +359,6 @@ skip_non_base64:
 	}
 
 	extra_skip = !is_optionally_direct(_inbuf[i]);
-	*inbytesleft = _inbytesleft - i - extra_skip;
-	*inbuf = (char *) (_inbuf + i + extra_skip);
+	*inbuf = (const char *) (_inbuf + i + extra_skip);
 	return CHARCONV_UTF_ILLEGAL;
 }

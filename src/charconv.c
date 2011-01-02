@@ -101,26 +101,29 @@ void charconv_close_convertor(charconv_t *handle) {
 		handle->close(handle);
 }
 
-charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
-	return handle->convert_to(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags | (handle->flags & 0xff));
+charconv_error_t charconv_to_unicode(charconv_t *handle, const char const **inbuf, const char const *inbuflimit, char **outbuf,
+		const char const *outbuflimit, int flags)
+{
+	return handle->convert_to(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
 }
 
-charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags) {
-	return handle->convert_from(handle, inbuf, inbytesleft, outbuf, outbytesleft, flags | (handle->flags & 0xff));
+charconv_error_t charconv_from_unicode(charconv_t *handle, const char **inbuf, const char const *inbuflimit, char **outbuf,
+		const char const *outbuflimit, int flags) {
+	return handle->convert_from(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
 }
 
-charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
-	return handle->skip_to(handle, inbuf, inbytesleft);
+charconv_error_t charconv_to_unicode_skip(charconv_t *handle, const char **inbuf, const char const *inbuflimit) {
+	return handle->skip_to(handle, inbuf, inbuflimit);
 }
 
-charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft) {
-	if (handle->get_unicode(inbuf, inbytesleft, true) == CHARCONV_UTF_INCOMPLETE)
+charconv_error_t charconv_from_unicode_skip(charconv_t *handle, const char **inbuf, const char *inbuflimit) {
+	if (handle->get_unicode(inbuf, inbuflimit, true) == CHARCONV_UTF_INCOMPLETE)
 		return CHARCONV_INCOMPLETE;
 	return CHARCONV_SUCCESS;
 }
 
-charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, size_t *outbytesleft) {
-	switch (handle->flush_from(handle, outbuf, outbytesleft)) {
+charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, const char const *outbuflimit) {
+	switch (handle->flush_from(handle, outbuf, outbuflimit)) {
 		case CHARCONV_SUCCESS:
 			break;
 		case CHARCONV_NO_SPACE:

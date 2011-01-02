@@ -71,13 +71,13 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	size_t result = 0;
 
 	char *_inbuf;
-	size_t _inbytesleft;
 	char saved_state[CHARCONV_SAVE_STATE_SIZE];
 
 	uint32_t codepoints[20];
 	char *codepoint_ptr;
-	size_t codepoint_bytesleft;
 	bool non_reversible;
+
+	const char *inbuflimit, *outbuflimit;
 
 	if (inbuf == NULL || *inbuf == NULL) {
 		/* There is no need to convert the input buffer, because even if it had an incomplete
@@ -91,7 +91,8 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			return 0;
 		}
 
-		switch (charconv_from_unicode_flush(cd->to, outbuf, outbytesleft))
+		outbuflimit = (*outbuf) + (*outbytesleft);
+		switch (charconv_from_unicode_flush(cd->to, outbuf, outbuflimit))
 		{
 			case CHARCONV_SUCCESS:
 				break;
@@ -104,30 +105,31 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	}
 
 	_inbuf = *inbuf;
-	_inbytesleft = *inbytesleft;
+	inbuflimit = (*inbuf) + (*inbytesleft);
+	outbuflimit = (*outbuf) + (*outbytesleft);
 
-	while (*inbytesleft > 0) {
+	while (_inbuf < inbuflimit) {
 		charconv_save_state(cd->from, saved_state);
 		non_reversible = false;
 		codepoint_ptr = (char *) &codepoints;
-		codepoint_bytesleft = sizeof(codepoints);
 		/* Convert a single character of the input, by forcing a single conversion. */
-		switch (charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr,
-				&codepoint_bytesleft, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
+		switch (charconv_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit, &codepoint_ptr,
+				(const char *) &codepoints + 20 * 4, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
 		{
 			case CHARCONV_ILLEGAL_END:
 			case CHARCONV_INCOMPLETE:
 				ERROR(EINVAL);
 			case CHARCONV_FALLBACK:
-				charconv_to_unicode(cd->from, &_inbuf, &_inbytesleft, &codepoint_ptr, &codepoint_bytesleft,
+				charconv_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit,
+						&codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]),
 						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
 				non_reversible = true;
 				break;
 			case CHARCONV_PRIVATE_USE:
 			case CHARCONV_UNASSIGNED:
 				codepoints[0] = 0xFFFD;
-				codepoint_bytesleft = sizeof(codepoints) - sizeof(codepoints[0]);
-				charconv_to_unicode_skip(cd->from, &_inbuf, &_inbytesleft);
+				//REMOVE codepoint_bytesleft = sizeof(codepoints) - sizeof(codepoints[0]);
+				charconv_to_unicode_skip(cd->from, (const char **) &_inbuf, inbuflimit);
 				non_reversible = true;
 				break;
 			case CHARCONV_ILLEGAL:
@@ -143,19 +145,18 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 		}
 
 		/* Only try to convert if the previous conversion yielded any codepoints. */
-		if (codepoint_bytesleft < sizeof(codepoints)) {
+		if (codepoint_ptr > (char *) codepoints) {
 
 			/* If the previous conversion yielded more than one codepoint, the
 			   conversion is definately non_reversible. */
-			if (codepoint_bytesleft < sizeof(codepoints) - sizeof(codepoints[0]))
+			if (codepoint_ptr > (char *) codepoints + sizeof(codepoints[0]))
 				non_reversible = true;
 
 			codepoint_ptr = (char *) &codepoints;
-			codepoint_bytesleft = sizeof(codepoints) - codepoint_bytesleft;
 		try_again:
 			/* Try to convert. If so far the conversion is reversible, try without substitutions and fallbacks first. */
-			switch (charconv_from_unicode(cd->to, &codepoint_ptr, &codepoint_bytesleft, outbuf,
-					outbytesleft, CHARCONV_NO_1N_CONVERSION |
+			switch (charconv_from_unicode(cd->to, (const char **) &codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]), outbuf,
+					outbuflimit, CHARCONV_NO_1N_CONVERSION |
 					(non_reversible ? CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL | CHARCONV_ALLOW_FALLBACK : 0)))
 			{
 				case CHARCONV_SUCCESS:
@@ -184,7 +185,6 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			non_reversible = false;
 		}
 		*inbuf = _inbuf;
-		*inbytesleft = _inbytesleft;
 	}
 
 	return result;

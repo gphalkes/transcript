@@ -115,11 +115,13 @@ struct _charconv_iso2022_state_t {
 
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
-CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-CHARCONV_API charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, size_t *outbytesleft);
+CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, const char **inbuf,
+	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);
+CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, const char **inbuf,
+	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);
+CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, const char **inbuf, const char *inbuflimit);
+CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, const char **inbuf, const char *inbuflimit);
+CHARCONV_API charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, const char *outbuflimit);
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);

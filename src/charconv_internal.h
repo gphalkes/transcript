@@ -29,11 +29,12 @@ typedef enum {false, true} bool;
 #include <stdbool.h>
 #endif
 
-typedef charconv_error_t (*conversion_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft, int flags);
-typedef charconv_error_t (*flush_func_t)(charconv_t *handle, char **outbuf, size_t *outbytesleft);
-typedef charconv_error_t (*skip_func_t)(charconv_t *handle, char **inbuf, size_t *inbytesleft);
-typedef charconv_error_t (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, size_t *outbytesleft);
-typedef uint_fast32_t (*get_unicode_func_t)(char **inbuf, size_t *inbytesleft, bool skip);
+typedef charconv_error_t (*conversion_func_t)(charconv_t *handle, const char **inbuf, const char *inbuflimit,
+	char **outbuf, const char *outbuflimit, int flags);
+typedef charconv_error_t (*flush_func_t)(charconv_t *handle, char **outbuf, const char *outbuflimit);
+typedef charconv_error_t (*skip_func_t)(charconv_t *handle, const char **inbuf, const char *inbuflimit);
+typedef charconv_error_t (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+typedef uint_fast32_t (*get_unicode_func_t)(const char **inbuf, const char *inbuflimit, bool skip);
 typedef int (*reset_func_t)(charconv_t *handle);
 typedef void (*close_func_t)(charconv_t *handle);
 typedef void (*save_func_t)(charconv_t *handle, void *state);
