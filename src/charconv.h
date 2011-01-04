@@ -14,6 +14,10 @@
 #ifndef CHARCONV_H
 #define CHARCONV_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -59,14 +63,15 @@ enum {
 
 typedef enum {
 	CHARCONV_SUCCESS, /**< All OK. */
+	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
+	CHARCONV_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
+
 	CHARCONV_FALLBACK, /**< The next character to convert is a fallback mapping. */
 	CHARCONV_UNASSIGNED, /**< The next character to convert is an unassigned sequence. */
 	CHARCONV_ILLEGAL, /**< The input is an illegal sequence. */
 	CHARCONV_ILLEGAL_END, /**< The end of the input does not form a valid sequence. */
 	CHARCONV_INTERNAL_ERROR, /**< The charconv library screwed up; no recovery possible. */
 	CHARCONV_PRIVATE_USE, /**< The next character to convert maps to a private use codepoint. */
-	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
-	CHARCONV_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
 
 	CHARCONV_ERRNO, /**< See errno for error code. */
 	CHARCONV_BAD_ARG, /**< Bad argument. */
@@ -74,7 +79,10 @@ typedef enum {
 	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
 	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
 	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
-	CHARCONV_INTERNAL_TABLE /**< Tried to load a table that is for internal use only. */
+	CHARCONV_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
+
+	CHARCONV_PART_SUCCESS_MAX = CHARCONV_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
+
 } charconv_error_t;
 
 typedef enum {
@@ -148,6 +156,10 @@ typedef cc_iconv_t iconv_t;
 #define iconv_open(_a, _b) cc_iconv_open((_a), (_b))
 #define iconv_close(_a) cc_iconv_close(_a)
 #endif
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif

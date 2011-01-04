@@ -81,14 +81,9 @@ int main(int argc, char *argv[]) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
-		switch ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0))) {
-			case CHARCONV_SUCCESS:
-			case CHARCONV_INCOMPLETE:
-			case CHARCONV_NO_SPACE:
-				break;
-			default:
-				fatal("conversion result: %s\n", charconv_strerror(error));
-		}
+		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) > CHARCONV_PART_SUCCESS_MAX)
+			fatal("conversion result: %s\n", charconv_strerror(error));
+
 		fill -= inbuf_ptr - inbuf;
 		if (!option_dump) {
 			printf("fill: %ld, outleft: %ld\n", fill, outbuf + 1024 - outbuf_ptr);
