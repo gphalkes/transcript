@@ -324,6 +324,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
+		/* Skip if the first codepoint doesn't match. */
 		if (codepoints[0] != handle->codepage_sorted_multi_mappings[i]->codepoints[0])
 			continue;
 
@@ -455,7 +456,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			continue;
 		}
 
-		// Optimize common case by not doing an actual lookup when the first byte is 0.
+		/* Optimize common case by not doing an actual lookup when the first byte is 0. */
 		if (codepoint > 0x10000L) {
 			byte = (codepoint >> 16) & 0xff;
 			entry = &handle->convertor->unicode_states[0].entries[handle->convertor->unicode_states[0].map[byte]];
