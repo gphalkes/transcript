@@ -324,6 +324,9 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
+		if (codepoints[0] != handle->codepage_sorted_multi_mappings[i]->codepoints[0])
+			continue;
+
 		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(ptr - (char *) codepoints, mapping_check_len);
 
