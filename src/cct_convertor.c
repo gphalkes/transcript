@@ -272,7 +272,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
-static charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
+static inline charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 

@@ -27,6 +27,6 @@ TARGETS := libcharconv.la test
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\" -DUSE_ENDIAN
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\" -DUSE_ENDIAN -O2
 
 test: | libcharconv.la
