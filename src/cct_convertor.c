@@ -425,7 +425,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf;
-	uint_fast8_t state;
+	uint_fast8_t state, state_16_bit;
 	uint_fast32_t idx;
 	uint_fast32_t codepoint;
 	entry_t *entry;
@@ -434,6 +434,10 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 	uint8_t *bytes;
 
 	_inbuf = (const uint8_t *) *inbuf;
+
+
+	entry = &handle->convertor->unicode_states[0].entries[handle->convertor->unicode_states[0].map[0]];
+	state_16_bit = entry->next_state;
 
 	while (*inbuf < inbuflimit) {
 		GET_UNICODE();
@@ -448,10 +452,16 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			continue;
 		}
 
-		byte = (codepoint >> 16) & 0xff;
-		entry = &handle->convertor->unicode_states[0].entries[handle->convertor->unicode_states[0].map[byte]];
-		idx = entry->base + (byte - entry->low) * entry->mul;
-		state = entry->next_state;
+		// Optimize common case by not doing an actual lookup when the first byte is 0.
+		if (codepoint > 0x10000L) {
+			byte = (codepoint >> 16) & 0xff;
+			entry = &handle->convertor->unicode_states[0].entries[handle->convertor->unicode_states[0].map[byte]];
+			idx = entry->base + (byte - entry->low) * entry->mul;
+			state = entry->next_state;
+		} else {
+			idx = 0;
+			state = state_16_bit;
+		}
 
 		byte = (codepoint >> 8) & 0xff;
 		entry = &handle->convertor->unicode_states[state].entries[handle->convertor->unicode_states[state].map[byte]];
