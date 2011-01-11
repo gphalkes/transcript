@@ -20,6 +20,9 @@
 #include "charconv_internal.h"
 #include "cct_convertor.h"
 
+/* FIXME: check limits on everything read! */
+
+
 typedef int (*compar_func_t)(const void *, const void *);
 
 static FILE *cct_open(const char *name, charconv_error_t *error);
@@ -491,6 +494,7 @@ static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const mul
 static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_error_t *error) {
 	uint_fast32_t i, j;
 
+	/* FIXME: check length fields for maximum permissable lengths */
 	READ_DWORD(convertor->nr_multi_mappings);
 
 	if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)

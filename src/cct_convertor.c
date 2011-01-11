@@ -34,7 +34,6 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **
 static void close_convertor(convertor_state_t *handle);
 
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-static put_unicode_func_t put_utf16;
 
 #define PUT_UNICODE(codepoint) do { int result; \
 	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != 0) \
@@ -307,7 +306,8 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	uint_fast32_t codepoint;
 	uint_fast32_t i;
 
-	#define CODEPOINT_BUFLEN 19
+	/* Buffer is over-dimensioned by 1 to prevent need for checking the end of buffer. */
+	#define CODEPOINT_BUFLEN 20
 	uint16_t codepoints[CODEPOINT_BUFLEN];
 	char *ptr = (char *) codepoints;
 
@@ -320,7 +320,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	   the longest possible match. */
 
 	GET_UNICODE();
-	if (put_utf16(codepoint, &ptr, (const char *) (codepoints + CODEPOINT_BUFLEN)) != 0)
+	if (_charconv_put_utf16_no_check(codepoint, &ptr) != 0)
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
@@ -333,15 +333,6 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 
 		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(ptr - (char *) codepoints, mapping_check_len);
-
-		/* No need to read more of the input if we already know that the start doesn't match. */
-		if (memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, check_len) != 0)
-			continue;
-
-		/* If we already read enough codepoints, then the comparison already verified that
-		   the sequence matches. */
-		if (check_len == mapping_check_len)
-			goto check_complete;
 
 		while (can_read_more && check_len < mapping_check_len) {
 			GET_UNICODE();
@@ -359,7 +350,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 				goto check_next_mapping;
 			}
 
-			switch (put_utf16(codepoint, &ptr, (const char *) (codepoints + CODEPOINT_BUFLEN))) {
+			switch (_charconv_put_utf16_no_check(codepoint, &ptr)) {
 				case CHARCONV_INCOMPLETE:
 					if (flags & CHARCONV_END_OF_TEXT) {
 						can_read_more = false;
@@ -377,11 +368,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 			check_len = ptr - (char *) codepoints;
 		}
 
-		if (check_len < mapping_check_len)
-			continue;
-
-		if (memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, check_len) == 0) {
-check_complete:
+		if (check_len >= mapping_check_len && memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, mapping_check_len) == 0) {
 			PUT_BYTES(handle->codepoint_sorted_multi_mappings[i]->bytes_length,
 				handle->codepoint_sorted_multi_mappings[i]->bytes);
 
@@ -574,9 +561,6 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	convertor_t *ptr;
 
 	pthread_mutex_lock(&cct_list_mutex);
-	/* Initialisation of global function. */
-	if (put_utf16 == NULL)
-		put_utf16 = _charconv_get_put_unicode(CHARCONV_UTF16);
 
 	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
 		pthread_mutex_unlock(&cct_list_mutex);

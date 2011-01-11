@@ -112,9 +112,9 @@ static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const 
 	return CHARCONV_SUCCESS;
 }
 
-#define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint > UINT32_C(0x10ffff) || \
+#define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint >= 0xfdd0 && (codepoint > UINT32_C(0x10ffff) || \
 	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfffe) || \
-	(codepoint >= UINT32_C(0xfdd0) && codepoint <= UINT32_C(0xfdef))) return CHARCONV_UTF_ILLEGAL; } while (0)
+	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint <= UINT32_C(0xfdef)))) return CHARCONV_UTF_ILLEGAL; } while (0)
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return CHARCONV_UTF_ILLEGAL; } while (0)
 
@@ -329,4 +329,19 @@ uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const 
 
 	*inbuf += 4;
 	return codepoint;
+}
+
+charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf) {
+	uint16_t *_outbuf = (uint16_t *) *outbuf;
+
+	if (codepoint < UINT32_C(0xffff)) {
+		*_outbuf = codepoint;
+		*outbuf += 2;
+	} else {
+		codepoint -= UINT32_C(0x10000);
+		*_outbuf++ = (UINT32_C(0xd800) + (codepoint >> 10));
+		*_outbuf = (UINT32_C(0xdc00) + (codepoint & 0x3ff));
+		*outbuf += 4;
+	}
+	return CHARCONV_SUCCESS;
 }
