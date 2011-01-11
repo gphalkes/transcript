@@ -295,8 +295,18 @@ static inline charconv_error_t put_bytes(convertor_state_t *handle, char **outbu
 	if ((*outbuf) + count > outbuflimit)
 		return CHARCONV_NO_SPACE;
 write_bytes:
-	memcpy(*outbuf, bytes, count);
-	*outbuf += count;
+	/* Use 8 here, just so we don't create a bug when we decide to up mb_cur_max. */
+	/* Using the switch here is faster than memcpy, which has to be completely general. */
+	switch (count) {
+		case 8: *(*outbuf)++ = *bytes++;
+		case 7: *(*outbuf)++ = *bytes++;
+		case 6: *(*outbuf)++ = *bytes++;
+		case 5: *(*outbuf)++ = *bytes++;
+		case 4: *(*outbuf)++ = *bytes++;
+		case 3: *(*outbuf)++ = *bytes++;
+		case 2: *(*outbuf)++ = *bytes++;
+		case 1: *(*outbuf)++ = *bytes++;
+	}
 	return CHARCONV_SUCCESS;
 }
 
