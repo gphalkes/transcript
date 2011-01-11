@@ -324,9 +324,12 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		return CHARCONV_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
-		/* Skip if the first codepoint doesn't match. */
-		if (codepoints[0] != handle->codepage_sorted_multi_mappings[i]->codepoints[0])
+		/* Skip if the first codepoint is smaller. */
+		if (codepoints[0] < handle->codepage_sorted_multi_mappings[i]->codepoints[0])
 			continue;
+		/* Skip other tests if the first codepoint is larger (sorted input). */
+		else if (codepoints[0] > handle->codepage_sorted_multi_mappings[i]->codepoints[0])
+			break;
 
 		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(ptr - (char *) codepoints, mapping_check_len);
