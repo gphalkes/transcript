@@ -115,6 +115,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 			}
 			PUT_UNICODE(codepoint);
 		} else if (entry->action == ACTION_FINAL) {
+			/* NOTE: we don't check for FINAL_PAIR, because that was converted when loading. */
 			conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
 			if ((conv_flags & TO_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
@@ -306,6 +307,7 @@ write_bytes:
 		case 3: *(*outbuf)++ = *bytes++;
 		case 2: *(*outbuf)++ = *bytes++;
 		case 1: *(*outbuf)++ = *bytes++;
+		default: ;
 	}
 	return CHARCONV_SUCCESS;
 }
