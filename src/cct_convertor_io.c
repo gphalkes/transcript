@@ -368,12 +368,20 @@ static void update_state_attributes(state_t *states, uint_fast32_t idx) {
 				high = i + 1 < states[idx].nr_entries ? states[idx].entries[i + 1].low : 256;
 				sum += (high - states[idx].entries[i].low) * states[idx].entries[i].mul;
 				break;
+			case ACTION_FINAL_LEN1_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN2_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN3_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN4_NOFLAGS | ACTION_FLAG_PAIR:
 			case ACTION_FINAL_PAIR:
-				states[idx].entries[i].action = ACTION_FINAL;
+				states[idx].entries[i].action &= !ACTION_FLAG_PAIR;
 			case ACTION_FINAL_PAIR_NOFLAGS:
 				states[idx].entries[i].mul = 2;
 				goto action_final_shared;
 			case ACTION_FINAL_NOFLAGS:
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_FINAL:
 				states[idx].entries[i].mul = 1;
 			action_final_shared:

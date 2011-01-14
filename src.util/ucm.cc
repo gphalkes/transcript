@@ -471,7 +471,7 @@ void Ucm::CodepageBytesStateMachineInfo::replace_state_machine(vector<State *> &
 	source.codepage_states = states;
 }
 
-bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) {
+bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action) {
 	vector<Mapping *> *mappings;
 
 	while (1) {
@@ -485,9 +485,10 @@ bool Ucm::CodepageBytesStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t
 				continue;
 			copy((*mappings)[idx]->codepage_bytes.begin(), (*mappings)[idx]->codepage_bytes.end(), bytes);
 			length = (*mappings)[idx]->codepage_bytes.size();
-			pair = iterating_simple_mappings ? (*mappings)[idx]->codepoints[0] > UINT32_C(0xffff) : false;
-			has_flags = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end() ||
-				((*mappings)[idx]->to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE) != 0;
+			mark_action = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end() ||
+				((*mappings)[idx]->to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE) != 0 ? ACTION_FINAL : ACTION_FINAL_NOFLAGS;
+			if (iterating_simple_mappings && (*mappings)[idx]->codepoints[0] > UINT32_C(0xffff))
+				mark_action = (action_t) (mark_action | ACTION_FLAG_PAIR);
 			idx++;
 			return true;
 		}
@@ -522,7 +523,7 @@ void Ucm::UnicodeStateMachineInfo::replace_state_machine(vector<State *> &states
 	source.unicode_states = states;
 }
 
-bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) {
+bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action) {
 	vector<Mapping *> *mappings;
 	uint32_t codepoint;
 
@@ -544,10 +545,12 @@ bool Ucm::UnicodeStateMachineInfo::get_next_byteseq(uint8_t *bytes, size_t &leng
 			memcpy(bytes, 1 + (char *) &codepoint, 3);
 			length = 3;
 
-			pair = iterating_simple_mappings ?
-				(*mappings)[idx]->codepage_bytes.size() > (size_t) source.single_bytes : false;
-			//has_flags = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end();
-			has_flags = true; // Length flags must always be stored for now
+			mark_action = (*mappings)[idx]->precision != 0 || !iterating_simple_mappings || variant_iter != source.variants.end() ?
+				ACTION_FINAL : (action_t) (ACTION_FINAL_LEN1_NOFLAGS + (*mappings)[idx]->codepage_bytes.size() - 1);
+
+			if (iterating_simple_mappings && (*mappings)[idx]->codepage_bytes.size() > (size_t) source.single_bytes)
+				mark_action = (action_t) (mark_action | ACTION_FLAG_PAIR);
+
 			idx++;
 			return true;
 		}

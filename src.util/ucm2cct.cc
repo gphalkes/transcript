@@ -26,6 +26,8 @@ bool option_verbose = false, option_internal_table = false;
 #ifdef DEBUG
 #define NO_ABORT_OPTION "a"
 bool option_abort = true;
+#else
+#define NO_ABORT_OPTION
 #endif
 const char *option_output_name = NULL;
 char *output_name;
@@ -126,6 +128,30 @@ void print_state_machine(const vector<State *> &states) {
 				case ACTION_FINAL_PAIR:
 					printf(".p");
 					break;
+				case ACTION_FINAL_LEN1_NOFLAGS:
+					printf(".[1]");
+					break;
+				case ACTION_FINAL_LEN2_NOFLAGS:
+					printf(".[2]");
+					break;
+				case ACTION_FINAL_LEN3_NOFLAGS:
+					printf(".[3]");
+					break;
+				case ACTION_FINAL_LEN4_NOFLAGS:
+					printf(".[4]");
+					break;
+				case ACTION_FINAL_LEN1_NOFLAGS | ACTION_FLAG_PAIR:
+					printf(".[1]p");
+					break;
+				case ACTION_FINAL_LEN2_NOFLAGS | ACTION_FLAG_PAIR:
+					printf(".[2]p");
+					break;
+				case ACTION_FINAL_LEN3_NOFLAGS | ACTION_FLAG_PAIR:
+					printf(".[3]p");
+					break;
+				case ACTION_FINAL_LEN4_NOFLAGS | ACTION_FLAG_PAIR:
+					printf(".[4]p");
+					break;
 				case ACTION_ILLEGAL:
 					printf(".i");
 					break;
@@ -177,10 +203,18 @@ static void update_state_attributes(vector<State *> &states, size_t idx) {
 				sum += (states[idx]->entries[i].high - states[idx]->entries[i].low + 1) *
 					states[idx]->entries[i].mul;
 				break;
+			case ACTION_FINAL_LEN1_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN2_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN3_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN4_NOFLAGS | ACTION_FLAG_PAIR:
 			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_FINAL_PAIR:
 				states[idx]->entries[i].mul = 2;
 				goto action_final_shared;
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL:
 				states[idx]->entries[i].mul = 1;
@@ -236,13 +270,15 @@ uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int 
 
 			value += states[state]->entries[j].base + (uint32_t)(charseq[i] - states[state]->entries[j].low) *
 				states[state]->entries[j].mul;
-			switch (states[state]->entries[j].action) {
+			switch (states[state]->entries[j].action & ~ACTION_FLAG_PAIR) {
 				case ACTION_VALID:
 					state = states[state]->entries[j].next_state;
 					goto next_char;
-				case ACTION_FINAL_PAIR_NOFLAGS:
+				case ACTION_FINAL_LEN1_NOFLAGS:
+				case ACTION_FINAL_LEN2_NOFLAGS:
+				case ACTION_FINAL_LEN3_NOFLAGS:
+				case ACTION_FINAL_LEN4_NOFLAGS:
 				case ACTION_FINAL_NOFLAGS:
-				case ACTION_FINAL_PAIR:
 				case ACTION_FINAL:
 					return value;
 				default:

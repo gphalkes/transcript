@@ -478,8 +478,10 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		entry = &handle->convertor->unicode_states[state].entries[handle->convertor->unicode_states[state].map[byte]];
 		idx += entry->base + (byte - entry->low) * entry->mul;
 
-
-		if (entry->action == ACTION_FINAL) {
+		if (entry->action >= ACTION_FINAL_LEN1_NOFLAGS && entry->action <= ACTION_FINAL_LEN4_NOFLAGS) {
+			bytes = &handle->convertor->unicode_mappings[idx * handle->convertor->single_size];
+			PUT_BYTES(entry->action - ACTION_FINAL_LEN1_NOFLAGS + 1, bytes);
+		} else if (entry->action == ACTION_FINAL) {
 			conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
 			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)

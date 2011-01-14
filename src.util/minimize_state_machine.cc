@@ -45,6 +45,68 @@ struct merge_cost_t {
 	int cost;
 };
 
+#ifdef DEBUG
+static void print_full_state(full_state_t *state) {
+	int i;
+	for (i = 0; i < 256; i++) {
+		switch (state->entries[i].action) {
+			case ACTION_FINAL:
+				putchar('+');
+				break;
+			case ACTION_FINAL_PAIR:
+				putchar('*');
+				break;
+
+			case ACTION_FINAL_LEN1_NOFLAGS:
+				putchar('a');
+				break;
+			case ACTION_FINAL_LEN2_NOFLAGS:
+				putchar('b');
+				break;
+			case ACTION_FINAL_LEN3_NOFLAGS:
+				putchar('c');
+				break;
+			case ACTION_FINAL_LEN4_NOFLAGS:
+				putchar('d');
+				break;
+
+			case ACTION_FINAL_LEN1_NOFLAGS | ACTION_FLAG_PAIR:
+				putchar('A');
+				break;
+			case ACTION_FINAL_LEN2_NOFLAGS | ACTION_FLAG_PAIR:
+				putchar('B');
+				break;
+			case ACTION_FINAL_LEN3_NOFLAGS | ACTION_FLAG_PAIR:
+				putchar('C');
+				break;
+			case ACTION_FINAL_LEN4_NOFLAGS | ACTION_FLAG_PAIR:
+				putchar('D');
+				break;
+
+			case ACTION_FINAL_NOFLAGS:
+				putchar('n');
+				break;
+			case ACTION_FINAL_NOFLAGS | ACTION_FINAL_PAIR:
+				putchar('N');
+				break;
+
+			case ACTION_ILLEGAL:
+				putchar('X');
+				break;
+			case ACTION_UNASSIGNED:
+				putchar('u');
+				break;
+			case ACTION_VALID:
+				putchar('v');
+				break;
+			default:
+				PANIC();
+		}
+	}
+	putchar('\n');
+}
+#endif
+
 static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info);
 
 static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail, const vector<State *> &states, int idx) {
@@ -107,30 +169,28 @@ static full_state_t *allocate_new_state(full_state_t **head, full_state_t **tail
 	return current;
 }
 
-static void mark_entry(full_state_t *start, unsigned char *bytes, int length, bool pair, bool has_flags) {
-	switch (start->entries[*bytes].action) {
+static void mark_entry(full_state_t *start, unsigned char *bytes, int length, action_t mark_action) {
+	switch (start->entries[*bytes].action & ~ACTION_FLAG_PAIR) {
 		case ACTION_VALID:
 			if (length == 1)
 				PANIC();
-			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, pair, has_flags);
+			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, mark_action);
 			return;
-		case ACTION_FINAL_NOFLAGS:
-		case ACTION_UNASSIGNED:
-			if (has_flags)
-				start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR : ACTION_FINAL;
-			else
-				start->entries[*bytes].action = pair ? ACTION_FINAL_PAIR_NOFLAGS : ACTION_FINAL_NOFLAGS;
-			break;
 		case ACTION_FINAL:
-			if (pair)
-				start->entries[*bytes].action = ACTION_FINAL_PAIR;
-			return;
-		/* Already marked as pair. Marking will not change this. */
-		case ACTION_FINAL_PAIR:
-			return;
-		case ACTION_FINAL_PAIR_NOFLAGS:
-			if (has_flags)
-				start->entries[*bytes].action = ACTION_FINAL_PAIR;
+		case ACTION_FINAL_NOFLAGS:
+		case ACTION_FINAL_LEN1_NOFLAGS:
+		case ACTION_FINAL_LEN2_NOFLAGS:
+		case ACTION_FINAL_LEN3_NOFLAGS:
+		case ACTION_FINAL_LEN4_NOFLAGS:
+			if ((mark_action & ~ACTION_FLAG_PAIR) != (start->entries[*bytes].action & ~ACTION_FLAG_PAIR))
+				start->entries[*bytes].action = (action_t) (ACTION_FINAL |
+					((mark_action | start->entries[*bytes].action) & ACTION_FLAG_PAIR));
+			else
+				start->entries[*bytes].action = (action_t) (start->entries[*bytes].action |
+					((mark_action | start->entries[*bytes].action) & ACTION_FLAG_PAIR));
+			break;
+		case ACTION_UNASSIGNED:
+			start->entries[*bytes].action = mark_action;
 			break;
 		default:
 			PANIC();
@@ -151,26 +211,28 @@ static bool can_merge(full_state_t *a, full_state_t *b) {
 		return false;
 
 	for (i = 0; i < 256; i++) {
-		switch (a->entries[i].action) {
+		switch (a->entries[i].action & ~ACTION_FLAG_PAIR) {
 			case ACTION_SHIFT:
-				if (a->entries[i].next_state != b->entries[i].next_state)
-					return false;
 			case ACTION_ILLEGAL:
 				if (a->entries[i].action != b->entries[i].action)
 					return false;
 				if (a->entries[i].next_state != b->entries[i].next_state)
 					return false;
 				break;
-			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_FINAL_NOFLAGS:
-			case ACTION_FINAL_PAIR:
 			case ACTION_FINAL:
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_UNASSIGNED:
-				switch (b->entries[i].action) {
-					case ACTION_FINAL_PAIR_NOFLAGS:
+				switch (b->entries[i].action & ~ACTION_FINAL_PAIR) {
 					case ACTION_FINAL_NOFLAGS:
-					case ACTION_FINAL_PAIR:
 					case ACTION_FINAL:
+					case ACTION_FINAL_LEN1_NOFLAGS:
+					case ACTION_FINAL_LEN2_NOFLAGS:
+					case ACTION_FINAL_LEN3_NOFLAGS:
+					case ACTION_FINAL_LEN4_NOFLAGS:
 					case ACTION_UNASSIGNED:
 						if (a->entries[i].next_state != b->entries[i].next_state)
 							return false;
@@ -203,10 +265,18 @@ static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info
 			case ACTION_SHIFT:
 			case ACTION_UNASSIGNED:
 				break;
+			case ACTION_FINAL_LEN1_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN2_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN3_NOFLAGS | ACTION_FLAG_PAIR:
+			case ACTION_FINAL_LEN4_NOFLAGS | ACTION_FLAG_PAIR:
 			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_FINAL_PAIR:
 				cost += (double) state->count * 2.0 * info->get_single_cost();
 				break;
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_FINAL_NOFLAGS:
 			case ACTION_FINAL:
 				cost += (double) state->count * info->get_single_cost();
@@ -222,41 +292,53 @@ static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info
 static int calculate_merge_cost(full_state_t *a, full_state_t *b, Ucm::StateMachineInfo *info) {
 	full_state_t tmp_state;
 	int i;
+	int extra_cost = 0;
 
 	memcpy(&tmp_state, a, sizeof(full_state_t));
 	tmp_state.count += b->count;
 
 	for (i = 0; i < 256; i++) {
-		switch (a->entries[i].action) {
+		switch (a->entries[i].action & ~ACTION_FLAG_PAIR) {
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:
-			case ACTION_FINAL_PAIR_NOFLAGS:
-				if (b->entries[i].action == ACTION_FINAL || b->entries[i].action == ACTION_FINAL_PAIR ||
-						(b->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags()))
-					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
+				if (a->entries[i].action != b->entries[i].action)
+					PANIC();
 				break;
-			case ACTION_FINAL_PAIR:
-				break;
+
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_FINAL_NOFLAGS:
-				if (b->entries[i].action == ACTION_FINAL_PAIR)
-					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
-				else if (b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-					tmp_state.entries[i].action = ACTION_FINAL_PAIR_NOFLAGS;
-				else if (b->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags())
-					tmp_state.entries[i].action = ACTION_FINAL;
-				break;
 			case ACTION_FINAL:
-				if (b->entries[i].action == ACTION_FINAL_PAIR || b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-					tmp_state.entries[i].action = ACTION_FINAL_PAIR;
+				if (b->entries[i].action == ACTION_UNASSIGNED && !info->unassigned_needs_flags())
+					break;
+				else if ((a->entries[i].action & ~ACTION_FLAG_PAIR) != (b->entries[i].action & ~ACTION_FLAG_PAIR)) {
+					tmp_state.entries[i].action = (action_t) (ACTION_FINAL |
+						((a->entries[i].action | b->entries[i].action) & ACTION_FLAG_PAIR));
+					if ((a->entries[i].action & ~ACTION_FLAG_PAIR) != ACTION_FINAL)
+						extra_cost += a->count;
+					if ((b->entries[i].action & ~ACTION_FLAG_PAIR) != ACTION_FINAL)
+						extra_cost += b->count;
+				} else
+					tmp_state.entries[i].action = (action_t) (tmp_state.entries[i].action |
+						((a->entries[i].action | b->entries[i].action) & ACTION_FLAG_PAIR));
 				break;
 			case ACTION_UNASSIGNED:
 				if (info->unassigned_needs_flags()) {
-					if (b->entries[i].action == ACTION_FINAL_NOFLAGS)
-						tmp_state.entries[i].action = ACTION_FINAL;
-					else if (b->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-						tmp_state.entries[i].action = ACTION_FINAL_PAIR;
-					else
-						tmp_state.entries[i].action = b->entries[i].action;
+					switch (b->entries[i].action & ~ACTION_FLAG_PAIR) {
+						default:
+							tmp_state.entries[i].action = b->entries[i].action;
+							break;
+						case ACTION_FINAL_LEN1_NOFLAGS:
+						case ACTION_FINAL_LEN2_NOFLAGS:
+						case ACTION_FINAL_LEN3_NOFLAGS:
+						case ACTION_FINAL_LEN4_NOFLAGS:
+						case ACTION_FINAL_NOFLAGS:
+							tmp_state.entries[i].action = (action_t) (ACTION_FINAL |
+								((a->entries[i].action | b->entries[i].action) & ACTION_FLAG_PAIR));
+							break;
+					}
 				} else {
 					tmp_state.entries[i].action = b->entries[i].action;
 				}
@@ -265,7 +347,7 @@ static int calculate_merge_cost(full_state_t *a, full_state_t *b, Ucm::StateMach
 				PANIC();
 		}
 	}
-	return calculate_state_cost(&tmp_state, info) - (a->cost + b->cost);
+	return calculate_state_cost(&tmp_state, info) - (a->cost + b->cost) + extra_cost * 2;
 }
 
 static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *right, Ucm::StateMachineInfo *info) {
@@ -281,42 +363,51 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	}
 	right->next = right->prev = NULL;
 
+	printf("Merging: %d,%d\n", left->cost, right->cost);
+	print_full_state(left);
+	print_full_state(right);
+
 	for (i = 0; i < 256; i++) {
-		switch (left->entries[i].action) {
+		switch (left->entries[i].action & ~ACTION_FLAG_PAIR) {
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:
 				break;
-			case ACTION_FINAL_PAIR_NOFLAGS:
-				if (right->entries[i].action == ACTION_FINAL || right->entries[i].action == ACTION_FINAL_PAIR ||
-						(right->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags()))
-					left->entries[i].action = ACTION_FINAL_PAIR;
-				break;
-			case ACTION_FINAL_PAIR:
-				break;
+
+			case ACTION_FINAL_LEN1_NOFLAGS:
+			case ACTION_FINAL_LEN2_NOFLAGS:
+			case ACTION_FINAL_LEN3_NOFLAGS:
+			case ACTION_FINAL_LEN4_NOFLAGS:
 			case ACTION_FINAL_NOFLAGS:
-				if (right->entries[i].action == ACTION_FINAL_PAIR)
-					left->entries[i].action = ACTION_FINAL_PAIR;
-				else if (right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-					left->entries[i].action = ACTION_FINAL_PAIR_NOFLAGS;
-				else if (right->entries[i].action == ACTION_UNASSIGNED && info->unassigned_needs_flags())
-					left->entries[i].action = ACTION_FINAL;
-				break;
 			case ACTION_FINAL:
-				if (right->entries[i].action == ACTION_FINAL_PAIR || right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-					left->entries[i].action = ACTION_FINAL_PAIR;
+				if (right->entries[i].action == ACTION_UNASSIGNED && !info->unassigned_needs_flags())
+					break;
+				else if ((left->entries[i].action & ~ACTION_FLAG_PAIR) != (right->entries[i].action & ~ACTION_FLAG_PAIR))
+					left->entries[i].action = (action_t) (ACTION_FINAL |
+						((left->entries[i].action | right->entries[i].action) & ACTION_FLAG_PAIR));
+				else
+					left->entries[i].action = (action_t) (left->entries[i].action |
+						((left->entries[i].action | right->entries[i].action) & ACTION_FLAG_PAIR));
 				break;
 			case ACTION_UNASSIGNED:
 				if (info->unassigned_needs_flags()) {
-					if (right->entries[i].action == ACTION_FINAL_NOFLAGS)
-						left->entries[i].action = ACTION_FINAL;
-					else if (right->entries[i].action == ACTION_FINAL_PAIR_NOFLAGS)
-						left->entries[i].action = ACTION_FINAL_PAIR;
-					else
-						left->entries[i].action = right->entries[i].action;
+					switch (right->entries[i].action & ~ACTION_FLAG_PAIR) {
+						default:
+							left->entries[i].action = right->entries[i].action;
+							break;
+						case ACTION_FINAL_LEN1_NOFLAGS:
+						case ACTION_FINAL_LEN2_NOFLAGS:
+						case ACTION_FINAL_LEN3_NOFLAGS:
+						case ACTION_FINAL_LEN4_NOFLAGS:
+						case ACTION_FINAL_NOFLAGS:
+							left->entries[i].action = (action_t) (ACTION_FINAL |
+								((left->entries[i].action | right->entries[i].action) & ACTION_FLAG_PAIR));
+							break;
+					}
 				} else {
 					left->entries[i].action = right->entries[i].action;
 				}
 				break;
+
 			case ACTION_VALID:
 				break;
 			default:
@@ -338,8 +429,10 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 
 	left->count += right->count;
 
-	if (left->cost > 0)
+	if (left->cost > 0) {
 		left->cost = calculate_state_cost(left, info);
+		printf("  new cost: %d\n", left->cost);
+	}
 
 	free(right);
 }
@@ -399,7 +492,7 @@ static void minimize_states(full_state_t *head, full_state_t **tail, Ucm::StateM
 			if (iter->left == previous.right || iter->right == previous.right) {
 				iter = costs.erase(iter);
 				continue;
-			} else  if (iter->left == previous.left || iter->right == previous.left) {
+			} else if (iter->left == previous.left || iter->right == previous.left) {
 				iter->cost = calculate_merge_cost(iter->left, iter->right, info);
 			}
 
@@ -412,8 +505,13 @@ static void minimize_states(full_state_t *head, full_state_t **tail, Ucm::StateM
 		if (nr_states <= 256 && best.cost > 0)
 			break;
 
+		if (nr_states > 256 && best.cost == INT_MAX)
+			fatal("Could not reduce the number of states sufficiently (this is probably a bug).\n");
+
 		merge_states(tail, best.left, best.right, info);
 		previous = best;
+		best.left = NULL;
+		best.right = NULL;
 		best.cost = INT_MAX;
 
 		nr_states = count_states(head);
@@ -435,9 +533,8 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
 
 	uint8_t bytes[31];
 	size_t length;
-	bool is_pair, has_flags;
+	action_t mark_action;
 	int state;
-
 
 	if (option_verbose)
 		fprintf(stderr, "Minimizing state machine\n");
@@ -471,9 +568,9 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
 	nr_initial_states = nr_serialized_states;
 
 	// Mark all used entries
-	while (info->get_next_byteseq(bytes, length, is_pair, has_flags)) {
+	while (info->get_next_byteseq(bytes, length, mark_action)) {
 		state = (flags & Ucm::MULTIBYTE_START_STATE_1) && length > 1 ? 1 : 0;
-		mark_entry(initial_states[state].full_state, bytes, length, is_pair, has_flags);
+		mark_entry(initial_states[state].full_state, bytes, length, mark_action);
 	}
 
 	minimize_states(head, &tail, info);

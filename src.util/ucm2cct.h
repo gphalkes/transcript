@@ -30,13 +30,25 @@ using namespace std;
 
 enum action_t {
 	ACTION_FINAL,
-	ACTION_FINAL_PAIR,
+	ACTION_FINAL_NOFLAGS,
+	ACTION_FINAL_LEN1_NOFLAGS,
+	ACTION_FINAL_LEN2_NOFLAGS,
+	ACTION_FINAL_LEN3_NOFLAGS,
+	ACTION_FINAL_LEN4_NOFLAGS,
+	/* Define lengths 5 through 8 such that we don't have to renumber later.
+	   Not used right now. */
+	ACTION_FINAL_LEN5_NOFLAGS,
+	ACTION_FINAL_LEN6_NOFLAGS,
+	ACTION_FINAL_LEN7_NOFLAGS,
+	ACTION_FINAL_LEN8_NOFLAGS,
 	ACTION_VALID,
 	ACTION_UNASSIGNED,
 	ACTION_SHIFT,
 	ACTION_ILLEGAL,
-	ACTION_FINAL_NOFLAGS,
-	ACTION_FINAL_PAIR_NOFLAGS
+
+	ACTION_FLAG_PAIR = (1<<7),
+	ACTION_FINAL_PAIR = ACTION_FINAL | ACTION_FLAG_PAIR,
+	ACTION_FINAL_PAIR_NOFLAGS = ACTION_FINAL_NOFLAGS | ACTION_FLAG_PAIR,
 };
 
 struct Entry {
@@ -184,7 +196,7 @@ class Ucm : public UcmBase {
 					iterating_simple_mappings(true), idx(0) {}
 				virtual const vector<State *> &get_state_machine(void) = 0;
 				virtual void replace_state_machine(vector<State *> &states) = 0;
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags) = 0;
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action) = 0;
 				virtual double get_single_cost(void) = 0;
 				virtual bool unassigned_needs_flags(void) = 0;
 		};
@@ -221,7 +233,7 @@ class Ucm : public UcmBase {
 				CodepageBytesStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action);
 				virtual double get_single_cost(void);
 				virtual bool unassigned_needs_flags(void);
 		};
@@ -231,7 +243,7 @@ class Ucm : public UcmBase {
 				UnicodeStateMachineInfo(Ucm &_source) : StateMachineInfo(_source) {}
 				virtual const vector<State *> &get_state_machine(void);
 				virtual void replace_state_machine(vector<State *> &states);
-				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, bool &pair, bool &has_flags);
+				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action);
 				virtual double get_single_cost(void);
 				virtual bool unassigned_needs_flags(void);
 		};
