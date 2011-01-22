@@ -25,51 +25,14 @@
 //FIXME: use gettext for this one
 #define _(x) x
 
-typedef struct {
-	const char *squashed_name;
-	const char *convertor_name;
-	void *(*open)(const char *name, int flags, charconv_error_t *error);
-} name_mapping;
-
-//FIXME: we need a list of known convertors and aliases! i.e. read convrtrs.txt
-static name_mapping convertors[] = {
-	{ "ibm437", "ibm-437_P100-1995", _charconv_open_cct_convertor },
-	{ "ibm437p100", "ibm-437_P100-1995", _charconv_open_cct_convertor },
-	{ "ibm437p1001995", "ibm-437_P100-1995", _charconv_open_cct_convertor },
-	{ "iso88591", "ISO-8859-1", _charconv_open_iso8859_1_convertor },
-	{ "utf8", "UTF-8", _charconv_open_unicode_convertor },
-	{ "utf8bom", "UTF-8_BOM", _charconv_open_unicode_convertor },
-	{ "utf16", "UTF-16", _charconv_open_unicode_convertor },
-	{ "utf16be", "UTF-16BE", _charconv_open_unicode_convertor },
-	{ "utf16le", "UTF-16LE", _charconv_open_unicode_convertor },
-	{ "ucs2", "UTF-16", _charconv_open_unicode_convertor },
-	{ "ucs2be", "UTF-16BE", _charconv_open_unicode_convertor },
-	{ "ucs2le", "UTF-16LE", _charconv_open_unicode_convertor },
-	{ "utf32", "UTF-32", _charconv_open_unicode_convertor },
-	{ "utf32be", "UTF-32BE", _charconv_open_unicode_convertor },
-	{ "utf32le", "UTF-32LE", _charconv_open_unicode_convertor },
-	{ "ucs4", "UTF-32", _charconv_open_unicode_convertor },
-	{ "ucs4be", "UTF-32BE", _charconv_open_unicode_convertor },
-	{ "ucs4le", "UTF-32LE", _charconv_open_unicode_convertor },
-	{ "cesu8", "CESU-8", _charconv_open_unicode_convertor },
-	{ "utf7", "UTF-7", _charconv_open_unicode_convertor },
-	{ "gb18030", "GB-18030", _charconv_open_unicode_convertor },
-	{ "iso2022jp", "ISO-2022-JP", _charconv_open_iso2022_convertor },
-	{ "iso885915", "ibm-923_P100-1998", _charconv_open_cct_convertor }
-#ifdef DEBUG
-	, { "iso2022test", "ISO-2022-TEST", _charconv_open_iso2022_convertor }
-#endif
-};
-
 static bool initialized;
 static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-
 /*================ API functions ===============*/
 charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
-	name_mapping *convertor;
+	charconv_convertor_name_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
-	size_t array_size = ARRAY_SIZE(convertors);
+	charconv_t *result;
 
 	if (!initialized) {
 		pthread_mutex_lock(&init_mutex);
@@ -87,12 +50,22 @@ charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, i
 
 	_charconv_squash_name(name, squashed_name);
 
-	if ((convertor = lfind(squashed_name, convertors, &array_size, sizeof(name_mapping), _charconv_element_strcmp)) != NULL) {
-		if (convertor->open != NULL)
-			return _charconv_fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
-		name = convertor->convertor_name;
+	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL) {
+		if ((result = _charconv_open_unicode_convertor(convertor->name, flags, error)) != NULL)
+			return _charconv_fill_utf(result, utf_type);
+		if ((result = _charconv_open_iso8859_1_convertor(convertor->name, flags, error)) != NULL)
+			return _charconv_fill_utf(result, utf_type);
+		if ((result = _charconv_open_iso2022_convertor(convertor->name, flags, error)) != NULL)
+			return _charconv_fill_utf(result, utf_type);
+		return _charconv_fill_utf(_charconv_open_cct_convertor(convertor->real_name, flags, error), utf_type);
 	}
 
+	if ((result = _charconv_open_unicode_convertor(squashed_name, flags, error)) != NULL)
+		return _charconv_fill_utf(result, utf_type);
+	if ((result = _charconv_open_iso8859_1_convertor(squashed_name, flags, error)) != NULL)
+		return _charconv_fill_utf(result, utf_type);
+	if ((result = _charconv_open_iso2022_convertor(squashed_name, flags, error)) != NULL)
+		return _charconv_fill_utf(result, utf_type);
 	return _charconv_fill_utf(_charconv_open_cct_convertor(name, flags, error), utf_type);
 }
 
@@ -209,7 +182,7 @@ void _charconv_squash_name(const char *name, char *squashed_name) {
 
 	/*FIXME: replace tolower, isalnum and isdigit by appropriate versions that are not locale dependent? */
 	for (; *name != 0 && write_idx < SQUASH_NAME_MAX - 1; name++) {
-		if (!isalnum(*name)) {
+		if (!isalnum(*name) && *name != ',') {
 			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *name == '0')

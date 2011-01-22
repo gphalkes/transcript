@@ -97,7 +97,11 @@ static void save_load_nop(charconv_common_t *handle, void *state) {
 void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error) {
 	charconv_common_t *retval;
 
-	(void) name;
+	if (strcmp(name, "iso88591") != 0) {
+		if (error != NULL)
+			*error = CHARCONV_INTERNAL_ERROR;
+		return NULL;
+	}
 
 	if ((retval = malloc(sizeof(charconv_common_t))) == 0) {
 		if (error != NULL)

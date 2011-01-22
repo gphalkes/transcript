@@ -616,17 +616,17 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 
 void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
 	static const name_to_iso2022type map[] = {
-		{ "ISO-2022-JP", ISO2022_JP },
-		{ "ISO-2022-JP-1", ISO2022_JP1 },
-		{ "ISO-2022-JP-2", ISO2022_JP2 },
-		{ "ISO-2022-JP-3", ISO2022_JP3 },
-		{ "ISO-2022-JP-2004", ISO2022_JP2004 },
-		{ "ISO-2022-KR", ISO2022_KR },
-		{ "ISO-2022-CN", ISO2022_CN },
-		{ "ISO-2022-CN-EXT", ISO2022_CNEXT }
+		{ "iso2022jp", ISO2022_JP },
+		{ "iso2022jp1", ISO2022_JP1 },
+		{ "iso2022jp2", ISO2022_JP2 },
+		{ "iso2022jp3", ISO2022_JP3 },
+		{ "iso2022jp2004", ISO2022_JP2004 },
+		{ "iso2022kr", ISO2022_KR },
+		{ "iso2022cn", ISO2022_CN },
+		{ "iso2022cnext", ISO2022_CNEXT }
 #ifdef DEBUG
 #warning using ISO-2022-TEST
-		, { "ISO-2022-TEST", ISO2022_TEST }
+		, { "iso2022test", ISO2022_TEST }
 #endif
 	};
 

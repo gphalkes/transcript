@@ -24,7 +24,7 @@ static charconv_convertor_name_t *convertors, *convertors_tail;
 static char **display_names;
 
 
-static void _charconv_log(const char *fmt, ...) {
+void _charconv_log(const char *fmt, ...) {
 	if (getenv("CHARCONV_LOG") != NULL) {
 		va_list ap;
 		va_start(ap, fmt);
@@ -55,15 +55,20 @@ bool _charconv_add_convertor_name(const char *name) {
 		}
 		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
 			if (strcmp(squashed_name, alias->name) == 0)
-				_charconv_log("warning: convertor name '%s' is shadowed by an alias\n", name);
+				_charconv_log("warning: convertor name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
 
-	if ((convertor = malloc(sizeof(charconv_convertor_name_t))) == NULL) {
+	if ((convertor = malloc(sizeof(charconv_convertor_name_t))) == NULL ||
+			(convertor->real_name = strdup(name)) == NULL ||
+			(convertor->name = strdup(squashed_name)) == NULL)
+	{
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
 	}
+
+
 
 	if ((convertor->name = strdup(squashed_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
@@ -78,39 +83,16 @@ bool _charconv_add_convertor_name(const char *name) {
 	/* Link into list. */
 	if (convertors_tail != NULL)
 		convertors_tail->next = convertor;
+	else
+		convertors = convertor;
 	convertors_tail = convertor;
 	return true;
 
 return_error:
 	if (convertor) {
+		free(convertor->real_name);
 		free(convertor->name);
 		free(convertor);
-	}
-	return false;
-}
-
-bool _charconv_set_option(const char *name, const char *value) {
-	charconv_option_t *option;
-
-	if ((option = malloc(sizeof(charconv_option_t))) == NULL)
-		goto return_error;
-
-	if ((option->name = strdup(name)) == NULL)
-		goto return_error;
-
-	if ((option->value = strdup(value)) == NULL)
-		goto return_error;
-
-	option->next = convertors_tail->options;
-	convertors_tail->options = option;
-	return true;
-
-return_error:
-	_charconv_log("error: out of memory while loading aliases\n");
-	if (option != NULL) {
-		free(option->name);
-		free(option->value);
-		free(option);
 	}
 	return false;
 }
@@ -136,7 +118,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 
 		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
 			if (strcmp(squashed_name, alias->name) == 0)
-				_charconv_log("warning: alias name '%s' is shadowed by an alias\n", name);
+				_charconv_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
 

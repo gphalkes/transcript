@@ -16,6 +16,7 @@ SOURCES.libcharconv.la := charconv.c utf.c cc_iconv.c cct_convertor.c cct_conver
 	read_aliases.l
 LDFLAGS.libcharconv.la := -pthread
 CFLAGS.cct_convertor := -pthread
+CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs

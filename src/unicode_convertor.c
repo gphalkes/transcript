@@ -183,18 +183,18 @@ static void load_state(convertor_state_t *handle, void *state) {
 
 void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_error_t *error) {
 	static const name_to_utftype map[] = {
-		{ "UTF-8", UTF8_LOOSE },
-		{ "UTF-8_BOM", UTF8_BOM },
-		{ "UTF-16", CHARCONV_UTF16 },
-		{ "UTF-16BE", CHARCONV_UTF16BE },
-		{ "UTF-16LE", CHARCONV_UTF16LE },
-		{ "UTF-32", CHARCONV_UTF32 },
-		{ "UTF-32BE", CHARCONV_UTF32BE },
-		{ "UTF-32LE", CHARCONV_UTF32LE },
-		{ "CESU-8", CESU8 },
-		{ "GB-18030", GB18030 },
-		{ "SCSU", SCSU },
-		{ "UTF-7", UTF7 }
+		{ "utf8", UTF8_LOOSE },
+		{ "utf8,bom", UTF8_BOM },
+		{ "utf16", CHARCONV_UTF16 },
+		{ "utf16be", CHARCONV_UTF16BE },
+		{ "utf16le", CHARCONV_UTF16LE },
+		{ "utf32", CHARCONV_UTF32 },
+		{ "utf32be", CHARCONV_UTF32BE },
+		{ "utf32le", CHARCONV_UTF32LE },
+		{ "cesu8", CESU8 },
+		{ "gb18030", GB18030 },
+		{ "scsu", SCSU },
+		{ "utf7", UTF7 }
 	};
 
 	convertor_state_t *retval;

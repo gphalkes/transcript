@@ -15,53 +15,49 @@
 %{
 #include "charconv_internal.h"
 
-static enum { START, PRE_OPTIONS, ALIAS } parse_state = START;
+static enum { START, ALIAS, SKIP_REST } parse_state = START;
 static int line_number;
 #define PARSE_ERROR 1
 %}
 
-%x OPTIONS
 %option noyywrap
 
 %%
 \\\n                        line_number++;
 \n                          line_number++; parse_state = START;
-[[:space:]]                 if (parse_state == PRE_OPTIONS) parse_state = ALIAS;
-#.*                         if (parse_state == PRE_OPTIONS) parse_state = ALIAS;
-\*[-a-zA-Z0-9:.+_]+         {
-								switch (parse_state) {
-									case START:
-										_charconv_add_convertor_name(yytext);
-										parse_state = PRE_OPTIONS;
-										break;
-									case PRE_OPTIONS:
-										/* ERROR! */
-										break;
-									case ALIAS:
-										_charconv_add_convertor_alias(yytext);
-										break;
-								}
-							}
-,                           BEGIN(OPTIONS);
+[[:space:]]                 /* Ignore space */
+#.*                         /* Ignore comments */
+\*?[-a-zA-Z0-9:.+_]+        {
+                            	switch (parse_state) {
+                            		case START:
+                            			parse_state = _charconv_add_convertor_name(yytext) ? ALIAS : SKIP_REST;
+                            			break;
+                            		case ALIAS:
+                            			_charconv_add_convertor_alias(yytext);
+                            			break;
+                            		case SKIP_REST:
+                            			break;
+                            	}
+                            }
+\*?[-a-zA-Z0-9:.+_]+,([a-zA-Z0-9_]+(=[a-zA-Z0-9_]+)?)?    {
+                            	if (parse_state == START)
+                            		parse_state = _charconv_add_convertor_name(yytext) ? ALIAS : SKIP_REST;
+                            }
 .                           return PARSE_ERROR;
-
-<OPTIONS>{
-[a-zA-Z0-9_]+               _charconv_set_option(yytext, NULL);
-[a-zA-Z0-9_]+=[a-zA-Z0-9_]+ { char *equals = strchr(yytext, '='); *equals = 0; _charconv_set_option(yytext, equals + 1); }
-#.*                         BEGIN(INITIAL); parse_state = ALIAS;
-\\\n                        line_number++;
-\n                          line_number++; BEGIN(INITIAL); parse_state = START;
-[[:space:]]                 BEGIN(INITIAL); parse_state = ALIAS;
-.                           return PARSE_ERROR;
-}
 
 %%
 
+#include <errno.h>
+#include <string.h>
+
 void _charconv_init_aliases(void) {
 	/* FIXME: open correct aliases file (use cct_open which should be moved to charconv.c */
-	if ((yyin = fopen("aliases.txt", "r")) == NULL)
+	if ((yyin = fopen("aliases.txt", "r")) == NULL) {
+		_charconv_log("Error opening aliases.txt: %s\n", strerror(errno));
 		return;
-	yylex();
+	}
+	if (yylex() == 1)
+		_charconv_log("Parse error at aliases.txt:%d\n", line_number);
 	yy_delete_buffer(YY_CURRENT_BUFFER);
 	yy_init = 1;
 }
