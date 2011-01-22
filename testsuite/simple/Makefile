@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CFILES.test := test.c
+SOURCES.test := test.c
 CFLAGS.test := -I../../src/
 LDFLAGS.test := -L../../src/.libs
 LDLIBS.test := -lcharconv

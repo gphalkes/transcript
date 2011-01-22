@@ -15,6 +15,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <search.h>
+#include <pthread.h>
 
 #include "charconv_internal.h"
 #include "utf.h"
@@ -60,35 +61,33 @@ static name_mapping convertors[] = {
 #endif
 };
 
+static bool initialized;
+static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
 /*================ API functions ===============*/
 charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
-	bool last_was_digit = false;
 	name_mapping *convertor;
-	char name_buffer[128];
-	size_t store_idx = 0;
+	char squashed_name[SQUASH_NAME_MAX];
 	size_t array_size = ARRAY_SIZE(convertors);
-	const char *ptr;
 
-	if (utf_type > CHARCONV_UTF32LE) {
+	if (!initialized) {
+		pthread_mutex_lock(&init_mutex);
+		if (!initialized)
+			_charconv_init_aliases();
+		initialized = true;
+		pthread_mutex_unlock(&init_mutex);
+	}
+
+	if (utf_type > CHARCONV_UTF32LE || utf_type <= 0) {
 		if (error != NULL)
 			*error = CHARCONV_BAD_ARG;
 		return NULL;
 	}
 
-	/*FIXME: replace tolower, isalnum and isdigit by appropriate versions that are not locale dependent? */
-	for (ptr = name; *ptr != 0 && store_idx < 127; ptr++) {
-		if (!isalnum(*ptr)) {
-			last_was_digit = false;
-		} else {
-			if (!last_was_digit && *ptr == '0')
-				continue;
-			name_buffer[store_idx++] = tolower(*ptr);
-			last_was_digit = isdigit(*ptr);
-		}
-	}
-	name_buffer[store_idx] = 0;
+	_charconv_squash_name(name, squashed_name);
 
-	if ((convertor = lfind(name_buffer, convertors, &array_size, sizeof(name_mapping), _charconv_element_strcmp)) != NULL) {
+	if ((convertor = lfind(squashed_name, convertors, &array_size, sizeof(name_mapping), _charconv_element_strcmp)) != NULL) {
 		if (convertor->open != NULL)
 			return _charconv_fill_utf(convertor->open(convertor->convertor_name, flags, error), utf_type);
 		name = convertor->convertor_name;
@@ -152,20 +151,6 @@ void charconv_load_state(charconv_t *handle, void *state) {
 	handle->save(handle, state);
 }
 
-/*================ Internal functions ===============*/
-
-charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type) {
-	if (handle == NULL)
-		return NULL;
-	handle->get_unicode = _charconv_get_get_unicode(utf_type);
-	handle->put_unicode = _charconv_get_put_unicode(utf_type);
-	return handle;
-}
-
-int _charconv_element_strcmp(const void *a, const void *b) {
-	return strcmp((const char *) a, *(char * const *) b);
-}
-
 const char *charconv_strerror(charconv_error_t error) {
 	switch (error) {
 		case CHARCONV_SUCCESS:
@@ -203,3 +188,36 @@ const char *charconv_strerror(charconv_error_t error) {
 			return _("Map file is for internal use only");
 	}
 }
+
+/*================ Internal functions ===============*/
+
+charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type) {
+	if (handle == NULL)
+		return NULL;
+	handle->get_unicode = _charconv_get_get_unicode(utf_type);
+	handle->put_unicode = _charconv_get_put_unicode(utf_type);
+	return handle;
+}
+
+int _charconv_element_strcmp(const void *a, const void *b) {
+	return strcmp((const char *) a, *(char * const *) b);
+}
+
+void _charconv_squash_name(const char *name, char *squashed_name) {
+	size_t write_idx = 0;
+	bool last_was_digit = false;
+
+	/*FIXME: replace tolower, isalnum and isdigit by appropriate versions that are not locale dependent? */
+	for (; *name != 0 && write_idx < SQUASH_NAME_MAX - 1; name++) {
+		if (!isalnum(*name)) {
+			last_was_digit = false;
+		} else {
+			if (!last_was_digit && *name == '0')
+				continue;
+			squashed_name[write_idx++] = tolower(*name);
+			last_was_digit = isdigit(*name);
+		}
+	}
+	squashed_name[write_idx] = 0;
+}
+

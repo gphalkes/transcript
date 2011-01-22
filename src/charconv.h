@@ -86,7 +86,7 @@ typedef enum {
 } charconv_error_t;
 
 typedef enum {
-	CHARCONV_UTF8,
+	CHARCONV_UTF8 = 1,
 	CHARCONV_UTF16,
 	CHARCONV_UTF32,
 	CHARCONV_UTF16BE,
