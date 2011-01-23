@@ -207,9 +207,15 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 		return NULL;
 	}
 
-	//FIXME: if type is GB18030, need to check table as well!
-	if (flags & CHARCONV_PROBE_ONLY)
+	if (flags & CHARCONV_PROBE_ONLY) {
+		if (ptr->utf_type == GB18030) {
+			FILE *file;
+			if ((file = _charconv_db_open("gb18030", ".cct", NULL)) == NULL)
+				return NULL;
+			fclose(file);
+		}
 		return (void *) 1;
+	}
 
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
