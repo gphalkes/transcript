@@ -193,7 +193,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 		{ "utf32le", CHARCONV_UTF32LE },
 		{ "cesu8", CESU8 },
 		{ "gb18030", GB18030 },
-		{ "scsu", SCSU },
+		/* Disabled for now { "scsu", SCSU }, */
 		{ "utf7", UTF7 }
 	};
 
@@ -207,6 +207,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 		return NULL;
 	}
 
+	//FIXME: if type is GB18030, need to check table as well!
 	if (flags & CHARCONV_PROBE_ONLY)
 		return (void *) 1;
 

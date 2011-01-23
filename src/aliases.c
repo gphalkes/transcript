@@ -184,7 +184,7 @@ charconv_convertor_name_t *_charconv_get_convertor_name(const char *name) {
 	return NULL;
 }
 
-const char const * const *charconv_get_names(int *count) {
+const char * const *charconv_get_names(int *count) {
 	_charconv_init();
 	if (count != NULL)
 		*count = display_names_used;

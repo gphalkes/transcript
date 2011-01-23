@@ -20,8 +20,7 @@ void fatal(const char *fmt, ...) {
 
 void show_names(void) {
 	int count, i;
-	//~ const char const * const *names;
-	const char const * const *names;
+	const char * const *names;
 	names = charconv_get_names(&count);
 	printf("Display name count: %d\n", count);
 	for (i = 0; i < count; i++)
