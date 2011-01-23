@@ -51,8 +51,7 @@ static int line_number;
 #include <string.h>
 
 void _charconv_init_aliases(void) {
-	/* FIXME: open correct aliases file (use cct_open which should be moved to charconv.c */
-	if ((yyin = fopen("aliases.txt", "r")) == NULL) {
+	if ((yyin = _charconv_db_open("aliases", ".txt", NULL)) == NULL) {
 		_charconv_log("Error opening aliases.txt: %s\n", strerror(errno));
 		return;
 	}

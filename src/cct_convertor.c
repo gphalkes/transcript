@@ -574,6 +574,15 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	variant_t *variant;
 	convertor_t *ptr;
 
+	if (flags & CHARCONV_PROBE_ONLY) {
+		FILE *file;
+		if ((file = _charconv_db_open(name, ".cct", NULL)) != NULL) {
+			fclose(file);
+			return (void *) 1;
+		}
+		return NULL;
+	}
+
 	pthread_mutex_lock(&cct_list_mutex);
 
 	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {

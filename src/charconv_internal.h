@@ -14,6 +14,7 @@
 #ifndef CHARCONV_INTERNAL_H
 #define CHARCONV_INTERNAL_H
 
+#include <stdio.h>
 #include "charconv.h"
 
 #define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
@@ -30,6 +31,10 @@ typedef enum {false, true} bool;
 #endif
 
 #define SQUASH_NAME_MAX 160
+
+enum {
+	CHARCONV_PROBE_ONLY = (1<<15)
+};
 
 typedef charconv_error_t (*conversion_func_t)(charconv_t *handle, const char **inbuf, const char *inbuflimit,
 	char **outbuf, const char *outbuflimit, int flags);
@@ -88,4 +93,6 @@ CHARCONV_LOCAL bool _charconv_add_convertor_alias(const char *name);
 CHARCONV_LOCAL charconv_convertor_name_t *_charconv_get_convertor_name(const char *name);
 
 CHARCONV_LOCAL void _charconv_squash_name(const char *name, char *squashed_name);
+CHARCONV_LOCAL void _charconv_init(void);
+CHARCONV_LOCAL FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error);
 #endif

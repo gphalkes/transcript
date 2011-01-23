@@ -55,7 +55,7 @@ GB18030 IBM-1392 Windows-54936
 # Non-unicode encodings:
 # ======================
 
-*ISO-8859-1 IBM-819 cp819 *latin1 8859_1 csISOLatin1 iso-ir-100 \
+*ISO-8859-1 IBM-819 cp819 *Latin1 8859_1 csISOLatin1 iso-ir-100 \
 	ISO_8859-1:1987 l1 819
 *US-ASCII *ASCII ANSI_X3.4-1968 ANSI_X3.4-1986 ISO_646.irv:1991 \
 	iso_646.irv:1983 ISO646-US us csASCII iso-ir-6 cp367 ascii7 646 \

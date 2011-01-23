@@ -17,6 +17,17 @@ void fatal(const char *fmt, ...) {
 	abort();
 }
 
+
+void show_names(void) {
+	int count, i;
+	//~ const char const * const *names;
+	const char const * const *names;
+	names = charconv_get_names(&count);
+	printf("Display name count: %d\n", count);
+	for (i = 0; i < count; i++)
+		printf("name: %s\n", names[i]);
+}
+
 int main(int argc, char *argv[]) {
 	charconv_error_t error;
 	void *conv;
@@ -40,7 +51,7 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", CHARCONV_UTF32BE },
 		{ "UTF-32LE", CHARCONV_UTF32LE }};
 
-	while ((c = getopt(argc, argv, "d:u:D")) != EOF) {
+	while ((c = getopt(argc, argv, "d:u:Dl")) != EOF) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
@@ -66,6 +77,9 @@ int main(int argc, char *argv[]) {
 			case 'D':
 				option_dump = 1;
 				break;
+			case 'l':
+				show_names();
+				exit(EXIT_SUCCESS);
 			default:
 				fatal("Error processing options\n");
 		}

@@ -25,7 +25,6 @@
 
 typedef int (*compar_func_t)(const void *, const void *);
 
-static FILE *cct_open(const char *name, charconv_error_t *error);
 static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries,
 	uint_fast32_t max_entries, charconv_error_t *error);
 static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
@@ -71,7 +70,7 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 		}
 	}
 
-	if ((file = cct_open(name, error)) == NULL)
+	if ((file = _charconv_db_open(name, ".cct", error)) == NULL)
 		goto end_error;
 
 	READ(4, magic);
@@ -248,39 +247,6 @@ void _charconv_unload_cct_convertor(convertor_t *convertor) {
 	}
 	free(convertor);
 }
-
-static FILE *try_open(const char *name, const char *dir, charconv_error_t *error) {
-	char *file_name = NULL;
-	FILE *file = NULL;
-	size_t len;
-
-	len = strlen(dir) + strlen(name) + 6;
-	if ((file_name = malloc(len)) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
-
-	strcpy(file_name, dir);
-	//FIXME: dir separator may not be /
-	strcat(file_name, "/");
-	strcat(file_name, name);
-	strcat(file_name, ".cct");
-
-	if ((file = fopen(file_name, "r")) == NULL)
-		ERROR(CHARCONV_ERRNO);
-
-end_error:
-	free(file_name);
-	return file;
-}
-
-static FILE *cct_open(const char *name, charconv_error_t *error) {
-	FILE *result;
-	const char *dir = getenv("CHARCONV_PATH");
-	//FIXME: allow colon delimited list
-	if (dir != NULL && (result = try_open(name, dir, error)) != NULL)
-		return result;
-	return try_open(name, DB_DIRECTORY, error);
-}
-
 
 static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries,
 		uint_fast32_t max_entries, charconv_error_t *error)

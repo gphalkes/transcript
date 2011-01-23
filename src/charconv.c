@@ -28,19 +28,26 @@
 static bool initialized;
 static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error);
+
 /*================ API functions ===============*/
+int charconv_probe_convertor(const char *name) {
+	charconv_convertor_name_t *convertor;
+	char squashed_name[SQUASH_NAME_MAX];
+
+	_charconv_init();
+	_charconv_squash_name(name, squashed_name);
+
+	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL)
+		return try_convertors(convertor->name, convertor->real_name, CHARCONV_PROBE_ONLY, NULL) != NULL;
+	return try_convertors(squashed_name, name, CHARCONV_PROBE_ONLY, NULL) != NULL;
+}
+
 charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
 	charconv_convertor_name_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
-	charconv_t *result;
 
-	if (!initialized) {
-		pthread_mutex_lock(&init_mutex);
-		if (!initialized)
-			_charconv_init_aliases();
-		initialized = true;
-		pthread_mutex_unlock(&init_mutex);
-	}
+	_charconv_init();
 
 	if (utf_type > CHARCONV_UTF32LE || utf_type <= 0) {
 		if (error != NULL)
@@ -50,23 +57,9 @@ charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, i
 
 	_charconv_squash_name(name, squashed_name);
 
-	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL) {
-		if ((result = _charconv_open_unicode_convertor(convertor->name, flags, error)) != NULL)
-			return _charconv_fill_utf(result, utf_type);
-		if ((result = _charconv_open_iso8859_1_convertor(convertor->name, flags, error)) != NULL)
-			return _charconv_fill_utf(result, utf_type);
-		if ((result = _charconv_open_iso2022_convertor(convertor->name, flags, error)) != NULL)
-			return _charconv_fill_utf(result, utf_type);
-		return _charconv_fill_utf(_charconv_open_cct_convertor(convertor->real_name, flags, error), utf_type);
-	}
-
-	if ((result = _charconv_open_unicode_convertor(squashed_name, flags, error)) != NULL)
-		return _charconv_fill_utf(result, utf_type);
-	if ((result = _charconv_open_iso8859_1_convertor(squashed_name, flags, error)) != NULL)
-		return _charconv_fill_utf(result, utf_type);
-	if ((result = _charconv_open_iso2022_convertor(squashed_name, flags, error)) != NULL)
-		return _charconv_fill_utf(result, utf_type);
-	return _charconv_fill_utf(_charconv_open_cct_convertor(name, flags, error), utf_type);
+	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL)
+		return _charconv_fill_utf(try_convertors(convertor->name, convertor->real_name, flags, error), utf_type);
+	return _charconv_fill_utf(try_convertors(squashed_name, name, flags, error), utf_type);
 }
 
 void charconv_close_convertor(charconv_t *handle) {
@@ -192,5 +185,65 @@ void _charconv_squash_name(const char *name, char *squashed_name) {
 		}
 	}
 	squashed_name[write_idx] = 0;
+}
+
+void _charconv_init(void) {
+	if (!initialized) {
+		pthread_mutex_lock(&init_mutex);
+		if (!initialized)
+			_charconv_init_aliases();
+		initialized = true;
+		pthread_mutex_unlock(&init_mutex);
+	}
+}
+
+static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error) {
+	charconv_t *result;
+	if ((result = _charconv_open_unicode_convertor(squashed_name, flags, error)) != NULL)
+		return result;
+	if ((result = _charconv_open_iso8859_1_convertor(squashed_name, flags, error)) != NULL)
+		return result;
+	if ((result = _charconv_open_iso2022_convertor(squashed_name, flags, error)) != NULL)
+		return result;
+	return _charconv_open_cct_convertor(real_name, flags, error);
+}
+
+
+static FILE *try_db_open(const char *name, const char *ext, const char *dir, charconv_error_t *error) {
+	char *file_name = NULL;
+	FILE *file = NULL;
+	size_t len;
+
+	len = strlen(dir) + strlen(name) + 2 + strlen(ext);
+	if ((file_name = malloc(len)) == NULL) {
+		if (error != NULL)
+			*error = CHARCONV_OUT_OF_MEMORY;
+		goto end;
+	}
+
+	strcpy(file_name, dir);
+	//FIXME: dir separator may not be /
+	strcat(file_name, "/");
+	strcat(file_name, name);
+	strcat(file_name, ext);
+
+	if ((file = fopen(file_name, "r")) == NULL) {
+		if (error != NULL)
+			*error = CHARCONV_ERRNO;
+		goto end;
+	}
+
+end:
+	free(file_name);
+	return file;
+}
+
+FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error) {
+	FILE *result;
+	const char *dir = getenv("CHARCONV_PATH");
+	//FIXME: allow colon delimited list
+	if (dir != NULL && (result = try_db_open(name, ext, dir, error)) != NULL)
+		return result;
+	return try_db_open(name, ext, DB_DIRECTORY, error);
 }
 

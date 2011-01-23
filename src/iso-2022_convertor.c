@@ -640,6 +640,10 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 		return NULL;
 	}
 
+	//FIXME: check existance of sub-convertors!!
+	if (flags & CHARCONV_PROBE_ONLY)
+		return (void *) 1;
+
 	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
 		if (error != NULL)
 			*error = CHARCONV_OUT_OF_MEMORY;

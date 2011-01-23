@@ -22,7 +22,26 @@
 
 static charconv_convertor_name_t *convertors, *convertors_tail;
 static char **display_names;
+static int display_names_allocated, display_names_used;
 
+static void add_display_name(const char *name) {
+	if (display_names_allocated == 0) {
+		if ((display_names = malloc(64 * sizeof(char *))) == NULL)
+			return;
+		display_names_allocated = 64;
+	} else if (display_names_used >= display_names_allocated) {
+		char **tmp;
+
+		if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(char *))) == NULL)
+			return;
+		display_names = tmp;
+		display_names_allocated *= 2;
+	}
+
+	if ((display_names[display_names_used] = strdup(name)) == NULL)
+		return;
+	display_names_used++;
+}
 
 void _charconv_log(const char *fmt, ...) {
 	if (getenv("CHARCONV_LOG") != NULL) {
@@ -68,7 +87,8 @@ bool _charconv_add_convertor_name(const char *name) {
 		goto return_error;
 	}
 
-
+	convertor->aliases = NULL;
+	convertor->next = NULL;
 
 	if ((convertor->name = strdup(squashed_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
@@ -76,9 +96,8 @@ bool _charconv_add_convertor_name(const char *name) {
 		goto return_error;
 	}
 
-	if (is_display_name) {
-		/* FIXME: append to display_names list */
-	}
+	if (is_display_name)
+		add_display_name(name);
 
 	/* Link into list. */
 	if (convertors_tail != NULL)
@@ -134,6 +153,9 @@ bool _charconv_add_convertor_alias(const char *name) {
 		goto return_error;
 	}
 
+	if (is_display_name)
+		add_display_name(name);
+
 	alias->next = convertors_tail->aliases;
 	convertors_tail->aliases = alias;
 	return true;
@@ -146,7 +168,7 @@ return_error:
 	return false;
 }
 
-CHARCONV_LOCAL charconv_convertor_name_t *_charconv_get_convertor_name(const char *name) {
+charconv_convertor_name_t *_charconv_get_convertor_name(const char *name) {
 	char squashed_name[SQUASH_NAME_MAX];
 	_charconv_squash_name(name, squashed_name);
 
@@ -160,4 +182,11 @@ CHARCONV_LOCAL charconv_convertor_name_t *_charconv_get_convertor_name(const cha
 		END_LOOP_LIST
 	END_LOOP_LIST
 	return NULL;
+}
+
+const char const * const *charconv_get_names(int *count) {
+	_charconv_init();
+	if (count != NULL)
+		*count = display_names_used;
+	return (const char const * const *) display_names;
 }

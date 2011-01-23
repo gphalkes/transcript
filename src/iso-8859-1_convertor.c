@@ -103,6 +103,9 @@ void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error
 		return NULL;
 	}
 
+	if (flags & CHARCONV_PROBE_ONLY)
+		return (void *) 1;
+
 	if ((retval = malloc(sizeof(charconv_common_t))) == 0) {
 		if (error != NULL)
 			*error = CHARCONV_OUT_OF_MEMORY;

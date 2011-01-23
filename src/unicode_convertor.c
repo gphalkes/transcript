@@ -207,6 +207,10 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 		return NULL;
 	}
 
+	if (flags & CHARCONV_PROBE_ONLY)
+		return (void *) 1;
+
+
 	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
 		if (error != NULL)
 			*error = CHARCONV_OUT_OF_MEMORY;

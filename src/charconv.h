@@ -59,6 +59,8 @@ enum {
 	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.). */
 	CHARCONV_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions. */
 	CHARCONV_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::CHARCONV_NO_MN_CONVERSION  */
+
+	/* NOTE: internal flags are defined in charconv_internal.h. Make sure these don't overlap! */
 };
 
 typedef enum {
@@ -121,6 +123,7 @@ struct _charconv_iso2022_state_t {
 #define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
 	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
 
+CHARCONV_API int charconv_probe_convertor(const char *name);
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
 CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, const char **inbuf,
@@ -137,6 +140,7 @@ CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 //FIXME: add a listing mechanism!
 CHARCONV_API const char *charconv_strerror(charconv_error_t error);
+CHARCONV_API const char const * const *charconv_get_names(int *count);
 
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)
