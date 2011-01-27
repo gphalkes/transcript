@@ -544,7 +544,7 @@ static void reset_state_cn(convertor_state_t *handle) {
 	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
 };
 
-static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
+static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
 	cct_handle_t *cct_handle, *extra_handle;
 	charconv_t *ext_handle;
 	uint_fast8_t idx = 0;
@@ -607,61 +607,28 @@ static bool load_table(convertor_state_t *handle, cct_descriptor_t *desc, int g,
 	return true;
 }
 
-#define LOAD_TABLE(handle, desc, g, error, _write) do { \
-	if (!load_table((handle), (desc), (g), (error), (_write))) { \
-		close_convertor(handle); \
-		return NULL; \
-	} \
+static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
+	(void) handle;
+	(void) g;
+	(void) error;
+	(void) flags;
+
+	if (desc->name == NULL)
+		return true; /* Builtin convertors (ISO-8859-1) */
+	else
+		return charconv_probe_convertor(desc->name);
+}
+
+#define DO_LOAD(handle, desc, g, error, _write) do { \
+	if (!load((handle), (desc), (g), (error), (_write))) \
+		return false; \
 } while (0)
 
-void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
-	static const name_to_iso2022type map[] = {
-		{ "iso2022jp", ISO2022_JP },
-		{ "iso2022jp1", ISO2022_JP1 },
-		{ "iso2022jp2", ISO2022_JP2 },
-		{ "iso2022jp3", ISO2022_JP3 },
-		{ "iso2022jp2004", ISO2022_JP2004 },
-		{ "iso2022kr", ISO2022_KR },
-		{ "iso2022cn", ISO2022_CN },
-		{ "iso2022cnext", ISO2022_CNEXT }
-#ifdef DEBUG
-#warning using ISO-2022-TEST
-		, { "iso2022test", ISO2022_TEST }
-#endif
-	};
+typedef bool (*load_table_func)(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags);
 
-	convertor_state_t *retval;
-	name_to_iso2022type *ptr;
-	size_t array_size = ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), _charconv_element_strcmp)) == NULL) {
-		if (error != NULL)
-			*error = CHARCONV_INTERNAL_ERROR;
-		return NULL;
-	}
-
-	//FIXME: check existance of sub-convertors!!
-	if (flags & CHARCONV_PROBE_ONLY)
-		return (void *) 1;
-
-	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
-		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
-		return NULL;
-	}
-	retval->g_sets[0] = NULL;
-	retval->g_sets[1] = NULL;
-	retval->g_sets[2] = NULL;
-	retval->g_sets[3] = NULL;
-	retval->g_initial[0] = NULL;
-	retval->g_initial[1] = NULL;
-	retval->g_initial[2] = NULL;
-	retval->g_initial[3] = NULL;
-
-	retval->iso2022_type = ptr->iso2022_type;
-	retval->reset_state = reset_state_nop;
-
-	switch (retval->iso2022_type) {
+static bool do_load(load_table_func load, convertor_state_t *handle, int type, charconv_error_t *error) {
+		switch (type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
 		   JIS X 0213 has two planes: the first plane which is a superset of
 		   JIS X 0208, and plane 2 which contains only new chars. However, in
@@ -698,81 +665,143 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 		*/
 		case ISO2022_JP2004:
 			/* Load the JP and JP-3 sets, but only for reading. */
-			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, 0);
-			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, 0);
-			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, 0);
-			LOAD_TABLE(retval, &jis_x_0213_2000_1, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, error, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0213_2004_1, 0, error, CCT_FLAG_WRITE);
-			retval->shift_types = 0;
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2004_1, 0, error, CCT_FLAG_WRITE);
+			handle->shift_types = 0;
 			break;
 		case ISO2022_JP3:
 			/* Load the JP sets, but only for reading. */
-			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, 0);
-			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, 0);
-			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, error, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0213_2000_1, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
-			retval->shift_types = 0;
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_2, 0, error, CCT_FLAG_WRITE);
+			if (handle != NULL)
+				handle->shift_types = 0;
 			break;
 		case ISO2022_JP2:
-			LOAD_TABLE(retval, &iso8859_1, 2, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &iso8859_7, 2, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &ksc5601_1987, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &gb2312_1980, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
+			DO_LOAD(handle, &iso8859_1, 2, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &iso8859_7, 2, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &ksc5601_1987, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &gb2312_1980, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
-			LOAD_TABLE(retval, &jis_x_0212_1990, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0212_1990, 0, error, CCT_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_JP:
-			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0208_1978, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
-			LOAD_TABLE(retval, &jis_x_0208_1983, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
-			retval->shift_types = 0;
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, error, CCT_FLAG_WRITE | CCT_FLAGS_SHORT_SEQ);
+			if (handle != NULL)
+				handle->shift_types = 0;
 			break;
 		case ISO2022_KR:
-			LOAD_TABLE(retval, &ksc5601_1987, 1, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &ascii, 0, error, CCT_FLAG_WRITE);
-			retval->shift_types = LS0 | LS1;
+			DO_LOAD(handle, &ksc5601_1987, 1, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &ascii, 0, error, CCT_FLAG_WRITE);
+			if (handle != NULL)
+				handle->shift_types = LS0 | LS1;
 			break;
 		case ISO2022_CNEXT:
 			/* The RFC (1922) lists several more character sets, but only under the assumption
 			   that a final character would be assigned to them. To the best of my knowledge,
 			   this hasn't happened yet, so we don't include them. */
-			LOAD_TABLE(retval, &iso_ir_165, 1, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_3, 3, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_4, 3, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_5, 3, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_6, 3, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_7, 3, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &iso_ir_165, 1, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_3, 3, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_4, 3, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_5, 3, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_6, 3, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_7, 3, error, CCT_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_CN:
-			LOAD_TABLE(retval, &gb2312_1980, 1, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_1, 1, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &cns_11643_1992_2, 2, error, CCT_FLAG_WRITE);
-			retval->shift_types = LS0 | LS1 | SS2 | (retval->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
-			retval->reset_state = reset_state_cn;
+			DO_LOAD(handle, &gb2312_1980, 1, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_1, 1, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_2, 2, error, CCT_FLAG_WRITE);
+			if (handle != NULL) {
+				handle->shift_types = LS0 | LS1 | SS2 | (handle->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
+				handle->reset_state = reset_state_cn;
+			}
 			break;
 		case ISO2022_TEST:
-			LOAD_TABLE(retval, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
-			LOAD_TABLE(retval, &iso8859_1, 2, error, CCT_FLAG_WRITE);
-			retval->shift_types = 0;
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, CCT_FLAG_WRITE);
+			DO_LOAD(handle, &iso8859_1, 2, error, CCT_FLAG_WRITE);
+			if (handle != NULL)
+				handle->shift_types = 0;
 			break;
 		default:
-			close_convertor(retval);
 			if (error != NULL)
 				*error = CHARCONV_INTERNAL_ERROR;
-			return NULL;
+			return false;
+	}
+	return true;
+}
+
+
+void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
+	static const name_to_iso2022type map[] = {
+		{ "iso2022jp", ISO2022_JP },
+		{ "iso2022jp1", ISO2022_JP1 },
+		{ "iso2022jp2", ISO2022_JP2 },
+		{ "iso2022jp3", ISO2022_JP3 },
+		{ "iso2022jp2004", ISO2022_JP2004 },
+		{ "iso2022kr", ISO2022_KR },
+		{ "iso2022cn", ISO2022_CN },
+		{ "iso2022cnext", ISO2022_CNEXT }
+#ifdef DEBUG
+#warning using ISO-2022-TEST
+		, { "iso2022test", ISO2022_TEST }
+#endif
+	};
+
+	convertor_state_t *retval;
+	name_to_iso2022type *ptr;
+	size_t array_size = ARRAY_SIZE(map);
+
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), _charconv_element_strcmp)) == NULL) {
+		if (error != NULL)
+			*error = CHARCONV_INTERNAL_ERROR;
+		return NULL;
+	}
+
+	if (flags & CHARCONV_PROBE_ONLY)
+		return do_load(probe, NULL, ptr->iso2022_type, error) ? (void *) 1 : NULL;
+
+	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+		if (error != NULL)
+			*error = CHARCONV_OUT_OF_MEMORY;
+		return NULL;
+	}
+	retval->g_sets[0] = NULL;
+	retval->g_sets[1] = NULL;
+	retval->g_sets[2] = NULL;
+	retval->g_sets[3] = NULL;
+	retval->g_initial[0] = NULL;
+	retval->g_initial[1] = NULL;
+	retval->g_initial[2] = NULL;
+	retval->g_initial[3] = NULL;
+
+	retval->iso2022_type = ptr->iso2022_type;
+	retval->reset_state = reset_state_nop;
+
+	if (!do_load(real_load, retval, ptr->iso2022_type, error)) {
+		close_convertor(retval);
+		return NULL;
 	}
 	/* Load ASCII, which all convertors need. */
-	LOAD_TABLE(retval, &ascii, 0, error, true);
+	if (!real_load(retval, &ascii, 0, error, true)) {
+		close_convertor(retval);
+		return NULL;
+	}
 	retval->ascii = retval->g_sets[0];
 	retval->g_initial[0] = retval->ascii;
 
