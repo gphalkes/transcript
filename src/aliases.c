@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string.h>
+#include <dirent.h>
 
 #define _CHARCONV_CONST
 #include "charconv_internal.h"
@@ -210,7 +211,7 @@ static const char *builtin_names[] = {
 	"UTF-32",
 	"UTF-32LE",
 	"UTF-32BE",
-	"UTF-8,bom",
+	"UTF-8,BOM",
 	"CESU-8",
 	"GB-18030",
 	"UTF-7",
@@ -227,24 +228,32 @@ static const char *builtin_names[] = {
 };
 
 void _charconv_init_aliases(void) {
-	char squashed_name[SQUASH_NAME_MAX];
+	DIR *dir;
+	struct dirent *entry;
 	size_t i;
 
 	_charconv_init_aliases_from_file();
 
 	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
-		_charconv_squash_name(builtin_names[i], squashed_name);
-		LOOP_LIST(charconv_name_desc_t, ptr, convertors)
-			if (strcmp(squashed_name, ptr->name) == 0)
-				goto next_builtin_name;
-
-			LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
-				if (strcmp(squashed_name, alias->name) == 0)
-					goto next_builtin_name;
-			END_LOOP_LIST
-		END_LOOP_LIST
-		add_display_name(builtin_names[i], _charconv_probe_convertor(builtin_names[i]));
-next_builtin_name:;
+		if (_charconv_get_name_desc(builtin_names[i]) == NULL)
+			add_display_name(builtin_names[i], _charconv_probe_convertor(builtin_names[i]));
 	}
+
+	if ((dir = opendir(DB_DIRECTORY)) == NULL)
+		return;
+
+	while ((entry = readdir(dir)) != NULL) {
+		size_t entry_name_len = strlen(entry->d_name);
+		if (entry_name_len < 5)
+			continue;
+		if (entry->d_name[0] == '_')
+			continue;
+		if (strcmp(entry->d_name + entry_name_len - 4, ".cct") != 0)
+			continue;
+		entry->d_name[entry_name_len - 4] = 0;
+		if (_charconv_get_name_desc(entry->d_name) == NULL)
+			add_display_name(entry->d_name, _charconv_probe_convertor(entry->d_name));
+	}
+	closedir(dir);
 }
 

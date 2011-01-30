@@ -5,13 +5,8 @@
   performance (through multiple conversions at a time) should be provided as
   well
 
-- the list of names returned by charconv_get_names should include all available
-  names. This means that it should list the db dir and provide all names from
-  there (if an alias is not already available). A problem is that some
-  convertors are meant for internal use only. Unless we encode that in the
-  name, this will not be noticed by the proposed scheme. Finally we need to
-  include the names of the internally defined encoders, if they are not already
-  included through the inclusion of the aliases list.
+- creating the list of names may be a bit heavy. Checking the availability
+  could also be done when requested rather than at load time
 
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 

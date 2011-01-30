@@ -616,7 +616,7 @@ static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, char
 	if (desc->name == NULL)
 		return true; /* Builtin convertors (ISO-8859-1) */
 	else
-		return charconv_probe_convertor(desc->name);
+		return _charconv_probe_convertor(desc->name);
 }
 
 #define DO_LOAD(handle, desc, g, error, _write) do { \

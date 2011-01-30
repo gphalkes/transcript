@@ -210,7 +210,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	if (flags & CHARCONV_PROBE_ONLY) {
 		if (ptr->utf_type == GB18030) {
 			FILE *file;
-			if ((file = _charconv_db_open("gb18030", ".cct", NULL)) == NULL)
+			if ((file = _charconv_db_open("_gb18030", ".cct", NULL)) == NULL)
 				return NULL;
 			fclose(file);
 		}
@@ -257,7 +257,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	switch (retval->utf_type) {
 		case GB18030:
 			if ((retval->gb18030_cct = _charconv_fill_utf(
-					_charconv_open_cct_convertor_internal("gb18030", flags, error, true), CHARCONV_UTF32)) == NULL) {
+					_charconv_open_cct_convertor_internal("_gb18030", flags, error, true), CHARCONV_UTF32)) == NULL) {
 				free(retval);
 				return NULL;
 			}
