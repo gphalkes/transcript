@@ -20,11 +20,11 @@ void fatal(const char *fmt, ...) {
 
 void show_names(void) {
 	int count, i;
-	const char * const *names;
+	const charconv_name_t *names;
 	names = charconv_get_names(&count);
 	printf("Display name count: %d\n", count);
 	for (i = 0; i < count; i++)
-		printf("name: %s\n", names[i]);
+		printf("name: %s (%d)\n", names[i].name, names[i].available);
 }
 
 int main(int argc, char *argv[]) {

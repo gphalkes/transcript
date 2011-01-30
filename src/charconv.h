@@ -119,6 +119,15 @@ struct _charconv_iso2022_state_t {
 	uint_fast8_t to, from;
 };
 
+#ifndef _CHARCONV_CONST
+#define _CHARCONV_CONST const
+#endif
+
+typedef struct {
+	_CHARCONV_CONST char *name;
+	int available;
+} charconv_name_t;
+
 #define _CHARCONV_MAX(a, b) ((a) > (b) ? (a) : (b))
 #define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
 	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
@@ -140,7 +149,7 @@ CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 //FIXME: add a listing mechanism!
 CHARCONV_API const char *charconv_strerror(charconv_error_t error);
-CHARCONV_API const char * const *charconv_get_names(int *count);
+CHARCONV_API const charconv_name_t *charconv_get_names(int *count);
 
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)

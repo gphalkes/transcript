@@ -29,4 +29,6 @@ CHARCONV_LOCAL void *_charconv_open_iso8859_1_convertor(const char *name, int fl
 /* ISO-2022-* convertor */
 CHARCONV_LOCAL void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error);
 
+/* NOTE: if you add a convertor here, also add it's display names to the builtin_names array in aliases.c */
+
 #endif

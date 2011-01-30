@@ -7,8 +7,11 @@
 
 - the list of names returned by charconv_get_names should include all available
   names. This means that it should list the db dir and provide all names from
-  there (if an alias is not already available). The question is whether we
-  should probe each alias before putting it in the display list.
+  there (if an alias is not already available). A problem is that some
+  convertors are meant for internal use only. Unless we encode that in the
+  name, this will not be noticed by the proposed scheme. Finally we need to
+  include the names of the internally defined encoders, if they are not already
+  included through the inclusion of the aliases list.
 
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 

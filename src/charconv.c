@@ -31,16 +31,20 @@ static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
 static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error);
 
 /*================ API functions ===============*/
-int charconv_probe_convertor(const char *name) {
+int _charconv_probe_convertor(const char *name) {
 	charconv_name_desc_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
 
-	_charconv_init();
 	_charconv_squash_name(name, squashed_name);
 
 	if ((convertor = _charconv_get_name_desc(squashed_name)) != NULL)
 		return try_convertors(convertor->name, convertor->real_name, CHARCONV_PROBE_ONLY, NULL) != NULL;
 	return try_convertors(squashed_name, name, CHARCONV_PROBE_ONLY, NULL) != NULL;
+}
+
+int charconv_probe_convertor(const char *name) {
+	_charconv_init();
+	return _charconv_probe_convertor(name);
 }
 
 charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
@@ -57,7 +61,7 @@ charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, i
 
 	_charconv_squash_name(name, squashed_name);
 
-	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL)
+	if ((convertor = _charconv_get_name_desc(squashed_name)) != NULL)
 		return _charconv_fill_utf(try_convertors(convertor->name, convertor->real_name, flags, error), utf_type);
 	return _charconv_fill_utf(try_convertors(squashed_name, name, flags, error), utf_type);
 }
@@ -246,4 +250,3 @@ FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *err
 		return result;
 	return try_db_open(name, ext, DB_DIRECTORY, error);
 }
-
