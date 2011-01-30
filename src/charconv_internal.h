@@ -74,12 +74,12 @@ typedef struct charconv_alias_name_t {
 	struct charconv_alias_name_t *next;
 } charconv_alias_name_t;
 
-typedef struct charconv_convertor_name_t {
+typedef struct charconv_name_desc_t {
 	char *real_name;
 	char *name;
 	charconv_alias_name_t *aliases;
-	struct charconv_convertor_name_t *next;
-} charconv_convertor_name_t;
+	struct charconv_name_desc_t *next;
+} charconv_name_desc_t;
 
 
 CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type);
@@ -90,7 +90,7 @@ CHARCONV_LOCAL void _charconv_log(const char *fmt, ...);
 CHARCONV_LOCAL void _charconv_init_aliases(void);
 CHARCONV_LOCAL bool _charconv_add_convertor_name(const char *name);
 CHARCONV_LOCAL bool _charconv_add_convertor_alias(const char *name);
-CHARCONV_LOCAL charconv_convertor_name_t *_charconv_get_convertor_name(const char *name);
+CHARCONV_LOCAL charconv_name_desc_t *_charconv_get_name_desc(const char *name);
 
 CHARCONV_LOCAL void _charconv_squash_name(const char *name, char *squashed_name);
 CHARCONV_LOCAL void _charconv_init(void);

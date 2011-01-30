@@ -32,19 +32,19 @@ static charconv_t *try_convertors(const char *squashed_name, const char *real_na
 
 /*================ API functions ===============*/
 int charconv_probe_convertor(const char *name) {
-	charconv_convertor_name_t *convertor;
+	charconv_name_desc_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
 
 	_charconv_init();
 	_charconv_squash_name(name, squashed_name);
 
-	if ((convertor = _charconv_get_convertor_name(squashed_name)) != NULL)
+	if ((convertor = _charconv_get_name_desc(squashed_name)) != NULL)
 		return try_convertors(convertor->name, convertor->real_name, CHARCONV_PROBE_ONLY, NULL) != NULL;
 	return try_convertors(squashed_name, name, CHARCONV_PROBE_ONLY, NULL) != NULL;
 }
 
 charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error) {
-	charconv_convertor_name_t *convertor;
+	charconv_name_desc_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
 
 	_charconv_init();

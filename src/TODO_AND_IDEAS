@@ -5,6 +5,11 @@
   performance (through multiple conversions at a time) should be provided as
   well
 
+- the list of names returned by charconv_get_names should include all available
+  names. This means that it should list the db dir and provide all names from
+  there (if an alias is not already available). The question is whether we
+  should probe each alias before putting it in the display list.
+
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
 - proper testing of all the convertors!!! This means both correct and

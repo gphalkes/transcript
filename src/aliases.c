@@ -20,7 +20,7 @@
 #define LOOP_LIST(type, iter, head) { type *iter; for (iter = head; iter != NULL; iter = iter->next) {
 #define END_LOOP_LIST }}
 
-static charconv_convertor_name_t *convertors, *convertors_tail;
+static charconv_name_desc_t *convertors, *convertors_tail;
 static char **display_names;
 static int display_names_allocated, display_names_used;
 
@@ -53,7 +53,7 @@ void _charconv_log(const char *fmt, ...) {
 }
 
 bool _charconv_add_convertor_name(const char *name) {
-	charconv_convertor_name_t *convertor = NULL;
+	charconv_name_desc_t *convertor = NULL;
 	char squashed_name[SQUASH_NAME_MAX];
 	bool is_display_name = *name == '*';
 
@@ -67,7 +67,7 @@ bool _charconv_add_convertor_name(const char *name) {
 		goto return_error;
 	}
 
-	LOOP_LIST(charconv_convertor_name_t, ptr, convertors)
+	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
 		if (strcmp(squashed_name, ptr->name) == 0) {
 			_charconv_log("error: convertor name '%s' is already known\n", name);
 			goto return_error;
@@ -78,7 +78,7 @@ bool _charconv_add_convertor_name(const char *name) {
 		END_LOOP_LIST
 	END_LOOP_LIST
 
-	if ((convertor = malloc(sizeof(charconv_convertor_name_t))) == NULL ||
+	if ((convertor = malloc(sizeof(charconv_name_desc_t))) == NULL ||
 			(convertor->real_name = strdup(name)) == NULL ||
 			(convertor->name = strdup(squashed_name)) == NULL)
 	{
@@ -131,7 +131,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 		goto return_error;
 	}
 
-	LOOP_LIST(charconv_convertor_name_t, ptr, convertors)
+	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
 		if (strcmp(squashed_name, ptr->name) == 0)
 			_charconv_log("error: alias name '%s' is shadowd by a convertor\n", name);
 
@@ -141,7 +141,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 		END_LOOP_LIST
 	END_LOOP_LIST
 
-	if ((alias = malloc(sizeof(charconv_convertor_name_t))) == NULL) {
+	if ((alias = malloc(sizeof(charconv_name_desc_t))) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
@@ -168,11 +168,11 @@ return_error:
 	return false;
 }
 
-charconv_convertor_name_t *_charconv_get_convertor_name(const char *name) {
+charconv_name_desc_t *_charconv_get_name_desc(const char *name) {
 	char squashed_name[SQUASH_NAME_MAX];
 	_charconv_squash_name(name, squashed_name);
 
-	LOOP_LIST(charconv_convertor_name_t, ptr, convertors)
+	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
 		if (strcmp(squashed_name, ptr->name) == 0)
 			return ptr;
 
