@@ -60,8 +60,10 @@ bool _charconv_add_convertor_name(const char *name) {
 	char squashed_name[SQUASH_NAME_MAX];
 	bool is_display_name = *name == '*';
 
-	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME))
+	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
 		add_display_name(convertors_tail->real_name, (convertors_tail->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
+		convertors_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
+	}
 
 	if (is_display_name)
 		name++;
@@ -233,6 +235,10 @@ void _charconv_init_aliases(void) {
 	size_t i;
 
 	_charconv_init_aliases_from_file();
+	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
+		add_display_name(convertors_tail->real_name, (convertors_tail->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
+		convertors_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
+	}
 
 	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
 		if (_charconv_get_name_desc(builtin_names[i]) == NULL)
