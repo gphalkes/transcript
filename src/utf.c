@@ -321,6 +321,10 @@ get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 	}
 }
 
+/* clang (correctly) complains about increased alignment in casts here, but we
+   ignore those. We ask the user to make sure instead. */
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint_fast32_t codepoint = *(const uint32_t *) *inbuf;
 
@@ -345,3 +349,4 @@ charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **ou
 	}
 	return CHARCONV_SUCCESS;
 }
+

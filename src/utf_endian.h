@@ -16,6 +16,10 @@
 #define _ALT(x, y) __ALT(x, y)
 #define ALT(x) _ALT(x, UTF_ENDIAN_H_VERSION)
 
+/* clang (correctly) complains about increased alignment in casts here, but we
+   ignore those. We ask the user to make sure instead. */
+#pragma GCC diagnostic ignored "-Wcast-align"
+
 static charconv_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint16_t *_outbuf = (uint16_t *) *outbuf;
 
@@ -106,6 +110,7 @@ static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbufl
 	*inbuf += 4;
 	return codepoint;
 }
+
 #undef ALT
 #undef _ALT
 #undef __ALT
