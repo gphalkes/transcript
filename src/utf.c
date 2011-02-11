@@ -12,6 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <arpa/inet.h>
+#include <string.h>
 
 #include "charconv_internal.h"
 #include "utf.h"
@@ -321,30 +322,31 @@ get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 	}
 }
 
-/* clang (correctly) complains about increased alignment in casts here, but we
-   ignore those. We ask the user to make sure instead. */
-#pragma GCC diagnostic ignored "-Wcast-align"
-
 uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
-	uint_fast32_t codepoint = *(const uint32_t *) *inbuf;
+	uint32_t codepoint;
 
 	(void) inbuflimit;
 	(void) skip;
+
+	memcpy(&codepoint, *inbuf, 4);
 
 	*inbuf += 4;
 	return codepoint;
 }
 
 charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf) {
-	uint16_t *_outbuf = (uint16_t *) *outbuf;
+	uint16_t tmp;
 
 	if (codepoint < UINT32_C(0xffff)) {
-		*_outbuf = codepoint;
+		tmp = codepoint;
+		memcpy(*outbuf, &tmp, 2);
 		*outbuf += 2;
 	} else {
 		codepoint -= UINT32_C(0x10000);
-		*_outbuf++ = (UINT32_C(0xd800) + (codepoint >> 10));
-		*_outbuf = (UINT32_C(0xdc00) + (codepoint & 0x3ff));
+		tmp = (UINT32_C(0xd800) + (codepoint >> 10));
+		memcpy(*outbuf, &tmp, 2);
+		tmp = (UINT32_C(0xdc00) + (codepoint & 0x3ff));
+		memcpy((*outbuf) + 2, &tmp, 2);
 		*outbuf += 4;
 	}
 	return CHARCONV_SUCCESS;
