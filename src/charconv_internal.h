@@ -91,7 +91,6 @@ CHARCONV_LOCAL int _charconv_element_strcmp(const void *a, const void *b);
 
 CHARCONV_LOCAL void _charconv_log(const char *fmt, ...);
 
-CHARCONV_LOCAL void _charconv_init_aliases(void);
 CHARCONV_LOCAL bool _charconv_add_convertor_name(const char *name);
 CHARCONV_LOCAL bool _charconv_add_convertor_alias(const char *name);
 CHARCONV_LOCAL charconv_name_desc_t *_charconv_get_name_desc(const char *name);

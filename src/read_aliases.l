@@ -21,6 +21,7 @@ static int line_number;
 %}
 
 %option noyywrap
+%option prefix="_charconv_"
 
 %%
 \\\n                        line_number++;

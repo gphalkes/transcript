@@ -5,9 +5,6 @@
   performance (through multiple conversions at a time) should be provided as
   well
 
-- creating the list of names may be a bit heavy. Checking the availability
-  could also be done when requested rather than at load time
-
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
 - proper testing of all the convertors!!! This means both correct and
@@ -25,6 +22,9 @@
   We should figure out if we can split those to do a proper difference.
   With the variant selection mechanism, this should not cause a large
   increase in size.
+- reading the aliases file using flex creates numerous externally visible
+  symbols. This is not desirable. Maybe we should consider a different method
+  for reading the file.
 
 http://x0213.org/codetable/index.en.html
 official standard (in japanese) http://www.jisc.go.jp/app/pager?id=72545

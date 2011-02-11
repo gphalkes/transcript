@@ -25,9 +25,6 @@
 //FIXME: use gettext for this one
 #define _(x) x
 
-static bool initialized;
-static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error);
 
 /*================ API functions ===============*/
@@ -192,10 +189,16 @@ void _charconv_squash_name(const char *name, char *squashed_name) {
 }
 
 void _charconv_init(void) {
+	static bool initialized = false;
+	static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 	if (!initialized) {
 		pthread_mutex_lock(&init_mutex);
+		/* Initialize aliases defined in the aliases.txt file. This does not
+		   check availability, nor does it build the complete set of display
+		   names. That will be done when that list is requested. */
 		if (!initialized)
-			_charconv_init_aliases();
+			_charconv_init_aliases_from_file();
 		initialized = true;
 		pthread_mutex_unlock(&init_mutex);
 	}

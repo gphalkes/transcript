@@ -15,6 +15,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <dirent.h>
+#include <pthread.h>
 
 #define _CHARCONV_CONST
 #include "charconv_internal.h"
@@ -61,7 +62,7 @@ bool _charconv_add_convertor_name(const char *name) {
 	bool is_display_name = *name == '*';
 
 	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
-		add_display_name(convertors_tail->real_name, (convertors_tail->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
+		add_display_name(convertors_tail->real_name, 0);
 		convertors_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
 	}
 
@@ -104,10 +105,10 @@ bool _charconv_add_convertor_name(const char *name) {
 		goto return_error;
 	}
 
-	convertor->flags = _charconv_probe_convertor(name) ? NAME_DESC_FLAG_AVAILABLE : 0;
+	convertor->flags = 0;
 
 	if (is_display_name) {
-		add_display_name(name, (convertor->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
+		add_display_name(name, 0);
 		convertor->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
 	}
 
@@ -166,7 +167,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 	}
 
 	if (is_display_name) {
-		add_display_name(name, (convertors_tail->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
+		add_display_name(name, 0);
 		convertors_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
 	}
 
@@ -198,13 +199,6 @@ charconv_name_desc_t *_charconv_get_name_desc(const char *name) {
 	return NULL;
 }
 
-const charconv_name_t *charconv_get_names(int *count) {
-	_charconv_init();
-	if (count != NULL)
-		*count = display_names_used;
-	return display_names;
-}
-
 static const char *builtin_names[] = {
 	"UTF-8",
 	"UTF-16",
@@ -229,37 +223,67 @@ static const char *builtin_names[] = {
 	"ISO-2022-CN-EXT"
 };
 
-void _charconv_init_aliases(void) {
+static void _charconv_init_aliases(void) {
+	static bool availability_initialized = false;
+	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+
 	DIR *dir;
 	struct dirent *entry;
 	size_t i;
 
-	_charconv_init_aliases_from_file();
+	if (availability_initialized)
+		return;
+
+	pthread_mutex_lock(&lock);
+	if (availability_initialized) {
+		pthread_mutex_unlock(&lock);
+		return;
+	}
+
+	/* FIXME: this is a hack. We should do this properly in _charconv_init_aliases_from_file.
+	   That is annoying as well, because it requires exposing several internal variables.
+	*/
 	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
 		add_display_name(convertors_tail->real_name, (convertors_tail->flags & NAME_DESC_FLAG_AVAILABLE) != 0);
 		convertors_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
 	}
 
+	/* Probe all the convertors listed as aliases from the file. */
+	for (i = 0; i < (size_t) display_names_used; i++)
+		display_names[i].available = _charconv_probe_convertor(display_names[i].name);
+
+
+	/* Add the built-in convertors, in as far as they are not already defined through the aliases file. */
 	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
 		if (_charconv_get_name_desc(builtin_names[i]) == NULL)
 			add_display_name(builtin_names[i], _charconv_probe_convertor(builtin_names[i]));
 	}
 
-	if ((dir = opendir(DB_DIRECTORY)) == NULL)
-		return;
-
-	while ((entry = readdir(dir)) != NULL) {
-		size_t entry_name_len = strlen(entry->d_name);
-		if (entry_name_len < 5)
-			continue;
-		if (entry->d_name[0] == '_')
-			continue;
-		if (strcmp(entry->d_name + entry_name_len - 4, ".cct") != 0)
-			continue;
-		entry->d_name[entry_name_len - 4] = 0;
-		if (_charconv_get_name_desc(entry->d_name) == NULL)
-			add_display_name(entry->d_name, _charconv_probe_convertor(entry->d_name));
+	/* Add all the file names we can find in the DB dir, if they are not already present. */
+	if ((dir = opendir(DB_DIRECTORY)) != NULL) {
+		while ((entry = readdir(dir)) != NULL) {
+			size_t entry_name_len = strlen(entry->d_name);
+			if (entry_name_len < 5)
+				continue;
+			if (entry->d_name[0] == '_')
+				continue;
+			if (strcmp(entry->d_name + entry_name_len - 4, ".cct") != 0)
+				continue;
+			entry->d_name[entry_name_len - 4] = 0;
+			if (_charconv_get_name_desc(entry->d_name) == NULL)
+				add_display_name(entry->d_name, _charconv_probe_convertor(entry->d_name));
+		}
+		closedir(dir);
 	}
-	closedir(dir);
+
+	availability_initialized = true;
+	pthread_mutex_unlock(&lock);
 }
 
+const charconv_name_t *charconv_get_names(int *count) {
+	_charconv_init();
+	_charconv_init_aliases();
+	if (count != NULL)
+		*count = display_names_used;
+	return display_names;
+}
