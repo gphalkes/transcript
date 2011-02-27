@@ -57,7 +57,7 @@ GB18030 IBM-1392 Windows-54936
 
 *ISO-8859-1 IBM-819 cp819 *Latin1 8859_1 csISOLatin1 iso-ir-100 \
 	ISO_8859-1:1987 l1 819
-*US-ASCII *ASCII ANSI_X3.4-1968 ANSI_X3.4-1986 ISO_646.irv:1991 \
+*ASCII *US-ASCII ANSI_X3.4-1968 ANSI_X3.4-1986 ISO_646.irv:1991 \
 	iso_646.irv:1983 ISO646-US us csASCII iso-ir-6 cp367 ascii7 646 \
 	windows-20127 IBM-367
 
@@ -185,7 +185,7 @@ ibm-878_P100-1996 IBM-878 *KOI8-R koi8 csKOI8R Windows-20866 cp878
 ibm-901_P100-1999 *IBM-901
 ibm-902_P100-1999 *IBM-902
 ibm-922_P100-1999 *IBM-922 cp922 922
-ibm-1168_P100-2002 IBM-1168 *KOI8-U Windows-21866
+ibm-1168_P100-2002 IBM-1168 *KOI8-U
 ibm-4909_P100-1999 *IBM-4909
 ibm-5346_P100-1998 IBM-5346 *Windows-1250 cp1250
 ibm-5347_P100-1998 IBM-5347 *Windows-1251 cp1251 ANSI1251
@@ -439,3 +439,9 @@ ibm-953_P100-2000 *IBM-953
 ibm-955_P110-1997 *IBM-955
 ibm-9577_P100-2001 *IBM-9577 IBM-1385
 iso-8859_16-2001 *ISO-8859-16 iso-ir-226 *Latin10 l10 # ISO_8859-16:2001
+
+# Windows-21866 is KOI8-U according to MS, but uses letters from KOI8-RU. However
+# it does not include the different non-alnum characters that KOI8-RU uses.
+# Unfortunately, the changed non-alnum characters in KOI8-RU are often overlooked
+# making that name ambiguous.
+windows-21866-2000 Windows-21866*
