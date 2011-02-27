@@ -12,10 +12,15 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* This convertor implements the ISO-8859-1 codepage. */
+/* This convertor implements the ISO-8859-1 and ASCII codepages. */
 #include <string.h>
 #include "charconv_internal.h"
 #include "utf.h"
+
+typedef struct {
+	charconv_common_t common;
+	unsigned int charmax;
+} convertor_state_t;
 
 static void close_convertor(charconv_common_t *handle);
 
@@ -44,14 +49,14 @@ static charconv_error_t to_unicode_skip(charconv_common_t *handle, char **inbuf,
 	return CHARCONV_SUCCESS;
 }
 
-static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char **inbuf, const char const *inbuflimit,
+static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 
 	while ((*inbuf) < inbuflimit) {
-		codepoint = handle->get_unicode((const char **) &_inbuf, inbuflimit, false);
+		codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
 		switch (codepoint) {
 			case CHARCONV_UTF_ILLEGAL:
 				return CHARCONV_ILLEGAL;
@@ -64,7 +69,7 @@ static charconv_error_t from_unicode_conversion(charconv_common_t *handle, char 
 				}
 				return CHARCONV_INCOMPLETE;
 			default:
-				if (codepoint > 0xff) {
+				if (codepoint > handle->charmax) {
 					if (flags & CHARCONV_SUBST_UNASSIGNED)
 						codepoint = 0x1a;
 					else
@@ -95,9 +100,9 @@ static void save_load_nop(charconv_common_t *handle, void *state) {
 }
 
 void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error) {
-	charconv_common_t *retval;
+	convertor_state_t *retval;
 
-	if (strcmp(name, "iso88591") != 0) {
+	if (strcmp(name, "iso88591") != 0 && strcmp(name, "ascii") != 0) {
 		if (error != NULL)
 			*error = CHARCONV_INTERNAL_ERROR;
 		return NULL;
@@ -106,21 +111,22 @@ void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error
 	if (flags & CHARCONV_PROBE_ONLY)
 		return (void *) 1;
 
-	if ((retval = malloc(sizeof(charconv_common_t))) == 0) {
+	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
 		if (error != NULL)
 			*error = CHARCONV_OUT_OF_MEMORY;
 		return NULL;
 	}
 
-	retval->convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->reset_from = (reset_func_t) reset_nop;
-	retval->convert_to = (conversion_func_t) to_unicode_conversion;
-	retval->skip_to = (skip_func_t) to_unicode_skip;
-	retval->reset_to = (reset_func_t) reset_nop;
-	retval->flags = flags;
-	retval->close = (close_func_t) close_convertor;
-	retval->save = (save_func_t) save_load_nop;
-	retval->load = (load_func_t) save_load_nop;
+	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.reset_from = (reset_func_t) reset_nop;
+	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
+	retval->common.skip_to = (skip_func_t) to_unicode_skip;
+	retval->common.reset_to = (reset_func_t) reset_nop;
+	retval->common.flags = flags;
+	retval->common.close = (close_func_t) close_convertor;
+	retval->common.save = (save_func_t) save_load_nop;
+	retval->common.load = (load_func_t) save_load_nop;
+	retval->charmax = strcmp(name, "ascii") ? 0x7f : 0xff;
 	return retval;
 }
 

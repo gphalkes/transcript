@@ -97,7 +97,6 @@ typedef struct {
 	uint_fast8_t flags;
 } cct_descriptor_t ;
 
-/* We use the lower part of the ISO8859-1 convertor for ASCII. */
 static cct_descriptor_t ascii = { NULL, 1, '\x42', false, CCT_FLAG_ASCII };
 static cct_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, CCT_FLAG_LARGE_SET };
 static cct_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
@@ -555,7 +554,8 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 		return CHARCONV_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(desc->name, 0, error), CHARCONV_UTF32);
+		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591",
+			0, error), CHARCONV_UTF32);
 	else
 		ext_handle = _charconv_fill_utf(_charconv_open_cct_convertor_internal(desc->name, 0, error, true), CHARCONV_UTF32);
 
