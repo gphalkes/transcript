@@ -90,6 +90,15 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	return CHARCONV_SUCCESS;
 }
 
+
+static charconv_error_t flush_nop(charconv_t *handle, char **outbuf, const char *outbuflimit) {
+	(void) handle;
+	(void) outbuf;
+	(void) outbuflimit;
+
+	return CHARCONV_SUCCESS;
+}
+
 static void reset_nop(charconv_common_t *handle) {
 	(void) handle;
 }
@@ -118,6 +127,7 @@ void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error
 	}
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
+	retval->common.flush_from = (flush_func_t) flush_nop;
 	retval->common.reset_from = (reset_func_t) reset_nop;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
