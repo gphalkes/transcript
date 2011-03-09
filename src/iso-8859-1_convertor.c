@@ -24,14 +24,20 @@ typedef struct {
 
 static void close_convertor(charconv_common_t *handle);
 
-static charconv_error_t to_unicode_conversion(charconv_common_t *handle, char **inbuf, const char const *inbuflimit,
+static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 
 	while ((*inbuf) < inbuflimit) {
 		codepoint = *(uint8_t *) *inbuf;
-		if (handle->put_unicode(codepoint, outbuf, outbuflimit) == CHARCONV_NO_SPACE)
+		if (codepoint > handle->charmax) {
+			if (flags & CHARCONV_SUBST_ILLEGAL)
+				codepoint = 0x1a;
+			else
+				return CHARCONV_ILLEGAL;
+		}
+		if (handle->common.put_unicode(codepoint, outbuf, outbuflimit) == CHARCONV_NO_SPACE)
 			return CHARCONV_NO_SPACE;
 		(*inbuf)++;
 		if (flags & CHARCONV_SINGLE_CONVERSION)
@@ -136,7 +142,7 @@ void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error
 	retval->common.close = (close_func_t) close_convertor;
 	retval->common.save = (save_func_t) save_load_nop;
 	retval->common.load = (load_func_t) save_load_nop;
-	retval->charmax = strcmp(name, "ascii") ? 0x7f : 0xff;
+	retval->charmax = strcmp(name, "ascii") == 0 ? 0x7f : 0xff;
 	return retval;
 }
 
