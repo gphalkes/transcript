@@ -95,7 +95,6 @@ CHARCONV_LOCAL bool _charconv_add_convertor_name(const char *name);
 CHARCONV_LOCAL bool _charconv_add_convertor_alias(const char *name);
 CHARCONV_LOCAL charconv_name_desc_t *_charconv_get_name_desc(const char *name);
 
-CHARCONV_LOCAL void _charconv_squash_name(const char *name, char *squashed_name);
 CHARCONV_LOCAL void _charconv_init(void);
 CHARCONV_LOCAL FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error);
 CHARCONV_LOCAL int _charconv_probe_convertor(const char *name);

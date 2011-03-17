@@ -147,9 +147,9 @@ CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
 //FIXME: should we do loading (and perhaps saving) per direction?
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
-//FIXME: add a listing mechanism!
 CHARCONV_API const char *charconv_strerror(charconv_error_t error);
 CHARCONV_API const charconv_name_t *charconv_get_names(int *count);
+CHARCONV_API void charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max);
 
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)

@@ -69,7 +69,7 @@ bool _charconv_add_convertor_name(const char *name) {
 	if (is_display_name)
 		name++;
 
-	_charconv_squash_name(name, squashed_name);
+	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
 	if (*squashed_name == 0) {
 		_charconv_log("error: convertor name '%s' is invalid\n", name);
@@ -137,7 +137,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 	if (is_display_name)
 		name++;
 
-	_charconv_squash_name(name, squashed_name);
+	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
 	if (*squashed_name == 0) {
 		_charconv_log("error: alias name '%s' is invalid\n", name);
@@ -185,7 +185,7 @@ return_error:
 
 charconv_name_desc_t *_charconv_get_name_desc(const char *name) {
 	char squashed_name[SQUASH_NAME_MAX];
-	_charconv_squash_name(name, squashed_name);
+	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
 	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
 		if (strcmp(squashed_name, ptr->name) == 0)
