@@ -29,6 +29,11 @@ LTTARGETS := libcharconv.la
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\" -DUSE_ENDIAN -O2
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/charconv\" -O2
+CFLAGS += -DUSE_ENDIAN
+CFLAGS += -DHAS_INLINE
+CFLAGS += -DHAS_NL_LANGINFO
+CFLAGS += -DHAS_STRDUP
+#~ CFLAGS += -std=c89
 
 test: | libcharconv.la

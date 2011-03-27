@@ -40,7 +40,7 @@ static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 		return result; \
 } while (0)
 
-static inline size_t min(size_t a, size_t b) {
+static _CHARCONV_INLINE size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
 }
 
@@ -272,7 +272,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
-static inline charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
+static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 

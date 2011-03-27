@@ -176,7 +176,7 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 	if (fread(magic, 1, 1, file) != 0 || !feof(file))
 		ERROR(CHARCONV_INVALID_FORMAT);
 
-	if ((convertor->name = strdup(name)) == NULL)
+	if ((convertor->name = _charconv_strdup(name)) == NULL)
 		ERROR(CHARCONV_OUT_OF_MEMORY);
 
 	fclose(file);

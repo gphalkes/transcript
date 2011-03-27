@@ -44,7 +44,7 @@ static inline uint32_t swapl(uint32_t value) {
 #endif
 
 /* GCC will recognize this as a byte swap, and will optimize (uses rolw $8, <reg> on IA-32) */
-static inline uint16_t swaps(uint16_t value) {
+static _CHARCONV_INLINE uint16_t swaps(uint16_t value) {
 	return (value << 8) | (value >> 8);
 }
 #endif

@@ -41,7 +41,7 @@ static void add_display_name(const char *name, int available) {
 		display_names_allocated *= 2;
 	}
 
-	if ((display_names[display_names_used].name = strdup(name)) == NULL)
+	if ((display_names[display_names_used].name = _charconv_strdup(name)) == NULL)
 		return;
 	display_names[display_names_used].available = available;
 	display_names_used++;
@@ -88,8 +88,8 @@ bool _charconv_add_convertor_name(const char *name) {
 	END_LOOP_LIST
 
 	if ((convertor = malloc(sizeof(charconv_name_desc_t))) == NULL ||
-			(convertor->real_name = strdup(name)) == NULL ||
-			(convertor->name = strdup(squashed_name)) == NULL)
+			(convertor->real_name = _charconv_strdup(name)) == NULL ||
+			(convertor->name = _charconv_strdup(squashed_name)) == NULL)
 	{
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
@@ -99,7 +99,7 @@ bool _charconv_add_convertor_name(const char *name) {
 	convertor->aliases = NULL;
 	convertor->next = NULL;
 
-	if ((convertor->name = strdup(squashed_name)) == NULL) {
+	if ((convertor->name = _charconv_strdup(squashed_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
@@ -160,7 +160,7 @@ bool _charconv_add_convertor_alias(const char *name) {
 		goto return_error;
 	}
 
-	if ((alias->name = strdup(squashed_name)) == NULL) {
+	if ((alias->name = _charconv_strdup(squashed_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;

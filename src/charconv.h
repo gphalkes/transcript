@@ -45,7 +45,7 @@ extern "C" {
 
 typedef struct charconv_common_t charconv_t;
 
-//FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc?
+/* FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc? */
 
 enum {
 	CHARCONV_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
@@ -145,11 +145,12 @@ CHARCONV_API charconv_error_t charconv_from_unicode_flush(charconv_t *handle, ch
 CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
 CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
-//FIXME: should we do loading (and perhaps saving) per direction?
+/*FIXME: should we do loading (and perhaps saving) per direction?*/
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 CHARCONV_API const char *charconv_strerror(charconv_error_t error);
 CHARCONV_API const charconv_name_t *charconv_get_names(int *count);
 CHARCONV_API void charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max);
+CHARCONV_API const char *charconv_get_codeset(void);
 
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)

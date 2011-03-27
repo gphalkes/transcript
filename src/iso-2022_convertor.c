@@ -110,7 +110,7 @@ static cct_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', fals
 static cct_descriptor_t jis_x_0208_1983 = { "ibm-5048_P100-1995", 2, '\x42', true, 0 };
 static cct_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, 0 };
 
-//FIXME: use the correct codepage names and check the high_bit flag
+/*FIXME: use the correct codepage names and check the high_bit flag*/
 static cct_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
 static cct_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
 static cct_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
@@ -125,7 +125,7 @@ static cct_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true
 static cct_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, 0 };
 static cct_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, 0 };
 static cct_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, 0 };
-static cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };//1
+static cct_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };
 
 /* FIXME: M:N conversions are sometimes also available!!! Check which ones are and convert multiple codepoints if necessary!!
    For ISO-2022-JP2004 the maximum number of codepoints is 2.
@@ -284,7 +284,7 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 			/* All ISO-2022 convertors implemented here are 7 bit only. */
 			return CHARCONV_ILLEGAL;
 		} else {
-			char buffer[3]; //FIXME: is this big enough?
+			char buffer[8]; /*FIXME: is this big enough?*/
 			const char *buffer_ptr = buffer;
 			uint32_t codepoint;
 			char *codepoint_ptr = (char *) &codepoint;
@@ -396,7 +396,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	cct_handle_t *ptr;
 	char buffer[4], *buffer_ptr;
-	struct { cct_handle_t *cct; uint_fast8_t state; } fallback;
+	struct { cct_handle_t *cct; uint_fast8_t state; } fallback = { NULL, 0 };
 	uint_fast8_t state;
 	int i;
 

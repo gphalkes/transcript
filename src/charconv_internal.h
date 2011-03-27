@@ -31,6 +31,17 @@ typedef enum {false, true} bool;
 #endif
 
 #define SQUASH_NAME_MAX 160
+#ifdef HAS_INLINE
+#define _CHARCONV_INLINE inline
+#else
+#define _CHARCONV_INLINE
+#endif
+
+#ifdef HAS_STRDUP
+#define _charconv_strdup strdup
+#else
+CHARCONV_LOCAL char *_charconv_strdup(const char *str);
+#endif
 
 enum {
 	CHARCONV_PROBE_ONLY = (1<<15)

@@ -17,13 +17,17 @@
 #include <search.h>
 #include <pthread.h>
 #include <limits.h>
+#include <locale.h>
+#ifdef HAS_NL_LANGINFO
+#include <langinfo.h>
+#endif
 
 #include "charconv_internal.h"
 #include "utf.h"
 
 #include "convertors.h"
 
-//FIXME: use gettext for this one
+/*FIXME: use gettext for this one*/
 #define _(x) x
 
 static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error);
@@ -158,7 +162,8 @@ const char *charconv_strerror(charconv_error_t error) {
 }
 
 /* We want to make sure that a locale setting doesn't corrupt our comparison
-   algorithms. So we use our own, rather than using the library supplied versions. */
+   algorithms. So we use our own versions of isalnum, isdiget and tolower,
+   rather than using the library supplied versions. */
 #define IS_ALNUM (1<<0)
 #define IS_DIGIT (1<<1)
 #define IS_UPPER (1<<2)
@@ -195,6 +200,19 @@ void charconv_squash_name(const char *name, char *squashed_name, size_t squashed
 		}
 	}
 	squashed_name[write_idx] = 0;
+}
+
+const char *charconv_get_codeset(void) {
+#ifdef HAS_NL_LANGINFO
+	return nl_langinfo(CODESET);
+#else
+	const char *lc_ctype, *codeset;
+
+	if ((lc_ctype = setlocale(LC_CTYPE, NULL)) == NULL || strcmp(lc_ctype, "POSIX") == 0 ||
+			strcmp(lc_ctype, "C") == 0 || (codeset = strrchr(lc_ctype, '.')) == NULL || codeset[1] == 0)
+		return "ANSI_X3.4-1968";
+	return codeset + 1;
+#endif
 }
 
 /*================ Internal functions ===============*/
@@ -254,7 +272,7 @@ static FILE *try_db_open(const char *name, const char *ext, const char *dir, cha
 	}
 
 	strcpy(file_name, dir);
-	//FIXME: dir separator may not be /
+	/*FIXME: dir separator may not be / */
 	strcat(file_name, "/");
 	strcat(file_name, name);
 	strcat(file_name, ext);
@@ -273,8 +291,20 @@ end:
 FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error) {
 	FILE *result;
 	const char *dir = getenv("CHARCONV_PATH");
-	//FIXME: allow colon delimited list
+	/*FIXME: allow colon delimited list*/
 	if (dir != NULL && (result = try_db_open(name, ext, dir, error)) != NULL)
 		return result;
 	return try_db_open(name, ext, DB_DIRECTORY, error);
 }
+
+#ifndef HAS_STRDUP
+char *_charconv_strdup(const char *str) {
+	char *result;
+	size_t len = strlen(str);
+
+	if ((result = malloc(len + 1)) == NULL)
+		return NULL;
+	memcpy(result, str, len + 1);
+	return result;
+}
+#endif

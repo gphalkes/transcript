@@ -128,7 +128,6 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			case CHARCONV_PRIVATE_USE:
 			case CHARCONV_UNASSIGNED:
 				codepoints[0] = 0xFFFD;
-				//REMOVE codepoint_bytesleft = sizeof(codepoints) - sizeof(codepoints[0]);
 				charconv_to_unicode_skip(cd->from, (const char **) &_inbuf, inbuflimit);
 				non_reversible = true;
 				break;
