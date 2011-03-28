@@ -16,6 +16,7 @@
 #include <string.h>
 #include "charconv_internal.h"
 #include "utf.h"
+#include "generic_fallbacks.h"
 
 typedef struct {
 	charconv_common_t common;
@@ -76,10 +77,14 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 				return CHARCONV_INCOMPLETE;
 			default:
 				if (codepoint > handle->charmax) {
-					if (flags & CHARCONV_SUBST_UNASSIGNED)
+					if ((codepoint = get_generic_fallback(codepoint)) <= handle->charmax) {
+						if (!(flags & CHARCONV_ALLOW_FALLBACK))
+							return CHARCONV_FALLBACK;
+					} else if (flags & CHARCONV_SUBST_UNASSIGNED) {
 						codepoint = 0x1a;
-					else
+					} else {
 						return CHARCONV_UNASSIGNED;
+					}
 				}
 				break;
 		}

@@ -25,22 +25,6 @@
   that value. Those are the overrides only, because for the general ones we
   don't include anything.
 
-  For the generic fallbacks, we have another issue: we have to check whether
-  the target is available. This shouldn't be a big problem, but still duplicates
-  some code.
-
-  Decisions:
-  - we save one generic fallback per codepoint
-  - all generic fallbacks are within the BMP
-  - we only save generic fallbacks if they occur more than 5 times
-  - for duplicate fallbacks, we save the one that occurs most often
-  - if the fallback defined in the convertor table is different from the generic
-    fallback, we save it in the table as a fallback
-
-  To convert the fallback, call the convertor itself again, but without the
-  CHARCONV_ALLOW_FALLBACK flag and with the CHARCONV_NO_MN_CONVERSION flag.
-  This can also be used to determine whether the fallback actually exists.
-
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
 - proper testing of all the convertors!!! This means both correct and

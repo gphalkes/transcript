@@ -2,6 +2,8 @@
 # static trie is derived which is used in the library. ucm2cct removes these
 # fallbacks (and emits a warning) from the convertor.
 
+# All fallback sources and targets must be within the BMP.
+
 00A7	0015
 00AD	2010
 00B6	0014

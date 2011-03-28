@@ -484,11 +484,13 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		}
 		if (fallback.cct == NULL) {
 			/* Unassigned */
-			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-				return CHARCONV_UNASSIGNED;
-			SWITCH_TO_SET(handle->ascii, 0);
-			buffer[0] = 0x1a;
-			PUT_BYTES(1, buffer);
+			HANDLE_UNASSIGNED(
+				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+					return CHARCONV_UNASSIGNED;
+				SWITCH_TO_SET(handle->ascii, 0);
+				buffer[0] = 0x1a;
+				PUT_BYTES(1, buffer);
+			)
 		} else {
 			/* Fallback */
 			if (!(flags & CHARCONV_ALLOW_FALLBACK))

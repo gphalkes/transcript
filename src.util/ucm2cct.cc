@@ -411,7 +411,6 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_SUCCESS);
 	}
 
-
 	ucm->minimize_state_machines();
 
 	if (option_verbose) {
@@ -445,9 +444,6 @@ int main(int argc, char *argv[]) {
 
 	if ((output = fopen(output_name, "w+b")) == NULL)
 		fatal("Could not open output file: %s\n", strerror(errno));
-
-/*	for (list<Variant *>::iterator iter = ucm->variants.begin(); iter != ucm->variants.end(); iter++)
-		(*iter)->dump(); */
 
 	ucm->write_table(output);
 	return EXIT_SUCCESS;

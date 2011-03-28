@@ -111,4 +111,22 @@ CHARCONV_LOCAL FILE *_charconv_db_open(const char *name, const char *ext, charco
 CHARCONV_LOCAL int _charconv_probe_convertor(const char *name);
 
 CHARCONV_LOCAL void _charconv_init_aliases_from_file(void);
+CHARCONV_LOCAL charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepoint, char **outbuf,
+		const char *outbuflimit, int flags);
+
+#define HANDLE_UNASSIGNED(_code) \
+	switch (_charconv_handle_unassigned((charconv_t *) handle, codepoint, outbuf, outbuflimit, flags)) { \
+		case CHARCONV_UNASSIGNED: \
+			_code \
+			break; \
+		case CHARCONV_SUCCESS: \
+			break; \
+		case CHARCONV_NO_SPACE: \
+			return CHARCONV_NO_SPACE; \
+		case CHARCONV_FALLBACK: \
+			return CHARCONV_FALLBACK; \
+		default: \
+			return CHARCONV_INTERNAL_ERROR; \
+	}
+
 #endif

@@ -45,7 +45,7 @@ struct merge_cost_t {
 	int cost;
 };
 
-#ifdef DEBUG
+#if defined(DEBUG) && 0
 static void print_full_state(full_state_t *state) {
 	int i;
 	for (i = 0; i < 256; i++) {
@@ -363,10 +363,6 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 	}
 	right->next = right->prev = NULL;
 
-	printf("Merging: %d,%d\n", left->cost, right->cost);
-	print_full_state(left);
-	print_full_state(right);
-
 	for (i = 0; i < 256; i++) {
 		switch (left->entries[i].action & ~ACTION_FLAG_PAIR) {
 			case ACTION_ILLEGAL:
@@ -429,10 +425,8 @@ static void merge_states(full_state_t **tail, full_state_t *left, full_state_t *
 
 	left->count += right->count;
 
-	if (left->cost > 0) {
+	if (left->cost > 0)
 		left->cost = calculate_state_cost(left, info);
-		printf("  new cost: %d\n", left->cost);
-	}
 
 	free(right);
 }

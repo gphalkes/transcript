@@ -1,4 +1,5 @@
 syntax: glob
+src*/generic_fallbacks.[ch]
 src/test
 src/cct_convertor
 src/libcharconv.la

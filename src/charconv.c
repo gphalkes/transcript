@@ -24,6 +24,7 @@
 
 #include "charconv_internal.h"
 #include "utf.h"
+#include "generic_fallbacks.h"
 
 #include "convertors.h"
 
@@ -239,8 +240,8 @@ void _charconv_init(void) {
 			/* Initialize aliases defined in the aliases.txt file. This does not
 			   check availability, nor does it build the complete set of display
 			   names. That will be done when that list is requested. */
-			_charconv_init_aliases_from_file();
 			init_char_info();
+			_charconv_init_aliases_from_file();
 		}
 		initialized = true;
 		pthread_mutex_unlock(&init_mutex);
@@ -308,3 +309,34 @@ char *_charconv_strdup(const char *str) {
 	return result;
 }
 #endif
+
+
+charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepoint, char **outbuf,
+		const char *outbuflimit, int flags)
+{
+	get_unicode_func_t saved_get_unicode_func;
+	const char *fallback_ptr;
+	charconv_error_t result;
+
+	if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xFFFF)) {
+		if (!(flags & CHARCONV_ALLOW_FALLBACK))
+			return CHARCONV_FALLBACK;
+		saved_get_unicode_func = handle->get_unicode;
+		handle->get_unicode = _charconv_get_utf32_no_check;
+		fallback_ptr = (const char *) &codepoint;
+
+		result = handle->convert_from(handle, &fallback_ptr, fallback_ptr + sizeof(uint32_t),
+			outbuf, outbuflimit, flags | CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_1N_CONVERSION);
+		handle->get_unicode = saved_get_unicode_func;
+		switch (result) {
+			case CHARCONV_NO_SPACE:
+			case CHARCONV_UNASSIGNED:
+			case CHARCONV_SUCCESS:
+			case CHARCONV_FALLBACK:
+				return result;
+			default:
+				return CHARCONV_INTERNAL_ERROR;
+		}
+	}
+	return CHARCONV_UNASSIGNED;
+}

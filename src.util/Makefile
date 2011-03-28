@@ -28,4 +28,4 @@ generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF charconv_generic_fallbacks < $<
 
 clean::
-	rm generic_fallbacks.c
+	rm generic_fallbacks.[ch]

@@ -512,12 +512,14 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				return CHARCONV_FALLBACK;
 
 			if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
-				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-					return CHARCONV_UNASSIGNED;
-				if (conv_flags & FROM_UNICODE_SUBCHAR1)
-					PUT_BYTES(1, &handle->convertor->subchar1);
-				else
-					PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+				HANDLE_UNASSIGNED(
+					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+						return CHARCONV_UNASSIGNED;
+					if (conv_flags & FROM_UNICODE_SUBCHAR1)
+						PUT_BYTES(1, &handle->convertor->subchar1);
+					else
+						PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+				)
 			} else {
 				PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
 			}
@@ -526,9 +528,11 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				return CHARCONV_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 		} else if (entry->action == ACTION_UNASSIGNED) {
-			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-				return CHARCONV_UNASSIGNED;
-			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+			HANDLE_UNASSIGNED(
+				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
+					return CHARCONV_UNASSIGNED;
+				PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
+			)
 		} else {
 			return CHARCONV_INTERNAL_ERROR;
 		}

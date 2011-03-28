@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
 	charconv_error_t (*convert)(charconv_t *, const char **, const char *, char **, const char *, int) = charconv_from_unicode;
 	int utf_type = CHARCONV_UTF8;
 	int option_dump = 0;
+	int flags = 0;
 
 	static struct { const char *name; int type; } utf_list[] = {
 		{ "UTF-8", CHARCONV_UTF8 },
@@ -50,7 +51,7 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", CHARCONV_UTF32BE },
 		{ "UTF-32LE", CHARCONV_UTF32LE }};
 
-	while ((c = getopt(argc, argv, "d:u:Dl")) != EOF) {
+	while ((c = getopt(argc, argv, "d:u:Dlf")) != EOF) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
@@ -76,6 +77,9 @@ int main(int argc, char *argv[]) {
 			case 'D':
 				option_dump = 1;
 				break;
+			case 'f':
+				flags |= CHARCONV_ALLOW_FALLBACK;
+				break;
 			case 'l':
 				show_names();
 				exit(EXIT_SUCCESS);
@@ -85,7 +89,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	if (argc - optind != 1)
-		fatal("Usage: test [-d <direction>] [-u <utf type>] [-D] <codepage name>\n");
+		fatal("Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     or: test -l");
 
 	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening convertor: %s\n", charconv_strerror(error));
@@ -94,7 +98,8 @@ int main(int argc, char *argv[]) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
-		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024, feof(stdin) ? CHARCONV_END_OF_TEXT : 0)) > CHARCONV_PART_SUCCESS_MAX)
+		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024,
+				feof(stdin) ? (flags | CHARCONV_END_OF_TEXT) : flags)) > CHARCONV_PART_SUCCESS_MAX)
 			fatal("conversion result: %s\n", charconv_strerror(error));
 
 		fill -= inbuf_ptr - inbuf;

@@ -71,7 +71,7 @@ bool _charconv_add_convertor_name(const char *name) {
 
 	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
-	if (*squashed_name == 0) {
+	if (squashed_name[0] == 0) {
 		_charconv_log("error: convertor name '%s' is invalid\n", name);
 		goto return_error;
 	}
