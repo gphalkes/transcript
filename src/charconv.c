@@ -38,7 +38,7 @@ int _charconv_probe_convertor(const char *name) {
 	charconv_name_desc_t *convertor;
 	char squashed_name[SQUASH_NAME_MAX];
 
-	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
+	_charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
 	if ((convertor = _charconv_get_name_desc(squashed_name)) != NULL)
 		return try_convertors(convertor->name, convertor->real_name, CHARCONV_PROBE_ONLY, NULL) != NULL;
@@ -62,7 +62,7 @@ charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, i
 		return NULL;
 	}
 
-	charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
+	_charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
 
 	if ((convertor = _charconv_get_name_desc(squashed_name)) != NULL)
 		return _charconv_fill_utf(try_convertors(convertor->name, convertor->real_name, flags, error), utf_type);
@@ -162,45 +162,9 @@ const char *charconv_strerror(charconv_error_t error) {
 	}
 }
 
-/* We want to make sure that a locale setting doesn't corrupt our comparison
-   algorithms. So we use our own versions of isalnum, isdiget and tolower,
-   rather than using the library supplied versions. */
-#define IS_ALNUM (1<<0)
-#define IS_DIGIT (1<<1)
-#define IS_UPPER (1<<2)
-static char char_info[CHAR_MAX];
-
-static void init_char_info(void) {
-	static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	static const char digit[] = "0123456789";
-	static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-	const char *ptr;
-
-	for (ptr = alnum; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_ALNUM;
-	for (ptr = digit; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_DIGIT;
-	for (ptr = upper; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_UPPER;
-}
-
-static int isalnum_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_ALNUM); }
-static int isdigit_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
-static int tolower_basic(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
-
 void charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max) {
-	size_t write_idx = 0;
-	bool last_was_digit = false;
-
-	for (; *name != 0 && write_idx < squashed_name_max - 1; name++) {
-		if (!isalnum_basic(*name) && *name != ',') {
-			last_was_digit = false;
-		} else {
-			if (!last_was_digit && *name == '0')
-				continue;
-			squashed_name[write_idx++] = tolower_basic(*name);
-			last_was_digit = isdigit_basic(*name);
-		}
-	}
-	squashed_name[write_idx] = 0;
+	_charconv_init();
+	_charconv_squash_name(name, squashed_name, squashed_name_max);
 }
 
 const char *charconv_get_codeset(void) {
@@ -230,24 +194,6 @@ int _charconv_element_strcmp(const void *a, const void *b) {
 	return strcmp((const char *) a, *(char * const *) b);
 }
 
-void _charconv_init(void) {
-	static bool initialized = false;
-	static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-	if (!initialized) {
-		pthread_mutex_lock(&init_mutex);
-		if (!initialized) {
-			/* Initialize aliases defined in the aliases.txt file. This does not
-			   check availability, nor does it build the complete set of display
-			   names. That will be done when that list is requested. */
-			init_char_info();
-			_charconv_init_aliases_from_file();
-		}
-		initialized = true;
-		pthread_mutex_unlock(&init_mutex);
-	}
-}
-
 static charconv_t *try_convertors(const char *squashed_name, const char *real_name, int flags, charconv_error_t *error) {
 	charconv_t *result;
 	if ((result = _charconv_open_unicode_convertor(squashed_name, flags, error)) != NULL)
@@ -258,7 +204,6 @@ static charconv_t *try_convertors(const char *squashed_name, const char *real_na
 		return result;
 	return _charconv_open_cct_convertor(real_name, flags, error);
 }
-
 
 static FILE *try_db_open(const char *name, const char *ext, const char *dir, charconv_error_t *error) {
 	char *file_name = NULL;
@@ -310,6 +255,46 @@ char *_charconv_strdup(const char *str) {
 }
 #endif
 
+/* We want to make sure that a locale setting doesn't corrupt our comparison
+   algorithms. So we use our own versions of isalnum, isdiget and tolower,
+   rather than using the library supplied versions. */
+#define IS_ALNUM (1<<0)
+#define IS_DIGIT (1<<1)
+#define IS_UPPER (1<<2)
+static char char_info[CHAR_MAX];
+
+static void init_char_info(void) {
+	static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	static const char digit[] = "0123456789";
+	static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+	const char *ptr;
+
+	for (ptr = alnum; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_ALNUM;
+	for (ptr = digit; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_DIGIT;
+	for (ptr = upper; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_UPPER;
+}
+
+static int isalnum_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_ALNUM); }
+static int isdigit_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
+static int tolower_basic(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
+
+void _charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max) {
+	size_t write_idx = 0;
+	bool last_was_digit = false;
+
+	for (; *name != 0 && write_idx < squashed_name_max - 1; name++) {
+		if (!isalnum_basic(*name) && *name != ',') {
+			last_was_digit = false;
+		} else {
+			if (!last_was_digit && *name == '0')
+				continue;
+			squashed_name[write_idx++] = tolower_basic(*name);
+			last_was_digit = isdigit_basic(*name);
+		}
+	}
+	squashed_name[write_idx] = 0;
+}
 
 charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags)
@@ -339,4 +324,22 @@ charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepo
 		}
 	}
 	return CHARCONV_UNASSIGNED;
+}
+
+void _charconv_init(void) {
+	static bool initialized = false;
+	static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+	if (!initialized) {
+		pthread_mutex_lock(&init_mutex);
+		if (!initialized) {
+			/* Initialize aliases defined in the aliases.txt file. This does not
+			   check availability, nor does it build the complete set of display
+			   names. That will be done when that list is requested. */
+			init_char_info();
+			_charconv_init_aliases_from_file();
+		}
+		initialized = true;
+		pthread_mutex_unlock(&init_mutex);
+	}
 }

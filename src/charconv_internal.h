@@ -110,6 +110,8 @@ CHARCONV_LOCAL void _charconv_init(void);
 CHARCONV_LOCAL FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error);
 CHARCONV_LOCAL int _charconv_probe_convertor(const char *name);
 
+CHARCONV_LOCAL void _charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max);
+
 CHARCONV_LOCAL void _charconv_init_aliases_from_file(void);
 CHARCONV_LOCAL charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags);
