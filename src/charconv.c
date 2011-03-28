@@ -261,36 +261,44 @@ char *_charconv_strdup(const char *str) {
 #define IS_ALNUM (1<<0)
 #define IS_DIGIT (1<<1)
 #define IS_UPPER (1<<2)
+#define IS_SPACE (1<<3)
+#define IS_IDCHR_EXTRA (1<<4)
 static char char_info[CHAR_MAX];
 
 static void init_char_info(void) {
 	static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 	static const char digit[] = "0123456789";
 	static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static const char space[] = " \t\f\n\r\v";
+	static const char idhcr_extra[] = "-_+.:";
 
 	const char *ptr;
 
 	for (ptr = alnum; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_ALNUM;
 	for (ptr = digit; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_DIGIT;
 	for (ptr = upper; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_UPPER;
+	for (ptr = space; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_SPACE;
+	for (ptr = idhcr_extra; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_IDCHR_EXTRA;
 }
 
-static int isalnum_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_ALNUM); }
-static int isdigit_basic(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
-static int tolower_basic(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
+int _charconv_isalnum(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_ALNUM); }
+int _charconv_isdigit(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
+int _charconv_isspace(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_SPACE); }
+int _charconv_isidchr(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & (IS_IDCHR_EXTRA | IS_ALNUM)); }
+int _charconv_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
 
 void _charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max) {
 	size_t write_idx = 0;
 	bool last_was_digit = false;
 
 	for (; *name != 0 && write_idx < squashed_name_max - 1; name++) {
-		if (!isalnum_basic(*name) && *name != ',') {
+		if (!_charconv_isalnum(*name) && *name != ',') {
 			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *name == '0')
 				continue;
-			squashed_name[write_idx++] = tolower_basic(*name);
-			last_was_digit = isdigit_basic(*name);
+			squashed_name[write_idx++] = _charconv_tolower(*name);
+			last_was_digit = _charconv_isdigit(*name);
 		}
 	}
 	squashed_name[write_idx] = 0;

@@ -13,7 +13,7 @@
 
 SOURCES.libcharconv.la := charconv.c utf.c cc_iconv.c cct_convertor.c cct_convertor_io.c unicode_convertor.c \
 	unicode_convertor_utf7.c unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c aliases.c \
-	read_aliases.l generic_fallbacks.c
+	generic_fallbacks.c
 LDFLAGS.libcharconv.la := -pthread
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
@@ -37,6 +37,8 @@ CFLAGS += -DHAS_STRDUP
 #~ CFLAGS += -std=c89
 
 test: | libcharconv.la
+
+$(OBJECTS): generic_fallbacks.c
 
 generic_fallbacks.c generic_fallbacks.h: ../src.util/generic_fallbacks.txt
 	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF charconv_generic_fallbacks < $<

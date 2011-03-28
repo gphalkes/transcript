@@ -16,6 +16,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <pthread.h>
+#include <errno.h>
 
 #define _CHARCONV_CONST
 #include "charconv_internal.h"
@@ -56,7 +57,7 @@ void _charconv_log(const char *fmt, ...) {
 	}
 }
 
-bool _charconv_add_convertor_name(const char *name) {
+static bool add_convertor_name(const char *name) {
 	charconv_name_desc_t *convertor = NULL;
 	char squashed_name[SQUASH_NAME_MAX];
 	bool is_display_name = *name == '*';
@@ -129,7 +130,7 @@ return_error:
 	return false;
 }
 
-bool _charconv_add_convertor_alias(const char *name) {
+static bool add_convertor_alias(const char *name) {
 	charconv_alias_name_t *alias = NULL;
 	char squashed_name[SQUASH_NAME_MAX];
 	bool is_display_name = *name == '*';
@@ -286,4 +287,119 @@ const charconv_name_t *charconv_get_names(int *count) {
 	if (count != NULL)
 		*count = display_names_used;
 	return display_names;
+}
+
+#define MAX_ID 80
+void _charconv_init_aliases_from_file(void) {
+	FILE *aliases;
+	int convertor_found = 0;
+	size_t idx = 0;
+	char id[MAX_ID + 1];
+	int c, line_number = 1;
+
+	enum {
+		LINE_START,
+		LINE_CONTINUED,
+		ID_FIRST,
+		ID_ALIAS,
+		AFTER_ID,
+		COMMENT,
+		SKIP_REST
+	} state = LINE_START;
+
+
+	if ((aliases = _charconv_db_open("aliases", ".txt", NULL)) == NULL) {
+		_charconv_log("Error opening aliases.txt: %s\n", strerror(errno));
+		return;
+	}
+
+	while ((c = fgetc(aliases)) != EOF) {
+		if (c == '\n')
+			line_number++;
+
+		switch (state) {
+			case LINE_START:
+			case LINE_CONTINUED:
+				if (_charconv_isspace(c)) {
+					state = LINE_CONTINUED;
+					break;
+				}
+
+				if (c == '#') {
+					state = COMMENT;
+					break;
+				}
+
+				if (!_charconv_isidchr(c) && c != '*') {
+					_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+					state = SKIP_REST;
+					break;
+				}
+
+				if (state == LINE_START) {
+					state = ID_FIRST;
+				} else {
+					if (convertor_found)
+						state = ID_ALIAS;
+					else
+						state = SKIP_REST;
+				}
+
+				id[0] = c;
+				idx = 1;
+				break;
+			case ID_FIRST:
+				if (c == ',' || c == '=') {
+					if (idx < MAX_ID)
+						id[idx++] = c;
+					break;
+				}
+				/* FALLTHROUGH */
+			case ID_ALIAS:
+				if (_charconv_isidchr(c)) {
+					if (idx < MAX_ID)
+						id[idx++] = c;
+					break;
+				}
+
+				if (_charconv_isspace(c) || c == '#') {
+					id[idx] = 0;
+					if (state == ID_FIRST)
+						convertor_found = add_convertor_name(id);
+					else
+						add_convertor_alias(id);
+					state = c == '#' ? COMMENT : AFTER_ID;
+				} else {
+					_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+					state = SKIP_REST;
+				}
+				break;
+			case AFTER_ID:
+				if (_charconv_isspace(c))
+					break;
+				if (_charconv_isidchr(c) || c == '*') {
+					id[0] = c;
+					idx = 1;
+					state = ID_ALIAS;
+					break;
+				}
+				if (c == '#') {
+					state = COMMENT;
+					break;
+				}
+				_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+				state = SKIP_REST;
+				break;
+			case SKIP_REST:
+			case COMMENT:
+				break;
+			default:
+				_charconv_log("Program logic error while reading aliases.txt\n");
+				fclose(aliases);
+				return;
+		}
+		if (c == '\n')
+			state = LINE_START;
+	}
+	fclose(aliases);
 }
