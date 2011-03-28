@@ -12,7 +12,9 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <string.h>
+#ifndef WITHOUT_PTHREAD
 #include <pthread.h>
+#endif
 
 #include "charconv_internal.h"
 #include "cct_convertor.h"
@@ -33,7 +35,9 @@ typedef struct {
 static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
 static void close_convertor(convertor_state_t *handle);
 
+#ifndef WITHOUT_PTHREAD
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 #define PUT_UNICODE(codepoint) do { int result; \
 	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != 0) \
@@ -587,10 +591,10 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 		return NULL;
 	}
 
-	pthread_mutex_lock(&cct_list_mutex);
+	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex););
 
 	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
-		pthread_mutex_unlock(&cct_list_mutex);
+		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
 
@@ -598,7 +602,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 		_charconv_unload_cct_convertor(ptr);
 		if (error != NULL)
 			*error = CHARCONV_INTERNAL_TABLE;
-		pthread_mutex_unlock(&cct_list_mutex);
+		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
 
@@ -606,10 +610,10 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 		_charconv_unload_cct_convertor(ptr);
 		if (error != NULL)
 			*error = CHARCONV_OUT_OF_MEMORY;
-		pthread_mutex_unlock(&cct_list_mutex);
+		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
-	pthread_mutex_unlock(&cct_list_mutex);
+	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 
 	retval->convertor = ptr;
 	retval->state.from = 0;
@@ -646,11 +650,11 @@ void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t
 
 
 static void close_convertor(convertor_state_t *handle) {
-	pthread_mutex_lock(&cct_list_mutex);
+	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex));
 	if (handle->convertor->refcount == 1)
 		_charconv_unload_cct_convertor(handle->convertor);
 	else
 		handle->convertor->refcount--;
-	pthread_mutex_unlock(&cct_list_mutex);
+	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 	free(handle);
 }

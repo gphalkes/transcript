@@ -15,7 +15,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <dirent.h>
+#ifndef WITHOUT_PTHREAD
 #include <pthread.h>
+#endif
 #include <errno.h>
 
 #define _CHARCONV_CONST
@@ -226,7 +228,9 @@ static const char *builtin_names[] = {
 
 static void _charconv_init_aliases(void) {
 	static bool availability_initialized = false;
+#ifndef WITHOUT_PTHREAD
 	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 	DIR *dir;
 	struct dirent *entry;
@@ -235,12 +239,16 @@ static void _charconv_init_aliases(void) {
 	if (availability_initialized)
 		return;
 
+#ifndef WITHOUT_PTHREAD
+	/* The initial check is to ensure that in the most common case, we skip the
+	   locking of the mutex. This is possible because we only set the value to
+	   true, never to false. Now we do the properly mutex protected check. */
 	pthread_mutex_lock(&lock);
 	if (availability_initialized) {
 		pthread_mutex_unlock(&lock);
 		return;
 	}
-
+#endif
 	/* FIXME: this is a hack. We should do this properly in _charconv_init_aliases_from_file.
 	   That is annoying as well, because it requires exposing several internal variables.
 	*/
@@ -278,7 +286,7 @@ static void _charconv_init_aliases(void) {
 	}
 
 	availability_initialized = true;
-	pthread_mutex_unlock(&lock);
+	PTHREAD_ONLY(pthread_mutex_unlock(&lock));
 }
 
 const charconv_name_t *charconv_get_names(int *count) {

@@ -15,7 +15,9 @@
 #include <ctype.h>
 #include <string.h>
 #include <search.h>
+#ifndef WITHOUT_PTHREAD
 #include <pthread.h>
+#endif
 #include <limits.h>
 #include <locale.h>
 #ifdef HAS_NL_LANGINFO
@@ -336,10 +338,12 @@ charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepo
 
 void _charconv_init(void) {
 	static bool initialized = false;
+#ifndef WITHOUT_PTHREAD
 	static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 	if (!initialized) {
-		pthread_mutex_lock(&init_mutex);
+		PTHREAD_ONLY(pthread_mutex_lock(&init_mutex));
 		if (!initialized) {
 			/* Initialize aliases defined in the aliases.txt file. This does not
 			   check availability, nor does it build the complete set of display
@@ -348,6 +352,6 @@ void _charconv_init(void) {
 			_charconv_init_aliases_from_file();
 		}
 		initialized = true;
-		pthread_mutex_unlock(&init_mutex);
+		PTHREAD_ONLY(pthread_mutex_unlock(&init_mutex));
 	}
 }

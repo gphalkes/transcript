@@ -43,6 +43,12 @@ typedef enum {false, true} bool;
 CHARCONV_LOCAL char *_charconv_strdup(const char *str);
 #endif
 
+#ifdef WITHOUT_PTHREAD
+#define PTHREAD_ONLY(_x)
+#else
+#define PTHREAD_ONLY(_x) do { _x; } while(0)
+#endif
+
 enum {
 	CHARCONV_PROBE_ONLY = (1<<15)
 };
