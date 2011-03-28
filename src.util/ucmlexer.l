@@ -18,7 +18,7 @@
 
 int line_number = 1;
 char *file_name;
-extern "C" void fatal(const char *fmt, ...);
+extern void fatal(const char *fmt, ...);
 
 %}
 

@@ -227,6 +227,8 @@ class Ucm : public UcmBase {
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
 			vector<Mapping *> &this_variant_mappings);
 		void find_used_flags(vector<Mapping *> &mappings, int *length_counts);
+		void remove_generic_fallbacks_internal(UcmBase *check, Variant *variant);
+		void remove_private_use_fallbacks_internal(UcmBase *check);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			public:
@@ -258,7 +260,7 @@ class Ucm : public UcmBase {
 		void validate_states(void);
 		virtual int check_codepage_bytes(vector<uint8_t> &bytes);
 		void check_duplicates(void);
-		void remove_fullwidth_fallbacks(void);
+		void remove_generic_fallbacks(void);
 		void remove_private_use_fallbacks(void);
 		void ensure_ascii_controls(void);
 		void calculate_item_costs(void);

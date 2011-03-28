@@ -371,7 +371,7 @@ int main(int argc, char *argv[]) {
 			fatal("%s: Only a single variant defined\n", ucm->name);
 		ucm->check_duplicates();
 		ucm->ensure_ascii_controls();
-		ucm->remove_fullwidth_fallbacks();
+		ucm->remove_generic_fallbacks();
 		ucm->remove_private_use_fallbacks();
 
 		ucms.push_back(ucm);

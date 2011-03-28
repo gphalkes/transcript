@@ -24,6 +24,7 @@
 %label _STATE, "state";
 %token TAG, SURROGATES, ACTION, STRING, NUMBER, PRECISION;
 
+%lexical cpp_wrap_yylex;
 %start parse_ucm, ucm;
 
 {
@@ -46,6 +47,11 @@ void LLmessage(int _class) {
 			fatal("%s:%d: Expected %s, found %s (%s).\n", file_name, line_number, LLgetSymbol(_class), LLgetSymbol(LLsymb), yytext);
 			break;
 	}
+}
+
+extern "C" int yylex(void);
+inline int cpp_wrap_yylex(void) {
+	return yylex();
 }
 
 }

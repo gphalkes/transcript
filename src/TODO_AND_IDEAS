@@ -4,13 +4,49 @@
 - perhaps an iconv like A to B convertor with better semantics and better
   performance (through multiple conversions at a time) should be provided as
   well
+- add an interface to get the fallback character for a specific sequence
+  encountered in the input. This interface can have one of two forms:
+  - a flag which indicates that if a fallback is encoutered, it should be
+    appended to the current output, but with the output ptr at the normal
+	position (so it is added after the normal output)
+  - a function to retrieve the character. The latter is obviously the most
+    clean interface (least hacky), but is less efficient, and likely duplicates
+	some code.
+  In both cases, we actually have to convert the bytes we find to a unicode
+  character. To do this, we have to
+  - figure out which starting state the target bytes use
+  - save the current convertor state.to
+  - set the convertor state.to to the required one for converting the target
+  - convert the target to unicode
+  - restore the convertor state.to
+  - return the found unicode state
+  However, we can also simply provide a short list in each convertor indicating
+  which fallbacks there are. Then we can do a binary search on that and return
+  that value. Those are the overrides only, because for the general ones we
+  don't include anything.
+
+  For the generic fallbacks, we have another issue: we have to check whether
+  the target is available. This shouldn't be a big problem, but still duplicates
+  some code.
+
+  Decisions:
+  - we save one generic fallback per codepoint
+  - all generic fallbacks are within the BMP
+  - we only save generic fallbacks if they occur more than 5 times
+  - for duplicate fallbacks, we save the one that occurs most often
+  - if the fallback defined in the convertor table is different from the generic
+    fallback, we save it in the table as a fallback
+
+  To convert the fallback, call the convertor itself again, but without the
+  CHARCONV_ALLOW_FALLBACK flag and with the CHARCONV_NO_MN_CONVERSION flag.
+  This can also be used to determine whether the fallback actually exists.
 
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
 - proper testing of all the convertors!!! This means both correct and
   incorrect input!
 
-- map FFFD to subchar!
+- map FFFD to subchar! (as fallback perhaps??)
 - private use handling in the unicode convertor! Should private use chars
   be allowed, and what interaction should be used wrt CHARCONV_ALLOW_PRIVATE_USE
 - need formats which force endianess and use of BOM for UTF-16/32

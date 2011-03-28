@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.ucm2cct := ucm2cct.cc ucm.cc ucm_write.cc ucm_analyse.cc minimize_state_machine.cc variant.cc \
-	ucmparser.gg ucmlexer.l
+	ucmparser.gg ucmlexer.l generic_fallbacks.c
 DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
 
@@ -24,5 +24,8 @@ include ../../makesys/rules.mk
 #================================================#
 CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 
-$(warning Overriding C compiler with c++ for now)
-CC:=$(CXX)
+generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
+	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF charconv_generic_fallbacks < $<
+
+clean::
+	rm generic_fallbacks.c

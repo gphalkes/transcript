@@ -17,6 +17,7 @@
 #include <arpa/inet.h>
 #include <algorithm>
 #include "ucm2cct.h"
+#include "generic_fallbacks.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
 	entries.push_back(Entry(0, 255, 0, ACTION_ILLEGAL, 0, 0));
@@ -331,44 +332,59 @@ next_char:;
 	return count;
 }
 
-void Ucm::remove_fullwidth_fallbacks(void) {
+void Ucm::remove_generic_fallbacks(void) {
 	if (option_verbose)
-		fprintf(stderr, "Removing fullwidth fallbacks\n");
+		fprintf(stderr, "Removing generic fallbacks\n");
 
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); ) {
-		if ((*iter)->codepoints[0] >= UINT32_C(0xff01) && (*iter)->codepoints[0] <= UINT32_C(0xff5e) && (*iter)->precision == 1) {
-			vector<Mapping *>::iterator search_iter;
-			uint32_t search_for;
-			size_t i;
+	remove_generic_fallbacks_internal(this, NULL);
+	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+		remove_generic_fallbacks_internal(*variant_iter, *variant_iter);
+}
 
-			search_for = (*iter)->codepoints[0] - 0xff00 + 0x20;
-			for (search_iter = simple_mappings.begin(); search_iter != simple_mappings.end(); search_iter++) {
-				if ((*search_iter)->codepoints[0] == search_for)
-					break;
-			}
+void Ucm::remove_generic_fallbacks_internal(UcmBase *check, Variant *current_variant) {
+	for (vector<Mapping *>::iterator iter = check->simple_mappings.begin(); iter != check->simple_mappings.end(); ) {
+		vector<Mapping *>::iterator search_iter;
+		uint32_t search_for;
 
-			if (search_iter == simple_mappings.end()) {
+		if ((*iter)->precision != 1 || (*iter)->codepoints.size() > 1 ||
+				(search_for = get_generic_fallback((*iter)->codepoints[0])) == 0xFFFF)
+		{
+			iter++;
+			continue;
+		}
+
+		for (search_iter = simple_mappings.begin(); search_iter != simple_mappings.end(); search_iter++) {
+			if ((*search_iter)->codepoints[0] == search_for)
+				break;
+		}
+
+		if (search_iter == simple_mappings.end()) {
+			if (current_variant != NULL) {
+				for (search_iter = current_variant->simple_mappings.begin();
+						search_iter != current_variant->simple_mappings.end(); search_iter++)
+				{
+					if ((*search_iter)->codepoints[0] == search_for)
+						break;
+				}
+				if (search_iter == current_variant->simple_mappings.end()) {
+					iter++;
+					continue;
+				}
+			} else {
 				iter++;
-				continue;
-			}
-
-			if ((*iter)->codepage_bytes.size() != (*search_iter)->codepage_bytes.size()) {
-				iter++;
-				continue;
-			}
-
-			for (i = 0; i < (*iter)->codepage_bytes.size(); i++) {
-				if ((*iter)->codepage_bytes[i] != (*search_iter)->codepage_bytes[i])
-					break;
-			}
-
-			if (i == (*iter)->codepage_bytes.size()) {
-				iter = simple_mappings.erase(iter);
 				continue;
 			}
 		}
 
-		iter++;
+		if ((*search_iter)->precision != 0 ||
+				(*iter)->codepage_bytes.size() != (*search_iter)->codepage_bytes.size() ||
+				!equal((*iter)->codepage_bytes.begin(), (*iter)->codepage_bytes.end(), (*search_iter)->codepage_bytes.begin()))
+		{
+			iter++;
+			continue;
+		}
+
+		iter = check->simple_mappings.erase(iter);
 	}
 }
 
@@ -382,9 +398,15 @@ void Ucm::remove_private_use_fallbacks(void) {
 	   in all relevant codepages. */
 	if (option_verbose)
 		fprintf(stderr, "Removing fallbacks from private-use codepoints\n");
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); ) {
+	remove_private_use_fallbacks_internal(this);
+	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+		remove_private_use_fallbacks_internal(*variant_iter);
+}
+
+void Ucm::remove_private_use_fallbacks_internal(UcmBase *check) {
+	for (vector<Mapping *>::iterator iter = check->simple_mappings.begin(); iter != check->simple_mappings.end(); ) {
 		if ((*iter)->precision == 1 && ((*iter)->to_unicode_flags & Mapping::TO_UNICODE_PRIVATE_USE)) {
-			iter = simple_mappings.erase(iter);
+			iter = check->simple_mappings.erase(iter);
 			continue;
 		}
 		iter++;
