@@ -21,7 +21,11 @@ typedef struct convertor_state_t convertor_state_t;
 typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
 typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip);
 
-typedef struct _charconv_unicode_state_t state_t;
+typedef struct {
+	uint_fast32_t utf7_put_save;
+	uint_fast8_t utf7_get_mode;
+	uint_fast8_t utf7_put_mode;
+} state_t;
 
 struct convertor_state_t {
 	charconv_common_t common;

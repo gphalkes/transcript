@@ -99,26 +99,6 @@ typedef enum {
 } charconv_utf_t;
 
 
-/* I would rather not define these here, but I need them for the definition of
-   CHARCONV_SAVE_STATE_SIZE. */
-struct _charconv_cct_state_t {
-	uint8_t to, from;
-};
-
-struct _charconv_unicode_state_t {
-	uint_fast32_t utf7_put_save;
-	uint_fast8_t utf7_get_mode;
-	uint_fast8_t utf7_put_mode;
-};
-
-struct _charconv_iso2022_cct_handle_t;
-
-struct _charconv_iso2022_state_t {
-	struct _charconv_iso2022_cct_handle_t *g_to[4]; /* Shifted-in sets. */
-	struct _charconv_iso2022_cct_handle_t *g_from[4]; /* Shifted-in sets. */
-	uint_fast8_t to, from;
-};
-
 #ifndef _CHARCONV_CONST
 #define _CHARCONV_CONST const
 #endif
@@ -128,9 +108,7 @@ typedef struct {
 	int available;
 } charconv_name_t;
 
-#define _CHARCONV_MAX(a, b) ((a) > (b) ? (a) : (b))
-#define CHARCONV_SAVE_STATE_SIZE _CHARCONV_MAX(_CHARCONV_MAX(sizeof(struct _charconv_cct_state_t), \
-	sizeof(struct _charconv_unicode_state_t)), sizeof(struct _charconv_iso2022_state_t))
+#define CHARCONV_SAVE_STATE_SIZE 72
 
 CHARCONV_API int charconv_probe_convertor(const char *name);
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);

@@ -26,6 +26,7 @@ per set:
 #include "charconv_internal.h"
 #include "convertors.h"
 #include "utf.h"
+#include "static_assert.h"
 
 enum {
 	CCT_FLAG_WRITE = (1<<0),
@@ -74,7 +75,16 @@ struct _charconv_iso2022_cct_handle_t {
 	cct_handle_t *prev, *next; /* Doubly-linked list ptrs. */
 };
 
-typedef struct _charconv_iso2022_state_t state_t;
+/*FIXME: change the references to single byte ints such the the state size can
+  be reduced. */
+typedef struct {
+	struct _charconv_iso2022_cct_handle_t *g_to[4]; /* Shifted-in sets. */
+	struct _charconv_iso2022_cct_handle_t *g_from[4]; /* Shifted-in sets. */
+	uint_fast8_t to, from;
+} state_t;
+
+static_assert(sizeof(state_t) <= CHARCONV_SAVE_STATE_SIZE);
+
 typedef struct convertor_state_t convertor_state_t;
 typedef void (*reset_state_func_t)(convertor_state_t *handle);
 

@@ -1,6 +1,22 @@
-- perhaps an iconv like A to B convertor with better semantics and better
-  performance (through multiple conversions at a time) should be provided as
-  well
+HIGH PRIORITY
+=============
+- proper testing of all the convertors!!! This means both correct and
+  incorrect input!
+- private use handling in the unicode convertor! Should private use chars
+  be allowed, and what interaction should be used wrt CHARCONV_ALLOW_PRIVATE_USE
+- need formats which force endianess and use of BOM for UTF-16/32
+- aliases.txt should be updated to reflect the state of affairs according to
+  me.
+- provide a Makefile for the ibm ucm files, which bunches similar convertors
+  into a single cct
+- use pthread-stubs compile in dist Makefile [glibc provides the required
+  stubs, but should compile with `pkg-config --cflags pthread-stubs`]
+- provide pkg-config stuf for our own library
+- do the library rename to libtranscribe transcribe_? Transliterate would be
+  a better name, but is too long for convenience.
+
+MEDIUM PRIORITY
+===============
 - add an interface to get the fallback character for a specific sequence
   encountered in the input. This interface can have one of two forms:
   - a flag which indicates that if a fallback is encoutered, it should be
@@ -21,27 +37,25 @@
   which fallbacks there are. Then we can do a binary search on that and return
   that value. Those are the overrides only, because for the general ones we
   don't include anything.
-
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
 
-- proper testing of all the convertors!!! This means both correct and
-  incorrect input!
 
-- private use handling in the unicode convertor! Should private use chars
-  be allowed, and what interaction should be used wrt CHARCONV_ALLOW_PRIVATE_USE
-- need formats which force endianess and use of BOM for UTF-16/32
-- can we handle IBM PUA and apple PUA such that we somehow know where the
-  private use stuff came from? If so, we can handle the whole
-  CHARCONV_ALLOW_PRIVATE_USE differently
-- we should modify convertors.txt to indicate the different variants
-- convertors.txt sometimes heaps things that are not exactly the same.
-  We should figure out if we can split those to do a proper difference.
-  With the variant selection mechanism, this should not cause a large
-  increase in size.
-- compile with pthread stubs (libc default) using pkg-config pthread-stubs
-  This will only use actual pthread calls if the application is linked with
-  libpthread. Or we should check whether we could just declare that some
-  calls are not thread safe?
+LOW PRIORITY
+============
+- perhaps an iconv like A to B convertor with better semantics and better
+  performance (through multiple conversions at a time) should be provided as
+  well
 
-http://x0213.org/codetable/index.en.html
-official standard (in japanese) http://www.jisc.go.jp/app/pager?id=72545
+IDEAS/MISC
+==========
+- See http://x0213.org/codetable/index.en.html
+  official standard (in japanese) http://www.jisc.go.jp/app/pager?id=72545
+- It would be nice if we could remove the pthreads stuff, and note which
+  functions are not thread safe. However, in doing so we need to consider that
+  other libraries may use the library. This complicates matters, as the other
+  library needs to share a locking mechanism with its users.
+
+  [Sepcial attention should be given to charconv_squash_name. Best option: make
+  charconv_init compulsory, and mark charconv_init and
+  charconv_{open,close}_convertor as not thread-safe.]
+

@@ -19,8 +19,13 @@
 #include "charconv_internal.h"
 #include "cct_convertor.h"
 #include "utf.h"
+#include "static_assert.h"
 
-typedef struct _charconv_cct_state_t save_state_t;
+typedef struct _charconv_cct_state_t {
+	uint8_t to, from;
+} save_state_t;
+
+static_assert(sizeof(save_state_t) <= CHARCONV_SAVE_STATE_SIZE);
 
 typedef struct {
 	charconv_common_t common;

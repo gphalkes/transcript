@@ -21,7 +21,9 @@
 #include "unicode_convertor.h"
 #include "convertors.h"
 #include "utf.h"
+#include "static_assert.h"
 
+static_assert(sizeof(state_t) <= CHARCONV_SAVE_STATE_SIZE);
 
 typedef struct {
 	const char *name;

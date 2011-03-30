@@ -258,7 +258,7 @@ char *_charconv_strdup(const char *str) {
 #endif
 
 /* We want to make sure that a locale setting doesn't corrupt our comparison
-   algorithms. So we use our own versions of isalnum, isdiget and tolower,
+   algorithms. So we use our own versions of isalnum, isdigit and tolower,
    rather than using the library supplied versions. */
 #define IS_ALNUM (1<<0)
 #define IS_DIGIT (1<<1)
