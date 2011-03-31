@@ -76,6 +76,22 @@ void charconv_close_convertor(charconv_t *handle) {
 		handle->close(handle);
 }
 
+int charconv_equal(const char *name_a, const char *name_b) {
+	charconv_name_desc_t *convertor;
+	char squashed_name_a[SQUASH_NAME_MAX], squashed_name_b[SQUASH_NAME_MAX];
+
+	_charconv_init();
+	_charconv_squash_name(name_a, squashed_name_a, SQUASH_NAME_MAX);
+	_charconv_squash_name(name_b, squashed_name_b, SQUASH_NAME_MAX);
+
+	if (strcmp(squashed_name_a, squashed_name_b) == 0)
+		return 1;
+
+	if ((convertor = _charconv_get_name_desc(squashed_name_a)) == NULL)
+		return 0;
+	return convertor == _charconv_get_name_desc(squashed_name_b);
+}
+
 charconv_error_t charconv_to_unicode(charconv_t *handle, const char const **inbuf, const char const *inbuflimit, char **outbuf,
 		const char const *outbuflimit, int flags)
 {

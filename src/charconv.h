@@ -113,6 +113,7 @@ typedef struct {
 CHARCONV_API int charconv_probe_convertor(const char *name);
 CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);
 CHARCONV_API void charconv_close_convertor(charconv_t *handle);
+CHARCONV_API int charconv_equal(const char *name_a, const char *name_b);
 CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, const char **inbuf,
 	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);
 CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, const char **inbuf,
