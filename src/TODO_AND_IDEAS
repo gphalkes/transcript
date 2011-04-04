@@ -14,6 +14,8 @@ HIGH PRIORITY
 - provide pkg-config stuf for our own library
 - do the library rename to libtranscribe transcribe_? Transliterate would be
   a better name, but is too long for convenience.
+- add documentation
+- API versioning
 
 MEDIUM PRIORITY
 ===============
@@ -38,7 +40,9 @@ MEDIUM PRIORITY
   that value. Those are the overrides only, because for the general ones we
   don't include anything.
 - iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
-
+- the aliases file is in ASCII, but the system on which we are running may not
+  be! This means the aliases file should be converted to the current execution
+  charset before use.
 
 LOW PRIORITY
 ============
@@ -59,3 +63,13 @@ IDEAS/MISC
   charconv_init compulsory, and mark charconv_init and
   charconv_{open,close}_convertor as not thread-safe.]
 
+RELEASE ENGINEERING
+===================
+- testing for
+	- HAS_INLINE
+	- HAS_NL_LANGINFO
+	- HAS_STRDUP
+	- USE_ENDIAN
+	- USE_GETTEXT (don't forget to set LOCALEDIR! see dwdiff Makefile.dist.in)
+- provide translations
+- set the copyright years correctly

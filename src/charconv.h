@@ -43,11 +43,17 @@ extern "C" {
 	#define CHARCONV_API CHARCONV_IMPORT
 #endif
 
+/** @defgroup charconv Functions, constants and enums. */
+/** @addtogroup charconv */
+/** @{ */
+
+/** @struct charconv_t
+    An opaque structure describing a convertor and its state.
+*/
 typedef struct charconv_common_t charconv_t;
 
-/* FIXME: do we want to somehow communicate counts of fallbacks/substitutes etc? */
-
-enum {
+/** Flags for convertors and conversions. */
+enum charconv_flags_t {
 	CHARCONV_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
 	CHARCONV_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
 	CHARCONV_SUBST_ILLEGAL = (1<<2), /**< Automatically insert a substitution character on illegal input. */
@@ -55,14 +61,31 @@ enum {
 
 	/* These are only valid as argument to charconv_from_unicode and charconv_to_unicode. */
 	CHARCONV_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
-	CHARCONV_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text. */
-	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.). */
-	CHARCONV_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions. */
-	CHARCONV_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::CHARCONV_NO_MN_CONVERSION  */
+	CHARCONV_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text.
+
+		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+
+		@note This flag is only used to determine whether an incomplete sequence
+		at the end of the buffer is allowed or not. Clients still need to call
+		::charconv_from_unicode_flush to properly end the output buffer.
+	*/
+	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
+
+		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+	*/
+	CHARCONV_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions.
+
+		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+	*/
+	CHARCONV_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::CHARCONV_NO_MN_CONVERSION.
+
+		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+	*/
 
 	/* NOTE: internal flags are defined in charconv_internal.h. Make sure these don't overlap! */
 };
 
+/** Error values. */
 typedef enum {
 	CHARCONV_SUCCESS, /**< All OK. */
 	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
@@ -108,6 +131,7 @@ typedef struct {
 	int available;
 } charconv_name_t;
 
+/** Required size of a buffer for saving convertor state. */
 #define CHARCONV_SAVE_STATE_SIZE 72
 
 CHARCONV_API int charconv_probe_convertor(const char *name);
@@ -128,11 +152,15 @@ CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
 CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
 CHARCONV_API const char *charconv_strerror(charconv_error_t error);
 CHARCONV_API const charconv_name_t *charconv_get_names(int *count);
-CHARCONV_API void charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max);
+CHARCONV_API void charconv_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 CHARCONV_API const char *charconv_get_codeset(void);
 
+/** Minimum required size for an output buffer for ::charconv_to_unicode, if M:N conversion are allowed. */
 #define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
+/** Minimum required size for an output buffer for ::charconv_from_unicode, if M:N conversion are allowed. */
 #define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)
+/** Minimum required size for an output buffer for either ::charconv_to_unicode or
+	::charconv_from_unicode, if M:N conversion are allowed. */
 #define CHARCONV_MIN_BUFFER_SIZE CHARCONV_MIN_UNICODE_BUFFER_SIZE
 
 #if defined(CHARCONV_ICONV_API) || defined(CHARCONV_ICONV)
@@ -154,5 +182,7 @@ typedef cc_iconv_t iconv_t;
 #ifdef __cplusplus
 }
 #endif
+
+/** @} */
 
 #endif

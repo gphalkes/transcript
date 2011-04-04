@@ -61,7 +61,7 @@ void _charconv_log(const char *fmt, ...) {
 
 static bool add_convertor_name(const char *name) {
 	charconv_name_desc_t *convertor = NULL;
-	char squashed_name[SQUASH_NAME_MAX];
+	char normalized_name[NORMALIZE_NAME_MAX];
 	bool is_display_name = *name == '*';
 
 	if (convertors_tail != NULL && !(convertors_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
@@ -72,27 +72,27 @@ static bool add_convertor_name(const char *name) {
 	if (is_display_name)
 		name++;
 
-	_charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
+	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if (squashed_name[0] == 0) {
+	if (normalized_name[0] == 0) {
 		_charconv_log("error: convertor name '%s' is invalid\n", name);
 		goto return_error;
 	}
 
 	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
-		if (strcmp(squashed_name, ptr->name) == 0) {
+		if (strcmp(normalized_name, ptr->name) == 0) {
 			_charconv_log("error: convertor name '%s' is already known\n", name);
 			goto return_error;
 		}
 		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
-			if (strcmp(squashed_name, alias->name) == 0)
+			if (strcmp(normalized_name, alias->name) == 0)
 				_charconv_log("warning: convertor name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
 
 	if ((convertor = malloc(sizeof(charconv_name_desc_t))) == NULL ||
 			(convertor->real_name = _charconv_strdup(name)) == NULL ||
-			(convertor->name = _charconv_strdup(squashed_name)) == NULL)
+			(convertor->name = _charconv_strdup(normalized_name)) == NULL)
 	{
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
@@ -102,7 +102,7 @@ static bool add_convertor_name(const char *name) {
 	convertor->aliases = NULL;
 	convertor->next = NULL;
 
-	if ((convertor->name = _charconv_strdup(squashed_name)) == NULL) {
+	if ((convertor->name = _charconv_strdup(normalized_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
@@ -134,25 +134,25 @@ return_error:
 
 static bool add_convertor_alias(const char *name) {
 	charconv_alias_name_t *alias = NULL;
-	char squashed_name[SQUASH_NAME_MAX];
+	char normalized_name[NORMALIZE_NAME_MAX];
 	bool is_display_name = *name == '*';
 
 	if (is_display_name)
 		name++;
 
-	_charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
+	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if (*squashed_name == 0) {
+	if (*normalized_name == 0) {
 		_charconv_log("error: alias name '%s' is invalid\n", name);
 		goto return_error;
 	}
 
 	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
-		if (strcmp(squashed_name, ptr->name) == 0)
+		if (strcmp(normalized_name, ptr->name) == 0)
 			_charconv_log("error: alias name '%s' is shadowd by a convertor\n", name);
 
 		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
-			if (strcmp(squashed_name, alias->name) == 0)
+			if (strcmp(normalized_name, alias->name) == 0)
 				_charconv_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
@@ -163,7 +163,7 @@ static bool add_convertor_alias(const char *name) {
 		goto return_error;
 	}
 
-	if ((alias->name = _charconv_strdup(squashed_name)) == NULL) {
+	if ((alias->name = _charconv_strdup(normalized_name)) == NULL) {
 		_charconv_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
@@ -187,15 +187,15 @@ return_error:
 }
 
 charconv_name_desc_t *_charconv_get_name_desc(const char *name) {
-	char squashed_name[SQUASH_NAME_MAX];
-	_charconv_squash_name(name, squashed_name, SQUASH_NAME_MAX);
+	char normalized_name[NORMALIZE_NAME_MAX];
+	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
-		if (strcmp(squashed_name, ptr->name) == 0)
+		if (strcmp(normalized_name, ptr->name) == 0)
 			return ptr;
 
 		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
-			if (strcmp(squashed_name, alias->name) == 0)
+			if (strcmp(normalized_name, alias->name) == 0)
 				return ptr;
 		END_LOOP_LIST
 	END_LOOP_LIST

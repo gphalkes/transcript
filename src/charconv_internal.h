@@ -30,7 +30,7 @@ typedef enum {false, true} bool;
 #include <stdbool.h>
 #endif
 
-#define SQUASH_NAME_MAX 160
+#define NORMALIZE_NAME_MAX 160
 #ifdef HAS_INLINE
 #define _CHARCONV_INLINE inline
 #else
@@ -104,7 +104,6 @@ typedef struct charconv_name_desc_t {
 
 
 CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t utf_type);
-CHARCONV_LOCAL int _charconv_element_strcmp(const void *a, const void *b);
 
 CHARCONV_LOCAL void _charconv_log(const char *fmt, ...);
 
@@ -119,7 +118,7 @@ CHARCONV_LOCAL int _charconv_isdigit(int c);
 CHARCONV_LOCAL int _charconv_isspace(int c);
 CHARCONV_LOCAL int _charconv_isidchr(int c);
 CHARCONV_LOCAL int _charconv_tolower(int c);
-CHARCONV_LOCAL void _charconv_squash_name(const char *name, char *squashed_name, size_t squashed_name_max);
+CHARCONV_LOCAL void _charconv_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 
 CHARCONV_LOCAL void _charconv_init_aliases_from_file(void);
 CHARCONV_LOCAL charconv_error_t _charconv_handle_unassigned(charconv_t *handle, uint32_t codepoint, char **outbuf,

@@ -19,3 +19,4 @@ testsuite/simple/convertors/*.cct
 testsuite/simple/.deps
 testsuite/simple/.objects
 .backupfilter.hg
+doc/API

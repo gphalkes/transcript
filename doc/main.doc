@@ -1,0 +1,9 @@
+/** @mainpage
+
+@section Introduction
+
+The libcharconv library provides functions for converting between different
+character sets and Unicode. The library allows great control over the
+conversions, and can encode Unicode in UTF-8, UTF-16 or UTF-32/UCS-4.
+
+*/

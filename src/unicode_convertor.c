@@ -203,7 +203,7 @@ void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_err
 	name_to_utftype *ptr;
 	size_t array_size = ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utftype), _charconv_element_strcmp)) == NULL) {
+	if ((ptr = lfind(name, map, &array_size, sizeof(name_to_utftype), (int (*)(const void *, const void *)) strcmp)) == NULL) {
 		if (error != NULL)
 			*error = CHARCONV_INTERNAL_ERROR;
 		return NULL;

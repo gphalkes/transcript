@@ -779,7 +779,7 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 	name_to_iso2022type *ptr;
 	size_t array_size = ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), _charconv_element_strcmp)) == NULL) {
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL) {
 		if (error != NULL)
 			*error = CHARCONV_INTERNAL_ERROR;
 		return NULL;
