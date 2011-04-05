@@ -23,6 +23,7 @@
 #endif
 #include <limits.h>
 #include <locale.h>
+#include <stdarg.h>
 #ifdef HAS_NL_LANGINFO
 #include <langinfo.h>
 #endif
@@ -92,7 +93,7 @@ charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, i
 
 	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if ((convertor = _charconv_get_name_desc(normalized_name)) != NULL)
+	if ((convertor = _charconv_get_name_desc(normalized_name, 0)) != NULL)
 		return _charconv_fill_utf(try_convertors(convertor->name, convertor->real_name, flags, error), utf_type);
 	return _charconv_fill_utf(try_convertors(normalized_name, name, flags, error), utf_type);
 }
@@ -124,9 +125,9 @@ int charconv_equal(const char *name_a, const char *name_b) {
 	if (strcmp(normalized_name_a, normalized_name_b) == 0)
 		return 1;
 
-	if ((convertor = _charconv_get_name_desc(normalized_name_a)) == NULL)
+	if ((convertor = _charconv_get_name_desc(normalized_name_a, 0)) == NULL)
 		return 0;
-	return convertor == _charconv_get_name_desc(normalized_name_b);
+	return convertor == _charconv_get_name_desc(normalized_name_b, 0);
 }
 
 /** Convert a buffer from a chararcter set to Unicode.
@@ -387,7 +388,7 @@ int _charconv_probe_convertor(const char *name) {
 
 	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if ((convertor = _charconv_get_name_desc(normalized_name)) != NULL)
+	if ((convertor = _charconv_get_name_desc(normalized_name, 0)) != NULL)
 		return try_convertors(convertor->name, convertor->real_name, CHARCONV_PROBE_ONLY, NULL) != NULL;
 	return try_convertors(normalized_name, name, CHARCONV_PROBE_ONLY, NULL) != NULL;
 }
@@ -622,6 +623,22 @@ void _charconv_init(void) {
 		}
 		initialized = true;
 		PTHREAD_ONLY(pthread_mutex_unlock(&init_mutex));
+	}
+}
+
+/** @internal
+    @brief Write a log message to standard error, but only if the CHARCONV_LOG
+        environment variable has been set.
+
+    Calls vfprintf internally, so all printf specifiers available on the platform
+    may be used.
+*/
+void _charconv_log(const char *fmt, ...) {
+	if (getenv("CHARCONV_LOG") != NULL) {
+		va_list ap;
+		va_start(ap, fmt);
+		vfprintf(stderr, fmt, ap);
+		va_end(ap);
 	}
 }
 

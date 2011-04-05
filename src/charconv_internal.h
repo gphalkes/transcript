@@ -91,8 +91,7 @@ typedef struct charconv_alias_name_t {
 	struct charconv_alias_name_t *next;
 } charconv_alias_name_t;
 
-#define NAME_DESC_FLAG_AVAILABLE (1<<0)
-#define NAME_DESC_FLAG_HAS_DISPNAME (1<<1)
+#define NAME_DESC_FLAG_HAS_DISPNAME (1<<0)
 
 typedef struct charconv_name_desc_t {
 	char *real_name;
@@ -107,7 +106,7 @@ CHARCONV_LOCAL charconv_t *_charconv_fill_utf(charconv_t *handle, charconv_utf_t
 
 CHARCONV_LOCAL void _charconv_log(const char *fmt, ...);
 
-CHARCONV_LOCAL charconv_name_desc_t *_charconv_get_name_desc(const char *name);
+CHARCONV_LOCAL charconv_name_desc_t *_charconv_get_name_desc(const char *name, int need_normalization);
 
 CHARCONV_LOCAL void _charconv_init(void);
 CHARCONV_LOCAL FILE *_charconv_db_open(const char *name, const char *ext, charconv_error_t *error);
