@@ -21,12 +21,17 @@
 #include "utf.h"
 #include "static_assert.h"
 
+/** @struct save_state_t
+    Structure holding the shift state of a CCT convertor. */
 typedef struct _charconv_cct_state_t {
 	uint8_t to, from;
 } save_state_t;
 
+/* Make sure that the saved state will fit in an allocated block. */
 static_assert(sizeof(save_state_t) <= CHARCONV_SAVE_STATE_SIZE);
 
+/** @struct convertor_state_t
+    Structure holding the pointers to the data and the state of a CCT convertor. */
 typedef struct {
 	charconv_common_t common;
 	convertor_t *convertor;
@@ -44,15 +49,23 @@ static void close_convertor(convertor_state_t *handle);
 static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
+/** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != 0) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != CHARCONV_SUCCESS) \
 		return result; \
 } while (0)
 
+/** Get the minimum of two @c size_t values. */
 static _CHARCONV_INLINE size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
 }
 
+/** Find variant conversion for to-Unicode conversion.
+
+    The CCT based convertors can store multiple similar convertors in a single
+    table. For the different convertors, or variants, look-up tables are provided
+    to find the actual conversion. This function perform the look-up.
+*/
 static void find_to_unicode_variant(const variant_t *variant, const uint8_t *bytes, size_t length,
 		uint8_t *conv_flags, uint_fast32_t *codepoint)
 {
@@ -93,6 +106,7 @@ static void find_to_unicode_variant(const variant_t *variant, const uint8_t *byt
 	*codepoint = mapping->codepoint;
 }
 
+/** convert_to implementation for CCT convertors. */
 static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -112,6 +126,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 		if (entry->action == ACTION_FINAL_NOFLAGS) {
 			PUT_UNICODE(handle->convertor->codepage_mappings[idx]);
 		} else if (entry->action == ACTION_VALID) {
+			/* Sequence not complete yet... */
 			state = entry->next_state;
 			continue;
 		} else if (entry->action == ACTION_FINAL_PAIR_NOFLAGS) {
@@ -136,19 +151,23 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 
 				/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
 				   check the longer mappings. This way we always find the longest match. */
-
 				for (i = 0; i < handle->nr_multi_mappings; i++) {
 					check_len = min(handle->codepage_sorted_multi_mappings[i]->bytes_length, inbuflimit - *inbuf);
 
+					/* Check if the multi-mapping is a prefix of the current input, or the
+					   current input is a prefix of the multi-mapping. */
 					if (memcmp(handle->codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) != 0)
 						continue;
 
+					/* Handle the case where the input is a prefix of the multi-mapping. */
 					if (check_len != handle->codepage_sorted_multi_mappings[i]->bytes_length) {
 						if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
 							continue;
 						return CHARCONV_INCOMPLETE;
 					}
 
+					/* We found the longest matching multi-mapping. Write the associated
+					   Unicode codepoints to the output buffer. */
 					outbuf_tmp = *outbuf;
 					for (j = 0; j < handle->codepage_sorted_multi_mappings[i]->codepoints_length; j++) {
 						codepoint = handle->codepage_sorted_multi_mappings[i]->codepoints[j];
@@ -159,14 +178,16 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 							codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
 							codepoint += 0x10000;
 						}
-						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) != 0)
+						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) != CHARCONV_SUCCESS)
 							return result;
 					}
 					*outbuf = outbuf_tmp;
 
+					/* Update the state and the *inbuf pointer. Note that to get
+					   to the correct next input state we need to "parse" the
+					   input, so we use to_unicode_skip to update *inbuf. */
 					_inbuf = (const uint8_t *) ((*inbuf) + check_len);
 					handle->state.to = state = entry->next_state;
-					/* We need to go to the correct state, so we use the skip function to move *inbuf. */
 					while ((const uint8_t *) *inbuf < _inbuf)
 						if (to_unicode_skip(handle, inbuf, inbuflimit) != 0)
 							return CHARCONV_INTERNAL_ERROR;
@@ -215,13 +236,16 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 		} else if (entry->action != ACTION_SHIFT) {
 			return CHARCONV_INTERNAL_ERROR;
 		}
+		/* Update state. */
 		*inbuf = (const char *) _inbuf;
 		handle->state.to = state = entry->next_state;
 		idx = handle->convertor->codepage_states[handle->state.to].base;
+
 		if (flags & CHARCONV_SINGLE_CONVERSION)
 			return CHARCONV_SUCCESS;
 	}
 
+	/* Check for incomplete characters at the end of the buffer. */
 	if (*inbuf != inbuflimit) {
 		if (flags & CHARCONV_END_OF_TEXT) {
 			if (!(flags & CHARCONV_SUBST_ILLEGAL))
@@ -235,6 +259,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 	return CHARCONV_SUCCESS;
 }
 
+/** skip_to implementation for CCT convertors. */
 static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
@@ -267,27 +292,35 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **
 	return CHARCONV_INCOMPLETE;
 }
 
+/** reset_to implementation for CCT convertors. */
 static void to_unicode_reset(convertor_state_t *handle) {
 	handle->state.to = 0;
 }
 
-
+/** Simplification macro for the get_unicode function in the convertor handle. */
 #define GET_UNICODE() do { \
 	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
 } while (0)
 
+/** Simplification macro for the put_bytes call, which automatically returns on CHARCONV_NO_SPACE. */
 #define PUT_BYTES(count, buffer) do { \
 	if (put_bytes(handle, outbuf, outbuflimit, count, buffer) == CHARCONV_NO_SPACE) \
 		return CHARCONV_NO_SPACE; \
 } while (0)
 
-static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf, const char const *outbuflimit, size_t count, const uint8_t *bytes) {
+/** Write a byte sequence to the output, prepending a shift sequence if necessary. */
+static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf,
+		const char const *outbuflimit, size_t count, const uint8_t *bytes)
+{
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 
+	/* Shift sequences are only necessary for specificly marked convertors. */
 	if (handle->convertor->flags & MULTIBYTE_START_STATE_1) {
 		required_state = count > 1 ? 1 : 0;
 		if (handle->state.from != required_state) {
+			/* Find the correct shift sequence. This can handle more than simply
+			   going from state 0 to 1 and vice versa. */
 			for (i = 0; i < handle->convertor->nr_shift_states; i++) {
 				if (handle->convertor->shift_states[i].from_state == handle->state.from &&
 						handle->convertor->shift_states[i].to_state == required_state)
@@ -297,6 +330,8 @@ static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, ch
 					memcpy(*outbuf, handle->convertor->shift_states[i].bytes, handle->convertor->shift_states[i].len);
 					*outbuf += handle->convertor->shift_states[i].len;
 					handle->state.from = required_state;
+					/* The space check has already been done, so simply skip to
+					   the copying of the output bytes. */
 					goto write_bytes;
 				}
 			}
@@ -304,9 +339,10 @@ static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, ch
 	}
 	if ((*outbuf) + count > outbuflimit)
 		return CHARCONV_NO_SPACE;
+
 write_bytes:
-	/* Use 8 here, just so we don't create a bug when we decide to up mb_cur_max. */
 	/* Using the switch here is faster than memcpy, which has to be completely general. */
+	/* Use 8 here, just so we don't create a bug when we decide to up mb_cur_max. */
 	switch (count) {
 		case 8: *(*outbuf)++ = *bytes++;
 		case 7: *(*outbuf)++ = *bytes++;
@@ -321,6 +357,7 @@ write_bytes:
 	return CHARCONV_SUCCESS;
 }
 
+/** Check if the current input is a multi-mapping for a from-Unicode conversion. */
 static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -328,8 +365,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	uint_fast32_t i;
 
 	/* Buffer is over-dimensioned by 1 to prevent need for checking the end of buffer. */
-	#define CODEPOINT_BUFLEN 20
-	uint16_t codepoints[CODEPOINT_BUFLEN];
+	uint16_t codepoints[20];
 	char *ptr = (char *) codepoints;
 
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -355,6 +391,8 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		mapping_check_len = handle->codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(ptr - (char *) codepoints, mapping_check_len);
 
+		/* Get more Unicode codepoints if the mapping we are checking is longer than
+		   what we have in our buffer. However, only if there is more input available. */
 		while (can_read_more && check_len < mapping_check_len) {
 			GET_UNICODE();
 
@@ -389,7 +427,10 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 			check_len = ptr - (char *) codepoints;
 		}
 
-		if (check_len >= mapping_check_len && memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints, mapping_check_len) == 0) {
+		if (check_len >= mapping_check_len && memcmp(codepoints, handle->codepoint_sorted_multi_mappings[i]->codepoints,
+				mapping_check_len) == 0)
+		{
+			/* Multi-mapping found. */
 			PUT_BYTES(handle->codepoint_sorted_multi_mappings[i]->bytes_length,
 				handle->codepoint_sorted_multi_mappings[i]->bytes);
 
@@ -407,7 +448,12 @@ check_next_mapping: ;
 	return -1;
 }
 
+/** Find variant conversion for from-Unicode conversion.
 
+    The CCT based convertors can store multiple similar convertors in a single
+    table. For the different convertors, or variants, look-up tables are provided
+    to find the actual conversion. This function perform the look-up.
+*/
 static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoint,
 		uint8_t *conv_flags, uint8_t **bytes)
 {
@@ -436,6 +482,7 @@ static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoi
 	*bytes = (uint8_t *) &mapping->codepage_bytes;
 }
 
+/** convert_from implementation for CCT convertors. */
 static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -467,6 +514,10 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			continue;
 		}
 
+		/* Calculate index in conversion table. Contrary to the to-Unicode case,
+		   we know which bytes make up the input, so we don't have to do this in a
+		   byte-by-byte loop. */
+
 		/* Optimize common case by not doing an actual lookup when the first byte is 0. */
 		if (codepoint > 0x10000L) {
 			byte = (codepoint >> 16) & 0xff;
@@ -487,6 +538,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		entry = &handle->convertor->unicode_states[state].entries[handle->convertor->unicode_states[state].map[byte]];
 		idx += entry->base + (byte - entry->low) * entry->mul;
 
+		/* First check for the most common case: a simple conversion without any special flags. */
 		if (entry->action >= ACTION_FINAL_LEN1_NOFLAGS && entry->action <= ACTION_FINAL_LEN4_NOFLAGS) {
 			bytes = &handle->convertor->unicode_mappings[idx * handle->convertor->single_size];
 			PUT_BYTES(entry->action - ACTION_FINAL_LEN1_NOFLAGS + 1, bytes);
@@ -495,6 +547,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
 					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
 			{
+				/* Check multi-mappings. */
 				switch (from_unicode_check_multi_mappings(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags)) {
 					case CHARCONV_SUCCESS:
 						_inbuf = (const uint8_t *) *inbuf;
@@ -521,6 +574,8 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				return CHARCONV_FALLBACK;
 
 			if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
+				/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
+				   uses the code in parentheses when even that doesn't result in a mapping. */
 				HANDLE_UNASSIGNED(
 					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 						return CHARCONV_UNASSIGNED;
@@ -537,6 +592,8 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				return CHARCONV_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 		} else if (entry->action == ACTION_UNASSIGNED) {
+			/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
+			   uses the code in parentheses when even that doesn't result in a mapping. */
 			HANDLE_UNASSIGNED(
 				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
 					return CHARCONV_UNASSIGNED;
@@ -550,6 +607,7 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			return CHARCONV_SUCCESS;
 	}
 
+	/* Check for incomplete characters at the end of the buffer. */
 	if (*inbuf < inbuflimit) {
 		if (flags & CHARCONV_END_OF_TEXT) {
 			if (!(flags & CHARCONV_SUBST_ILLEGAL))
@@ -563,25 +621,35 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 	return CHARCONV_SUCCESS;
 }
 
+/** flush_from implementation for CCT convertors. */
 static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
 	return CHARCONV_SUCCESS;
 }
 
-
+/** reset_from implementation for CCT convertors. */
 static void from_unicode_reset(convertor_state_t *handle) {
 	handle->state.from = 0;
 }
 
+/** save implementation for CCT convertors. */
 static void save_cct_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(save, &handle->state, sizeof(save_state_t));
 }
 
+/** load implementation for CCT convertors. */
 static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
+/** @internal
+    @brief Load a CCT table and create a convertor handle from it.
+    @param name The name of the convertor, which must correspond to a file name.
+    @param flags Flags for the convertor.
+    @param error The location to store an error.
+    @param internal_use Boolean indicating whether the table is intended for use by another convertor.
+*/
 void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use) {
 	convertor_state_t *retval;
 	variant_t *variant;
@@ -596,6 +664,7 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 		return NULL;
 	}
 
+	/* Loading the convertor should be done one at a time. All locking is done in this file. */
 	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex););
 
 	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
@@ -649,17 +718,15 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	return retval;
 }
 
+/** Wrapper function around _charconv_open_cct_convertor_internal for loading CCT convertors. */
 void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error) {
 	return _charconv_open_cct_convertor_internal(name, flags, error, false);
 }
 
-
+/** close implementation for CCT convertors. */
 static void close_convertor(convertor_state_t *handle) {
 	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex));
-	if (handle->convertor->refcount == 1)
-		_charconv_unload_cct_convertor(handle->convertor);
-	else
-		handle->convertor->refcount--;
+	_charconv_unload_cct_convertor(handle->convertor);
 	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 	free(handle);
 }

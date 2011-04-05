@@ -67,6 +67,8 @@ work:
 > ambiguous output is not properly detected, as it is sometimes a difficult
 > problem to accomplish this detection, or to do it speedily.
 
+These two issues make recode unsuitable for my purposes.
+
 ICU
 ---
 
@@ -82,12 +84,24 @@ several drawbacks:
   *-DOS family of operating systems, and the rest of the world (e.g. iconv)
   does not think the changed mapping is a good idea (except for IBM-437 which
   is IBM-PC specific).
-* It is part of a huge library, which provides not only character set
+* It is part of a _huge_ library, which provides not only character set
   conversions, but also a plethora of Unicode string manipulation functions.
+  Examples of these functions range from case conversion, to normalization,
+  regular expression matching and formatting/parsing of numbers and dates.
   I prefer libraries which adhere to the Unix principle: "do one thing, and do
   it well".
 * It can only encode to and from UTF-16. For programs whishing to use a
   different representation of Unicode, a second conversion is needed.
 
 Admittedly, these reasons are not as strong as the reasons cited for iconv and
-recode.
+recode. The last of these, for example, can be easily worked around by
+providing wrapper routines which perform the second conversion step to UTF-8 or
+UTF-32/UCS-4.
+
+Conclusion
+==========
+
+The currently available character-set convertors do not provide the required
+control and flexibility I require for my purposes. Therefore, I created the
+charconv library which meets my requirements. Hopefully, this will be useful
+to others as well.
