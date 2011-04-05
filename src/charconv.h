@@ -43,7 +43,7 @@ extern "C" {
 	#define CHARCONV_API CHARCONV_IMPORT
 #endif
 
-/** @defgroup charconv Functions, constants and enums. */
+/** @defgroup charconv Native charconv interface. */
 /** @addtogroup charconv */
 /** @{ */
 
@@ -126,9 +126,15 @@ typedef enum {
 #define _CHARCONV_CONST const
 #endif
 
+/** @struct charconv_name_t
+    A structure holding a display name and availability information about a convertor.
+*/
 typedef struct {
-	_CHARCONV_CONST char *name;
-	int available;
+	_CHARCONV_CONST char *name; /**< The (display) name of the convertor. */
+	int available; /**< A boolean indicating whether the convertor is available.
+
+	@note If availability is indicated, a load failure may still occur if the
+	conversion table is corrupt. */
 } charconv_name_t;
 
 /** Required size of a buffer for saving convertor state. */
@@ -163,13 +169,30 @@ CHARCONV_API const char *charconv_get_codeset(void);
 	::charconv_from_unicode, if M:N conversion are allowed. */
 #define CHARCONV_MIN_BUFFER_SIZE CHARCONV_MIN_UNICODE_BUFFER_SIZE
 
+/** @} */
+
 #if defined(CHARCONV_ICONV_API) || defined(CHARCONV_ICONV)
 
+/** @defgroup cc_iconv Iconv compatible interface.
+    This interface allows very limited control over the conversion and
+    is only provided for systems without an iconv library. To make the interface
+	available, define @c CHARCONV_ICONV_API before including the @c charconv.h
+	header. If you want the interface to be available without the @c cc_ prefix,
+	as well, define @c CHARCONV_ICONV instead.
+*/
+/** @addtogroup cc_iconv */
+/** @{ */
+
+/** @struct cc_iconv_t
+    An opaque handle representing the cc_iconv state.
+*/
 typedef struct _cc_iconv_t *cc_iconv_t;
 
 CHARCONV_API cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
 CHARCONV_API int cc_iconv_close(cc_iconv_t cd);
 CHARCONV_API size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
+
+/** @} */
 
 #ifdef CHARCONV_ICONV
 typedef cc_iconv_t iconv_t;
@@ -182,7 +205,5 @@ typedef cc_iconv_t iconv_t;
 #ifdef __cplusplus
 }
 #endif
-
-/** @} */
 
 #endif

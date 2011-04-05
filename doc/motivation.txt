@@ -1,0 +1,93 @@
+Why another character-set conversion library?
+=============================================
+
+There are several existing character-set conversion libraries out there. For
+example, there are multiple implementations of the POSIX iconv interface.
+Furthermore, there is the recode library, and the ICU library also provides a
+character-set conversion interface. So why build another library?
+
+The problem with the exising libraries is that they either do not provide
+enough control over the conversion, or they are otherwise inflexible. In my
+specific case, i.e. the t3window library, it is vital that a character is not
+substituted by an unknown other character. If for example the displayed width
+is different from the expected width due to a character replacment, screen
+corruption occurs.
+
+In the following sections we will detail the problems with each of the
+previously named libaries.
+
+iconv
+-----
+
+This is the most widely available interface. However, it suffers from several
+serious issues regarding control of the conversion. First of all, there is no
+standardized list of names which are accepted by a convertor. This would not be
+a problem if character sets had a unique name. However, many character sets go
+by different aliases. For example, even the well known ASCII character set is
+known by several names, such as ANSI_X3.4-1968, ISO646-US and others.
+
+Of course this problem can be circumvented by building a list of known aliases
+for each character set, but this set then has to be provided with each program
+that uses the iconv interface.
+
+The second problem of the iconv interface is that specification of the iconv
+function itself is not unambiguous. For example, the POSIX standard says:
+
+> If iconv() encounters a character in the input buffer that is valid, but for
+> which an identical character does not exist in the target codeset, iconv()
+> performs an implementation-dependent conversion on this character.
+
+Some implementations will for example insert a nul character or a question mark
+in the output, while others return with an error.
+
+The third problem in the iconv interface is that detection of non-identical
+conversions is shaky at best. The issue here is that the return value of iconv
+indicates the number of non-identical conversions performed, _or_ the reason
+iconv stopped converting. If the latter is the case, the number of non-identical
+conversions performed is lost.
+
+For a program which cares about the conversion fidelity, these issues are
+show-stopping.
+
+recode
+------
+
+The set of available native conversions is fairly limited. Multi-byte encodings
+such as EUC-JP and others are only available through the iconv library.
+Obviously this is undesirable given the comments about iconv above. The recode
+library does provide a flag to indicate that the iconv based conversions are
+not wanted. However, this severly limits the available character sets.
+
+The recode libary does provide a method to stop conversion if a character
+cannot be converted back to its original character. However this only works for
+the native character sets, and even then it is unclear whether it will always
+work:
+
+> Currently, there are many cases in the library where the production of
+> ambiguous output is not properly detected, as it is sometimes a difficult
+> problem to accomplish this detection, or to do it speedily.
+
+ICU
+---
+
+The ICU library also provides a character-set conversion interface. This
+interface does allow great control over what should happen when characters are
+encountered which can not be converted precisely. However, the library has
+several drawbacks:
+
+* Several convertors have an IBM specific quirk: these ASCII based convertors
+  map the Unicode codpoints 1A, 1C and 7F not to the same values in ASCII, but
+  to 1C, 7F and 1A respectively. The cited reason is that IBM-PC operating
+  systems use 1A as the end of file marker. However, this only holds for the
+  *-DOS family of operating systems, and the rest of the world (e.g. iconv)
+  does not think the changed mapping is a good idea (except for IBM-437 which
+  is IBM-PC specific).
+* It is part of a huge library, which provides not only character set
+  conversions, but also a plethora of Unicode string manipulation functions.
+  I prefer libraries which adhere to the Unix principle: "do one thing, and do
+  it well".
+* It can only encode to and from UTF-16. For programs whishing to use a
+  different representation of Unicode, a second conversion is needed.
+
+Admittedly, these reasons are not as strong as the reasons cited for iconv and
+recode.

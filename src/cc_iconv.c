@@ -11,6 +11,9 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+/** @file */
+
 #include <errno.h>
 
 #define CHARCONV_ICONV_API
@@ -19,6 +22,16 @@
 
 /* iconv compatible interface */
 #define ERROR(err) do { errno = err; goto end_error; } while (0)
+
+/** @addtogroup cc_iconv */
+/** @{ */
+
+/** Open a convertor (iconv compatibility interface).
+    @param tocode Name of the character set to convert to.
+    @param fromcode Name of the character set to convert from.
+    @return A handle for the conversion state, or @c (cc_iconv_t) @c -1 on error. On
+        error, @c errno is set appropriately.
+*/
 cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	cc_iconv_t retval = NULL;
 	charconv_error_t error;
@@ -55,6 +68,10 @@ end_error:
 	return (cc_iconv_t) -1;
 }
 
+/** Close a convertor (iconv compatibility interface).
+    @param cd The conversion state handle to clean up.
+    @return @c 0 on success, @c -1 on failure (sets @c errno).
+*/
 int cc_iconv_close(cc_iconv_t cd) {
 	if (cd == NULL)
 		return 0;
@@ -64,6 +81,26 @@ int cc_iconv_close(cc_iconv_t cd) {
 	return 0;
 }
 
+/** Perform conversion (iconv compatibility interface).
+    @param cd The conversion state handle to use.
+    @param inbuf A double pointer to the input buffer.
+    @param inbytesleft A pointer to the number of bytes left in the input buffer.
+    @param outbuf A double pointer to the output buffer.
+    @param outbytesleft A pointer to the number of bytes left in the output buffer.
+    @return The number of non-reversible conversions, or @c (size_t) @c -1 on
+        failure in which case it sets @c errno.
+
+    When @a inbuf is not @c NULL, this function tries to convert the bytes in
+    the input buffer. For each character converted, it updates @a inbuf, @a
+    inbytesleft, @a outbuf and @a outbytesleft. @c errno may be set to @c E2BIG
+    if there is not enough space in @a outbuf to convert all the bytes, @c EILSEQ
+    if an illegal sequence is encoutered in @a inbuf, or @c EINVAL if the buffer
+    ends with an incomplete sequence.
+
+    If @a inbuf is @c NULL, the convertor is reset to its initial state. If
+    @a outbuf is not @c NULL in this case, the convertor writes the finishing
+    bytes to the output to ensure a complete and legal conversion.
+*/
 size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
 	/* To implement a compatible interface, we have to convert
 	   character-by-character. This is what iconv does as well and otherwise
