@@ -11,9 +11,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES.libtranscript.la := transcript.c utf.c cc_iconv.c cct_convertor.c cct_convertor_io.c unicode_convertor.c \
-	unicode_convertor_utf7.c unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c aliases.c \
-	generic_fallbacks.c
+SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c \
+	cct_convertor_io.c unicode_convertor.c unicode_convertor_utf7.c \
+	unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c \
+	aliases.c generic_fallbacks.c
 LDFLAGS.libtranscript.la := -pthread
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused

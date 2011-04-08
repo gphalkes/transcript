@@ -2,9 +2,6 @@ HIGH PRIORITY
 =============
 - proper testing of all the convertors!!! This means both correct and
   incorrect input!
-- private use handling in the unicode convertor! Should private use chars
-  be allowed, and what interaction should be used wrt TRANSCRIPT_ALLOW_PRIVATE_USE
-- need formats which force endianess and use of BOM for UTF-16/32
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
 - provide a Makefile for the ibm ucm files, which bunches similar convertors
@@ -12,7 +9,6 @@ HIGH PRIORITY
 - use pthread-stubs compile in dist Makefile [glibc provides the required
   stubs, but should compile with `pkg-config --cflags pthread-stubs`]
 - provide pkg-config stuf for our own library
-- add documentation
 
 MEDIUM PRIORITY
 ===============
@@ -46,6 +42,7 @@ LOW PRIORITY
 - perhaps an iconv like A to B convertor with better semantics and better
   performance (through multiple conversions at a time) should be provided as
   well
+- should TRANSCRIPT_ALLOW_PRIVATE_USE impact the from_unicode conversion as well?
 
 IDEAS/MISC
 ==========

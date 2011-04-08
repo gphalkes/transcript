@@ -288,8 +288,8 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 	switch (type) {
 		case TRANSCRIPT_UTF8:
-		case UTF8_LOOSE:
-		case UTF8_BOM:
+		case _TRANSCRIPT_UTF8_LOOSE:
+		case _TRANSCRIPT_UTF8_BOM:
 			return put_utf8;
 		case TRANSCRIPT_UTF16:
 			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
@@ -297,15 +297,19 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
 
 		case TRANSCRIPT_UTF16BE:
+		case _TRANSCRIPT_UTF16BE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf16_a : put_utf16_b;
 		case TRANSCRIPT_UTF16LE:
+		case _TRANSCRIPT_UTF16LE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf16_b : put_utf16_a;
 		case TRANSCRIPT_UTF32BE:
+		case _TRANSCRIPT_UTF32BE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 		case TRANSCRIPT_UTF32LE:
+		case _TRANSCRIPT_UTF32LE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 
-		case CESU8:
+		case _TRANSCRIPT_CESU8:
 			return put_cesu8;
 		default:
 			return NULL;
@@ -324,18 +328,22 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 		case TRANSCRIPT_UTF32:
 			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
 
-		case UTF8_LOOSE:
-		case UTF8_BOM:
-		case CESU8:
+		case _TRANSCRIPT_UTF8_LOOSE:
+		case _TRANSCRIPT_UTF8_BOM:
+		case _TRANSCRIPT_CESU8:
 			return get_utf8;
 
 		case TRANSCRIPT_UTF16BE:
+		case _TRANSCRIPT_UTF16BE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf16_a : get_utf16_b;
 		case TRANSCRIPT_UTF16LE:
+		case _TRANSCRIPT_UTF16LE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf16_b : get_utf16_a;
 		case TRANSCRIPT_UTF32BE:
+		case _TRANSCRIPT_UTF32BE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf32_a : get_utf32_b;
 		case TRANSCRIPT_UTF32LE:
+		case _TRANSCRIPT_UTF32LE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
 
 		default:

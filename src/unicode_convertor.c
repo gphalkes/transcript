@@ -93,6 +93,17 @@ static transcript_error_t unicode_conversion(convertor_state_t *handle, const ch
 			default:
 				break;
 		}
+		/* FIXME: do we really want to check this on output as well? For now we
+		   assume we do, because writing private use characters is not really
+		   something one should do. Other programs will have no idea what the
+		   character is supposed to be. */
+		if (((codepoint >= UINT32_C(0xe000) && codepoint <= UINT32_C(0xf8ff)) ||
+				/* The code point is valid, so we can summarize the two ranges from
+				   0xf0000-0xffffd and 0x100000-0x10fffd. Furthermore, we don't have
+				   to check for the end of the Unicode range either. */
+				codepoint >= UINT32_C(0xf0000)) && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE))
+			return TRANSCRIPT_PRIVATE_USE;
+
 		if ((result = put_unicode(handle, codepoint, outbuf, outbuflimit)) != 0)
 			return result;
 		*inbuf = (const char *) _inbuf;
@@ -110,18 +121,28 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 		uint_fast32_t codepoint = 0;
 		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 
-		if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16) {
-			codepoint = _transcript_get_get_unicode(handle->utf_type == TRANSCRIPT_UTF32 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF16BE)(
-					(const char **) &_inbuf, inbuflimit, false);
+		if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16 ||
+				handle->utf_type == _TRANSCRIPT_UTF32_NOBOM || handle->utf_type == _TRANSCRIPT_UTF16_NOBOM)
+		{
+			get_unicode_func_t get_le, get_be;
+
+			if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == _TRANSCRIPT_UTF32_NOBOM) {
+				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
+				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF32LE);
+			} else {
+				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
+				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF16LE);
+			}
+
+			codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
 			if (codepoint == UINT32_C(0xFEFF)) {
-				handle->to_unicode_get = _transcript_get_get_unicode(handle->utf_type == TRANSCRIPT_UTF32 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF16BE);
+				handle->to_unicode_get = get_be;
 			} else if (codepoint == TRANSCRIPT_ILLEGAL) {
-				codepoint = _transcript_get_get_unicode(handle->utf_type == TRANSCRIPT_UTF32 ? TRANSCRIPT_UTF32LE : TRANSCRIPT_UTF16LE)(
-						(const char **) &_inbuf, inbuflimit, false);
+				codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
 				if (codepoint == UINT32_C(0xFEFF))
-					handle->to_unicode_get = _transcript_get_get_unicode(handle->utf_type == TRANSCRIPT_UTF32 ? TRANSCRIPT_UTF32LE : TRANSCRIPT_UTF16LE);
+					handle->to_unicode_get = get_le;
 				else
-					handle->to_unicode_get = _transcript_get_get_unicode(handle->utf_type == TRANSCRIPT_UTF32 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF16BE);
+					handle->to_unicode_get = get_be;
 			}
 		} else {
 			codepoint = handle->to_unicode_get((const char **) &_inbuf, inbuflimit, false);
@@ -146,12 +167,14 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 static void to_unicode_reset(convertor_state_t *handle) {
 	switch (handle->utf_type) {
 		case TRANSCRIPT_UTF16:
+		case _TRANSCRIPT_UTF16_NOBOM:
 			handle->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
 			break;
 		case TRANSCRIPT_UTF32:
+		case _TRANSCRIPT_UTF32_NOBOM:
 			handle->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
 			break;
-		case UTF7:
+		case _TRANSCRIPT_UTF7:
 			handle->state.utf7_get_mode = UTF7_MODE_DIRECT;
 			break;
 		default:
@@ -170,7 +193,11 @@ static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf
 		switch (handle->utf_type) {
 			case TRANSCRIPT_UTF32:
 			case TRANSCRIPT_UTF16:
-			case UTF8_BOM:
+			case _TRANSCRIPT_UTF16BE_BOM:
+			case _TRANSCRIPT_UTF16LE_BOM:
+			case _TRANSCRIPT_UTF32BE_BOM:
+			case _TRANSCRIPT_UTF32LE_BOM:
+			case _TRANSCRIPT_UTF8_BOM:
 				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
 					return TRANSCRIPT_NO_SPACE;
 				break;
@@ -185,7 +212,7 @@ static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf
 
 /** reset_from implementation for Unicode convertors. */
 static void from_unicode_reset(convertor_state_t *handle) {
-	if (handle->utf_type == UTF7) {
+	if (handle->utf_type == _TRANSCRIPT_UTF7) {
 		handle->state.utf7_put_mode = UTF7_MODE_DIRECT;
 		handle->state.utf7_put_save = 0;
 	}
@@ -193,7 +220,7 @@ static void from_unicode_reset(convertor_state_t *handle) {
 
 /** flush_from implementation for Unicode convertors. */
 static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
-	if (handle->utf_type == UTF7)
+	if (handle->utf_type == _TRANSCRIPT_UTF7)
 		return _transcript_from_unicode_flush_utf7(handle, outbuf, outbuflimit);
 	return TRANSCRIPT_SUCCESS;
 }
@@ -215,19 +242,29 @@ static void load_state(convertor_state_t *handle, void *state) {
     @param error The location to store an error.
 */
 void *_transcript_open_unicode_convertor(const char *name, int flags, transcript_error_t *error) {
+	/* Mapping from name to integer constant. Note that we don't actually parse
+	   any options, but simply use the mapping to take care of that. This does
+	   mean that no other options are possible than the ones that are listed
+	   here. */
 	static const name_to_utftype map[] = {
-		{ "utf8", UTF8_LOOSE },
-		{ "utf8,bom", UTF8_BOM },
+		{ "utf8", _TRANSCRIPT_UTF8_LOOSE },
+		{ "utf8,bom", _TRANSCRIPT_UTF8_BOM },
 		{ "utf16", TRANSCRIPT_UTF16 },
 		{ "utf16be", TRANSCRIPT_UTF16BE },
 		{ "utf16le", TRANSCRIPT_UTF16LE },
+		{ "utf16,nobom", _TRANSCRIPT_UTF16_NOBOM },
+		{ "utf16be,bom", _TRANSCRIPT_UTF16BE_BOM },
+		{ "utf16le,bom", _TRANSCRIPT_UTF16LE_BOM },
 		{ "utf32", TRANSCRIPT_UTF32 },
 		{ "utf32be", TRANSCRIPT_UTF32BE },
 		{ "utf32le", TRANSCRIPT_UTF32LE },
-		{ "cesu8", CESU8 },
-		{ "gb18030", GB18030 },
-		/* Disabled for now { "scsu", SCSU }, */
-		{ "utf7", UTF7 }
+		{ "utf32,nobom", _TRANSCRIPT_UTF32_NOBOM },
+		{ "utf32be,bom", _TRANSCRIPT_UTF32BE_BOM },
+		{ "utf32le,bom", _TRANSCRIPT_UTF32LE_BOM },
+		{ "cesu8", _TRANSCRIPT_CESU8 },
+		{ "gb18030", _TRANSCRIPT_GB18030 },
+		/* Disabled for now { "scsu", _TRANSCRIPT_SCSU }, */
+		{ "utf7", _TRANSCRIPT_UTF7 }
 	};
 
 	convertor_state_t *retval;
@@ -241,7 +278,7 @@ void *_transcript_open_unicode_convertor(const char *name, int flags, transcript
 	}
 
 	if (flags & TRANSCRIPT_PROBE_ONLY) {
-		if (ptr->utf_type == GB18030) {
+		if (ptr->utf_type == _TRANSCRIPT_GB18030) {
 			FILE *file;
 			if ((file = _transcript_db_open("_gb18030", ".cct", NULL)) == NULL)
 				return NULL;
@@ -271,16 +308,18 @@ void *_transcript_open_unicode_convertor(const char *name, int flags, transcript
 	retval->utf_type = ptr->utf_type;
 	switch (retval->utf_type) {
 		case TRANSCRIPT_UTF16:
+		case _TRANSCRIPT_UTF16_NOBOM:
 			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
 			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF16BE);
 			break;
 		case TRANSCRIPT_UTF32:
+		case _TRANSCRIPT_UTF32_NOBOM:
 			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
 			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32BE);
 			break;
-		case GB18030:
-		case SCSU:
-		case UTF7:
+		case _TRANSCRIPT_GB18030:
+		case _TRANSCRIPT_SCSU:
+		case _TRANSCRIPT_UTF7:
 			break;
 		default:
 			retval->to_unicode_get = _transcript_get_get_unicode(retval->utf_type);
@@ -288,7 +327,7 @@ void *_transcript_open_unicode_convertor(const char *name, int flags, transcript
 			break;
 	}
 	switch (retval->utf_type) {
-		case GB18030:
+		case _TRANSCRIPT_GB18030:
 			if ((retval->gb18030_cct = _transcript_fill_utf(
 					_transcript_open_cct_convertor_internal("_gb18030", flags, error, true), TRANSCRIPT_UTF32)) == NULL) {
 				free(retval);
@@ -298,9 +337,9 @@ void *_transcript_open_unicode_convertor(const char *name, int flags, transcript
 			retval->to_get = _transcript_get_gb18030;
 			retval->from_put = _transcript_put_gb18030;
 			break;
-		case SCSU:
+		case _TRANSCRIPT_SCSU:
 			break;
-		case UTF7:
+		case _TRANSCRIPT_UTF7:
 			retval->state.utf7_get_mode = UTF7_MODE_DIRECT;
 			retval->state.utf7_put_mode = UTF7_MODE_DIRECT;
 			retval->state.utf7_put_save = 0;

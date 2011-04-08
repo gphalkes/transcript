@@ -82,7 +82,7 @@ typedef struct transcript_common_t {
 	int utf_type;
 } transcript_common_t;
 
-struct _cc_iconv_t {
+struct _transcript_iconv_t {
 	transcript_t *from, *to;
 };
 
