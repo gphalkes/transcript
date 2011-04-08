@@ -18,6 +18,9 @@
 #include "utf.h"
 #include "generic_fallbacks.h"
 
+/** @struct convertor_state_t
+    @brief Struct holding the state for the ISO-8859-1/ASCII convertor.
+*/
 typedef struct {
 	transcript_common_t common;
 	unsigned int charmax;
@@ -25,6 +28,7 @@ typedef struct {
 
 static void close_convertor(transcript_common_t *handle);
 
+/** convert_to implementation for ISO-8859-1/ASCII convertors. */
 static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -32,6 +36,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char 
 
 	while ((*inbuf) < inbuflimit) {
 		codepoint = *(uint8_t *) *inbuf;
+		/* This is the only difference for ISO-8859-1 and ASCII: the value of charmax. */
 		if (codepoint > handle->charmax) {
 			if (flags & TRANSCRIPT_SUBST_ILLEGAL)
 				codepoint = 0x1a;
@@ -47,6 +52,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char 
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** skip_to implementation for ISO-8859-1/ASCII convertors. */
 static transcript_error_t to_unicode_skip(transcript_common_t *handle, char **inbuf, const char const *inbuflimit) {
 	(void) handle;
 
@@ -56,6 +62,7 @@ static transcript_error_t to_unicode_skip(transcript_common_t *handle, char **in
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** convert_from implementation for ISO-8859-1/ASCII convertors. */
 static transcript_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -76,6 +83,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, cha
 				}
 				return TRANSCRIPT_INCOMPLETE;
 			default:
+				/* This is the only difference for ISO-8859-1 and ASCII: the value of charmax. */
 				if (codepoint > handle->charmax) {
 					if ((codepoint = get_generic_fallback(codepoint)) <= handle->charmax) {
 						if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
@@ -101,7 +109,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, cha
 	return TRANSCRIPT_SUCCESS;
 }
 
-
+/** flush_from implementation for ISO-8859-1/ASCII convertors. */
 static transcript_error_t flush_nop(transcript_t *handle, char **outbuf, const char *outbuflimit) {
 	(void) handle;
 	(void) outbuf;
@@ -110,15 +118,20 @@ static transcript_error_t flush_nop(transcript_t *handle, char **outbuf, const c
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** reset_to/reset_from implementation for ISO-8859-1/ASCII convertors. */
 static void reset_nop(transcript_common_t *handle) {
 	(void) handle;
 }
 
+/** save/load implementation for ISO-8859-1/ASCII convertors. */
 static void save_load_nop(transcript_common_t *handle, void *state) {
 	(void) handle;
 	(void) state;
 }
 
+/** @internal
+    @brief Open an ISO-8859-1/ASCII convertor.
+*/
 void *_transcript_open_iso8859_1_convertor(const char *name, int flags, int *error) {
 	convertor_state_t *retval;
 
@@ -151,10 +164,7 @@ void *_transcript_open_iso8859_1_convertor(const char *name, int flags, int *err
 	return retval;
 }
 
+/** close implementation for ISO-8859-1/ASCII convertors. */
 static void close_convertor(transcript_common_t *handle) {
 	free(handle);
-}
-
-size_t get_iso8859_1_saved_state_size(void) {
-	return 0;
 }

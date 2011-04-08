@@ -49,13 +49,14 @@ static _TRANSCRIPT_INLINE uint16_t swaps(uint16_t value) {
 }
 #endif
 
-
+/** Simplification macro to check whether a codepoint is valid, and return an error if not. */
 #define CHECK_CODEPOINT_RANGE() do { if (codepoint > UINT32_C(0x10ffff) || \
 	(codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff))) return TRANSCRIPT_INTERNAL_ERROR; } while (0)
 
-
+/** Simplification macro to make sure that there is enough space in the output buffer, and return an error if not. */
 #define CHECK_OUTBYTESLEFT(_x) if ((*outbuf) + (_x) > outbuflimit) return TRANSCRIPT_NO_SPACE;
 
+/** Write a codepoint encoded as UTF-8. */
 static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
@@ -81,6 +82,7 @@ static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** Write a codepoint encoded as CESU-8. */
 static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
@@ -113,12 +115,20 @@ static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, cons
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** Simplification macro to check whether a codepoint is a legal codepoint, and return an error if not. */
 #define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint >= 0xfdd0 && (codepoint > UINT32_C(0x10ffff) || \
 	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfffe) || \
 	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint <= UINT32_C(0xfdef)))) return TRANSCRIPT_UTF_ILLEGAL; } while (0)
+/** Simplification macro to check whether a codepoint is a surrogate, and return an error if not. */
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return TRANSCRIPT_UTF_ILLEGAL; } while (0)
 
+/** Read a UTF-8 encoded codepoint.
+    @param inbuf &nbsp;
+    @param inbuflimit &nbsp;
+    @param skip &nbsp;
+	@param strict Whether to allow overlong sequences and high/low surrogates.
+*/
 static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbuflimit, bool skip, bool strict) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast32_t codepoint = *_inbuf, least;
@@ -214,11 +224,16 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
 	return codepoint;
 }
 
+/** Read a standard compliant UTF-8 encoded codepoint.
+
+    This function is a wrapper around ::get_utf8internal to make the interface
+    the same as for the other @c get_xxx functions.
+*/
 static uint_fast32_t get_utf8strict(const char **inbuf, const char const *inbuflimit, bool skip) {
 	return get_utf8internal(inbuf, inbuflimit, skip, true);
 }
 
-/** Get the next UTF-8 encoded unicode codepoint from the stream.
+/** Read a non-standard-compliant UTF-8 encoded codepoint.
 
     This version is permissive in what it accepts, in that it allows overlong
     sequences, and allows CESU-8 encoding using surrogate pairs.
@@ -267,6 +282,9 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
 
+/** @internal
+    @brief Retrieve a function pointer for writing Unicode codepoints, encoded in one of the UTF-X encodings.
+*/
 put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 	switch (type) {
 		case TRANSCRIPT_UTF8:
@@ -294,6 +312,9 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 	}
 }
 
+/** @internal
+    @brief Retrieve a function pointer for reading Unicode codepoints, encoded in one of the UTF-X encodings.
+*/
 get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 	switch (type) {
 		case TRANSCRIPT_UTF8:
@@ -322,6 +343,13 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 	}
 }
 
+/** @internal
+    @brief Read a codepoint encoded as UTF-32 (Machine Endian), without validity checking.
+
+    This function is provided for reading back converted output which we know
+    to be valid. Should be used mainly for points in the code where this code
+    will be called frequently.
+*/
 uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint32_t codepoint;
 
@@ -334,6 +362,13 @@ uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char cons
 	return codepoint;
 }
 
+/** @internal
+    @brief Write a codepoint encoded as UTF-16 (Machine Endian), without validity checking.
+
+    This function is provided for writing back converted input which we know
+    to be valid, and for which we know the buffer to be large enough. Should be
+    used mainly for points in the code where this code will be called frequently.
+*/
 transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf) {
 	uint16_t tmp;
 

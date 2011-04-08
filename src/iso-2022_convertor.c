@@ -807,7 +807,9 @@ static bool do_load(load_table_func load, convertor_state_t *handle, int type, t
 	return true;
 }
 
-/** Open an ISO-2022 convertor. */
+/** @internal
+    @brief Open an ISO-2022 convertor.
+*/
 void *_transcript_open_iso2022_convertor(const char *name, int flags, transcript_error_t *error) {
 	static const name_to_iso2022type map[] = {
 		{ "iso2022jp", ISO2022_JP },

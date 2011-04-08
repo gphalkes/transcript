@@ -16,6 +16,7 @@
 #define _ALT(x, y) __ALT(x, y)
 #define ALT(x) _ALT(x, UTF_ENDIAN_H_VERSION)
 
+/** Write a codepoint encoded as UTF-16. */
 static transcript_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint16_t tmp;
 
@@ -37,6 +38,7 @@ static transcript_error_t ALT(put_utf16)(uint_fast32_t codepoint, char **outbuf,
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** Write a codepoint encoded as UTF-32. */
 static transcript_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint32_t tmp;
 	CHECK_CODEPOINT_RANGE();
@@ -48,6 +50,7 @@ static transcript_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf,
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** Read a codepoint encoded as UTF-16. */
 static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint16_t tmp;
 	uint_fast32_t codepoint, masked_codepoint;
@@ -98,6 +101,7 @@ static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbufl
 	return codepoint;
 }
 
+/** Read a codepoint encoded as UTF-32. */
 static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint32_t codepoint;
 
