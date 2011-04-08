@@ -102,6 +102,6 @@ Conclusion
 ==========
 
 The currently available character-set convertors do not provide the required
-control and flexibility I require for my purposes. Therefore, I created the
-charconv library which meets my requirements. Hopefully, this will be useful
+control and flexibility I require for my purposes. Therefore, I created
+libtranscript which meets my requirements. Hopefully, this will be useful
 to others as well.

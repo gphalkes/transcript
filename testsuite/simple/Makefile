@@ -14,7 +14,7 @@
 SOURCES.test := test.c
 CFLAGS.test := -I../../src/
 LDFLAGS.test := -L../../src/.libs
-LDLIBS.test := -lcharconv
+LDLIBS.test := -ltranscript
 
 TARGETS := test
 

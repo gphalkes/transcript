@@ -6,5 +6,5 @@ sed -r '1,/^%%/d;s/#.*//;s/[[:space:]]+//g' "$1" > output.txt
 
 OPTIONS="`head -n 1 \"$1\" | sed -r 's/^#//'`"
 
-CHARCONV_PATH=../convertors LD_LIBRARY_PATH=../../../src/.libs ../test  $OPTIONS < input.txt > result.txt
+TRANSCRIPT_PATH=../convertors LD_LIBRARY_PATH=../../../src/.libs ../test  $OPTIONS < input.txt > result.txt
 diff -uBw output.txt result.txt
