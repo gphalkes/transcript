@@ -12,7 +12,6 @@ HIGH PRIORITY
 - use pthread-stubs compile in dist Makefile [glibc provides the required
   stubs, but should compile with `pkg-config --cflags pthread-stubs`]
 - provide pkg-config stuf for our own library
-- after renaming the library, also rename the cc_iconv interface
 - add documentation
 
 MEDIUM PRIORITY

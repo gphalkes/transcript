@@ -189,32 +189,32 @@ TRANSCRIPT_API long transcript_get_version(void);
 
 #if defined(TRANSCRIPT_ICONV_API) || defined(TRANSCRIPT_ICONV)
 
-/** @defgroup cc_iconv Iconv compatible interface.
+/** @defgroup transcript_iconv Iconv compatible interface.
     This interface allows very limited control over the conversion and
     is only provided for systems without an iconv library. To make the interface
 	available, define @c TRANSCRIPT_ICONV_API before including the @c transcript.h
 	header. If you want the interface to be available without the @c cc_ prefix,
 	as well, define @c TRANSCRIPT_ICONV instead.
 */
-/** @addtogroup cc_iconv */
+/** @addtogroup transcript_iconv */
 /** @{ */
 
-/** @struct cc_iconv_t
-    An opaque handle representing the cc_iconv state.
+/** @struct transcript_iconv_t
+    An opaque handle representing the transcript_iconv state.
 */
-typedef struct _cc_iconv_t *cc_iconv_t;
+typedef struct _transcript_iconv_t *transcript_iconv_t;
 
-TRANSCRIPT_API cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
-TRANSCRIPT_API int cc_iconv_close(cc_iconv_t cd);
-TRANSCRIPT_API size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
+TRANSCRIPT_API transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcode);
+TRANSCRIPT_API int transcript_iconv_close(transcript_iconv_t cd);
+TRANSCRIPT_API size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
 
 /** @} */
 
 #ifdef TRANSCRIPT_ICONV
-typedef cc_iconv_t iconv_t;
-#define iconv(_a, _b, _c, _d, _e) cc_iconv((_a), (_b), (_c), (_d), (_e))
-#define iconv_open(_a, _b) cc_iconv_open((_a), (_b))
-#define iconv_close(_a) cc_iconv_close(_a)
+typedef transcript_iconv_t iconv_t;
+#define iconv(_a, _b, _c, _d, _e) transcript_iconv((_a), (_b), (_c), (_d), (_e))
+#define iconv_open(_a, _b) transcript_iconv_open((_a), (_b))
+#define iconv_close(_a) transcript_iconv_close(_a)
 #endif
 #endif
 

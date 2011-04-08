@@ -23,17 +23,17 @@
 /* iconv compatible interface */
 #define ERROR(err) do { errno = err; goto end_error; } while (0)
 
-/** @addtogroup cc_iconv */
+/** @addtogroup transcript_iconv */
 /** @{ */
 
 /** Open a convertor (iconv compatibility interface).
     @param tocode Name of the character set to convert to.
     @param fromcode Name of the character set to convert from.
-    @return A handle for the conversion state, or @c (cc_iconv_t) @c -1 on error. On
+    @return A handle for the conversion state, or @c (transcript_iconv_t) @c -1 on error. On
         error, @c errno is set appropriately.
 */
-cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
-	cc_iconv_t retval = NULL;
+transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcode) {
+	transcript_iconv_t retval = NULL;
 	transcript_error_t error;
 
 	if ((retval = malloc(sizeof(*retval))) == NULL)
@@ -61,18 +61,18 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 
 end_error:
 	if (retval == NULL)
-		return (cc_iconv_t) -1;
+		return (transcript_iconv_t) -1;
 
 	transcript_close_convertor(retval->from);
 	transcript_close_convertor(retval->to);
-	return (cc_iconv_t) -1;
+	return (transcript_iconv_t) -1;
 }
 
 /** Close a convertor (iconv compatibility interface).
     @param cd The conversion state handle to clean up.
     @return @c 0 on success, @c -1 on failure (sets @c errno).
 */
-int cc_iconv_close(cc_iconv_t cd) {
+int transcript_iconv_close(transcript_iconv_t cd) {
 	if (cd == NULL)
 		return 0;
 	transcript_close_convertor(cd->from);
@@ -101,7 +101,7 @@ int cc_iconv_close(cc_iconv_t cd) {
     @a outbuf is not @c NULL in this case, the convertor writes the finishing
     bytes to the output to ensure a complete and legal conversion.
 */
-size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
+size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
 	/* To implement a compatible interface, we have to convert
 	   character-by-character. This is what iconv does as well and otherwise
 	   we have to save the intermediate results as well. */
