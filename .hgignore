@@ -1,8 +1,9 @@
 syntax: glob
+doc/motivation.html
 src*/generic_fallbacks.[ch]
 src/test
 src/cct_convertor
-src/libcharconv.la
+src/libtranscript.la
 src.util/ucm2cct
 
 src*/.objects
@@ -10,7 +11,7 @@ src*/.deps
 src.util/genconv
 src.util/ibm-ucm
 src/.libs
-src/charconv
+src/transcript
 tmp/*
 testsuite/*/testlog*.txt
 testsuite/*/work
