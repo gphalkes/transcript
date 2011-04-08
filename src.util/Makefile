@@ -25,7 +25,7 @@ include ../../makesys/rules.mk
 CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 
 generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
-	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF charconv_generic_fallbacks < $<
+	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF transcript_generic_fallbacks < $<
 
 clean::
 	rm generic_fallbacks.[ch]

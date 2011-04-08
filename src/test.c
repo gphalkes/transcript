@@ -5,7 +5,7 @@
 #include <strings.h>
 #include <string.h>
 
-#include "charconv.h"
+#include "transcript.h"
 #include "utf.h"
 
 void fatal(const char *fmt, ...) {
@@ -20,15 +20,15 @@ void fatal(const char *fmt, ...) {
 
 void show_names(void) {
 	int count, i;
-	const charconv_name_t *names;
-	names = charconv_get_names(&count);
+	const transcript_name_t *names;
+	names = transcript_get_names(&count);
 	printf("Display name count: %d\n", count);
 	for (i = 0; i < count; i++)
 		printf("name: %s (%d)\n", names[i].name, names[i].available);
 }
 
 int main(int argc, char *argv[]) {
-	charconv_error_t error;
+	transcript_error_t error;
 	void *conv;
 	char inbuf[1024], outbuf[1024], *outbuf_ptr;
 	const char *inbuf_ptr;
@@ -37,29 +37,29 @@ int main(int argc, char *argv[]) {
 
 	int c;
 	enum { FROM, TO } dir = FROM;
-	charconv_error_t (*convert)(charconv_t *, const char **, const char *, char **, const char *, int) = charconv_from_unicode;
-	int utf_type = CHARCONV_UTF8;
+	transcript_error_t (*convert)(transcript_t *, const char **, const char *, char **, const char *, int) = transcript_from_unicode;
+	int utf_type = TRANSCRIPT_UTF8;
 	int option_dump = 0;
 	int flags = 0;
 
 	static struct { const char *name; int type; } utf_list[] = {
-		{ "UTF-8", CHARCONV_UTF8 },
-		{ "UTF-16", CHARCONV_UTF16 },
-		{ "UTF-16BE", CHARCONV_UTF16BE },
-		{ "UTF-16LE", CHARCONV_UTF16LE },
-		{ "UTF-32", CHARCONV_UTF32 },
-		{ "UTF-32BE", CHARCONV_UTF32BE },
-		{ "UTF-32LE", CHARCONV_UTF32LE }};
+		{ "UTF-8", TRANSCRIPT_UTF8 },
+		{ "UTF-16", TRANSCRIPT_UTF16 },
+		{ "UTF-16BE", TRANSCRIPT_UTF16BE },
+		{ "UTF-16LE", TRANSCRIPT_UTF16LE },
+		{ "UTF-32", TRANSCRIPT_UTF32 },
+		{ "UTF-32BE", TRANSCRIPT_UTF32BE },
+		{ "UTF-32LE", TRANSCRIPT_UTF32LE }};
 
 	while ((c = getopt(argc, argv, "d:u:Dlf")) != EOF) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
 					dir = TO;
-					convert = charconv_to_unicode;
+					convert = transcript_to_unicode;
 				} else if (strcasecmp(optarg, "from") == 0) {
 					dir = FROM;
-					convert = charconv_from_unicode;
+					convert = transcript_from_unicode;
 				} else {
 					fatal("Invalid argument for -d\n");
 				}
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 				option_dump = 1;
 				break;
 			case 'f':
-				flags |= CHARCONV_ALLOW_FALLBACK;
+				flags |= TRANSCRIPT_ALLOW_FALLBACK;
 				break;
 			case 'l':
 				show_names();
@@ -91,16 +91,16 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     or: test -l");
 
-	if ((conv = charconv_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
-		fatal("Error opening convertor: %s\n", charconv_strerror(error));
+	if ((conv = transcript_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
+		fatal("Error opening convertor: %s\n", transcript_strerror(error));
 
 	while ((result = fread(inbuf + fill, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;
 		outbuf_ptr = outbuf;
 		fill += result;
 		if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024,
-				feof(stdin) ? (flags | CHARCONV_END_OF_TEXT) : flags)) > CHARCONV_PART_SUCCESS_MAX)
-			fatal("conversion result: %s\n", charconv_strerror(error));
+				feof(stdin) ? (flags | TRANSCRIPT_END_OF_TEXT) : flags)) > TRANSCRIPT_PART_SUCCESS_MAX)
+			fatal("conversion result: %s\n", transcript_strerror(error));
 
 		fill -= inbuf_ptr - inbuf;
 		if (!option_dump) {
@@ -109,11 +109,11 @@ int main(int argc, char *argv[]) {
 				printf("\\x%02X", (uint8_t) outbuf[i]);
 			putchar('\n');
 		}
-		if (option_dump || (dir == TO && utf_type == CHARCONV_UTF8))
+		if (option_dump || (dir == TO && utf_type == TRANSCRIPT_UTF8))
 			printf("%.*s", (int) (outbuf_ptr - outbuf), outbuf);
 		memmove(inbuf, inbuf_ptr, fill);
 	}
-	if (!option_dump && dir == TO && utf_type == CHARCONV_UTF8)
+	if (!option_dump && dir == TO && utf_type == TRANSCRIPT_UTF8)
 		putchar('\n');
 	return 0;
 }

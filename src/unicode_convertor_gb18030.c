@@ -14,7 +14,7 @@
 
 /* Get and put routines for GB-18030. This uses the internal gb18030.cct tables. */
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "utf.h"
 #include "unicode_convertor.h"
 
@@ -37,7 +37,7 @@ static const gb_range_map_t gb_range_map[] = {
 	{ UINT32_C(0x99e2), UINT32_C(0x99fb), UINT32_C(0xffe6), UINT32_C(0xffff) },
 	{ UINT32_C(0x2e248), UINT32_C(0x12e247), UINT32_C(0x10000), UINT32_C(0x10ffff) }};
 
-int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
 #else
@@ -48,23 +48,23 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 	uint8_t *_outbuf;
 
 	switch (handle->gb18030_cct->convert_from(handle->gb18030_cct, &codepoint_ptr, codepoint_ptr + 4, outbuf,
-			outbuflimit, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_1N_CONVERSION))
+			outbuflimit, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION))
 	{
-		case CHARCONV_SUCCESS:
-			return CHARCONV_SUCCESS;
-		case CHARCONV_NO_SPACE:
-			return CHARCONV_NO_SPACE;
-		case CHARCONV_UNASSIGNED:
+		case TRANSCRIPT_SUCCESS:
+			return TRANSCRIPT_SUCCESS;
+		case TRANSCRIPT_NO_SPACE:
+			return TRANSCRIPT_NO_SPACE;
+		case TRANSCRIPT_UNASSIGNED:
 			break;
 
-		/* CHARCONV_FALLBACK
-		   CHARCONV_INCOMPLETE
-		   CHARCONV_PRIVATE_USE
-		   CHARCONV_ILLEGAL
-		   CHARCONV_ILLEGAL_END
-		   CHARCONV_INTERNAL_ERROR */
+		/* TRANSCRIPT_FALLBACK
+		   TRANSCRIPT_INCOMPLETE
+		   TRANSCRIPT_PRIVATE_USE
+		   TRANSCRIPT_ILLEGAL
+		   TRANSCRIPT_ILLEGAL_END
+		   TRANSCRIPT_INTERNAL_ERROR */
 		default:
-			return CHARCONV_INTERNAL_ERROR;
+			return TRANSCRIPT_INTERNAL_ERROR;
 	}
 
 	low = 0;
@@ -80,10 +80,10 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 
 	if (low == ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].unicode_high ||
 			codepoint < gb_range_map[low].unicode_low)
-		return CHARCONV_INTERNAL_ERROR;
+		return TRANSCRIPT_INTERNAL_ERROR;
 
 	if ((*outbuf) + 4 > outbuflimit)
-		return CHARCONV_NO_SPACE;
+		return TRANSCRIPT_NO_SPACE;
 
 	_outbuf = (uint8_t *) *outbuf;
 	codepoint = codepoint - gb_range_map[low].unicode_low + gb_range_map[low].low;
@@ -95,49 +95,49 @@ int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, ch
 	codepoint /= (0x3a - 0x30);
 	_outbuf[0] = 0x81 + codepoint;
 	*outbuf += 4;
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
-uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	char *codepoint_ptr;
 	size_t low, mid, high;
 	const uint8_t *_inbuf;
 	uint32_t codepoint;
 
 	if (skip) {
-		charconv_to_unicode_skip(handle->gb18030_cct, inbuf, inbuflimit);
+		transcript_to_unicode_skip(handle->gb18030_cct, inbuf, inbuflimit);
 		return 0;
 	}
 
 	codepoint_ptr = (char *) &codepoint;
 	switch (handle->gb18030_cct->convert_to(handle->gb18030_cct, inbuf, inbuflimit, &codepoint_ptr,
-			codepoint_ptr + 4, CHARCONV_SINGLE_CONVERSION | CHARCONV_ALLOW_PRIVATE_USE | CHARCONV_NO_1N_CONVERSION))
+			codepoint_ptr + 4, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_ALLOW_PRIVATE_USE | TRANSCRIPT_NO_1N_CONVERSION))
 	{
-		case CHARCONV_SUCCESS:
+		case TRANSCRIPT_SUCCESS:
 			return codepoint;
-		case CHARCONV_ILLEGAL:
-			return CHARCONV_UTF_ILLEGAL;
+		case TRANSCRIPT_ILLEGAL:
+			return TRANSCRIPT_UTF_ILLEGAL;
 
-		/* CHARCONV_FALLBACK - There should be no fallback mappings in the GB-18030 table.
-		   CHARCONV_ILLEGAL_END - As we do not include the CHARCONV_END_OF_TEXT flag, this should be impossible.
-		   CHARCONV_INTERNAL_ERROR
-		   CHARCONV_PRIVATE_USE - Should not happen because we told the convertor that private use mappings are alright.
-		   CHARCONV_NO_SPACE - We provided enough space for the single character. */
+		/* TRANSCRIPT_FALLBACK - There should be no fallback mappings in the GB-18030 table.
+		   TRANSCRIPT_ILLEGAL_END - As we do not include the TRANSCRIPT_END_OF_TEXT flag, this should be impossible.
+		   TRANSCRIPT_INTERNAL_ERROR
+		   TRANSCRIPT_PRIVATE_USE - Should not happen because we told the convertor that private use mappings are alright.
+		   TRANSCRIPT_NO_SPACE - We provided enough space for the single character. */
 		default:
-			return CHARCONV_UTF_INTERNAL_ERROR;
+			return TRANSCRIPT_UTF_INTERNAL_ERROR;
 
-		case CHARCONV_INCOMPLETE:
-			return CHARCONV_UTF_INCOMPLETE;
-		case CHARCONV_UNASSIGNED:
+		case TRANSCRIPT_INCOMPLETE:
+			return TRANSCRIPT_UTF_INCOMPLETE;
+		case TRANSCRIPT_UNASSIGNED:
 			break;
 	}
 
 	if ((*inbuf) + 4 > inbuflimit)
-		return CHARCONV_UTF_ILLEGAL;
+		return TRANSCRIPT_UTF_ILLEGAL;
 
 	_inbuf = (const uint8_t *) *inbuf;
 	if (*_inbuf < 0x81 || *_inbuf > 0xfe)
-		return CHARCONV_ILLEGAL;
+		return TRANSCRIPT_ILLEGAL;
 
 	codepoint = _inbuf[0] - 0x81;
 	codepoint = codepoint * (0x3a - 0x30) + _inbuf[1] - 0x30;
@@ -156,7 +156,7 @@ uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, const char **inbu
 	} while (low < high);
 
 	if (low == ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].high || codepoint < gb_range_map[low].low)
-		return CHARCONV_UTF_ILLEGAL;
+		return TRANSCRIPT_UTF_ILLEGAL;
 
 	*inbuf += 4;
 	return codepoint - gb_range_map[low].low + gb_range_map[low].unicode_low;

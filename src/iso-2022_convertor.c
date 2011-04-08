@@ -23,7 +23,7 @@ per set:
 #include <string.h>
 #include <search.h>
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "convertors.h"
 #include "utf.h"
 #include "static_assert.h"
@@ -67,11 +67,11 @@ typedef struct {
 	int iso2022_type;
 } name_to_iso2022type;
 
-typedef struct _charconv_iso2022_cct_handle_t cct_handle_t;
+typedef struct _transcript_iso2022_cct_handle_t cct_handle_t;
 
 /** Struct holding a CCT convertor and associated information. */
-struct _charconv_iso2022_cct_handle_t {
-	charconv_t *cct; /**< Handle for the table based convertor. */
+struct _transcript_iso2022_cct_handle_t {
+	transcript_t *cct; /**< Handle for the table based convertor. */
 	uint_fast8_t bytes_per_char; /**< Bytes per character code. */
 	uint_fast8_t seq_len; /**< Length of the escape sequence used to shift. */
 	char escape_seq[7]; /**< The escape sequence itselft. */
@@ -85,14 +85,14 @@ struct _charconv_iso2022_cct_handle_t {
 /** @struct state_t
     Structure holding the shift state of an ISO-2022 convertor. */
 typedef struct {
-	struct _charconv_iso2022_cct_handle_t *g_to[4]; /**< Shifted-in sets. */
-	struct _charconv_iso2022_cct_handle_t *g_from[4]; /**< Shifted-in sets. */
+	struct _transcript_iso2022_cct_handle_t *g_to[4]; /**< Shifted-in sets. */
+	struct _transcript_iso2022_cct_handle_t *g_from[4]; /**< Shifted-in sets. */
 	uint_fast8_t to, /**< Current character set in use by the to-Unicode conversion. */
 		from; /**< Current character set in use by the from-Unicode conversion. */
 } state_t;
 
 /* Make sure that the saved state will fit in an allocated block. */
-static_assert(sizeof(state_t) <= CHARCONV_SAVE_STATE_SIZE);
+static_assert(sizeof(state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
 typedef struct convertor_state_t convertor_state_t;
 typedef void (*reset_state_func_t)(convertor_state_t *handle);
@@ -100,7 +100,7 @@ typedef void (*reset_state_func_t)(convertor_state_t *handle);
 /** @struct convertor_state_t
     Structure holding the data and the state of a CCT convertor. */
 struct convertor_state_t {
-	charconv_common_t common;
+	transcript_common_t common;
 	cct_handle_t *g_initial[4]; /**< Initial sets of the convertor (for resetting purposes). */
 	cct_handle_t *g_sets[4]; /**< Linked lists of possible tables. */
 	cct_handle_t *ascii; /**< The ASCII convertor. */
@@ -190,15 +190,15 @@ static int check_escapes(convertor_state_t *handle, const char **inbuf, const ch
 		}
 		if (skip)
 			*inbuf = (const char *) _inbuf - 1;
-		return CHARCONV_ILLEGAL;
+		return TRANSCRIPT_ILLEGAL;
 	}
 
 	if ((const char *) _inbuf == inbuflimit && inbuflimit == (*inbuf) + 5) {
 		if (skip)
 			*inbuf += 5;
-		return CHARCONV_ILLEGAL;
+		return TRANSCRIPT_ILLEGAL;
 	} else {
-		return CHARCONV_INCOMPLETE;
+		return TRANSCRIPT_INCOMPLETE;
 	}
 
 sequence_found:
@@ -216,18 +216,18 @@ sequence_found:
 
 				handle->state.g_to[i] = ptr;
 				*inbuf = (const char *) _inbuf;
-				return CHARCONV_SUCCESS;
+				return TRANSCRIPT_SUCCESS;
 			}
 		}
 	} else {
 		*inbuf = (const char *) _inbuf;
 	}
-	return CHARCONV_ILLEGAL;
+	return TRANSCRIPT_ILLEGAL;
 }
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != CHARCONV_SUCCESS) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != TRANSCRIPT_SUCCESS) \
 		return result; \
 } while (0)
 
@@ -266,7 +266,7 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 
 				state_shift_done:
 						if (handle->state.g_to[state > 3 ? state >> 2 : state] == NULL)
-							return CHARCONV_ILLEGAL;
+							return TRANSCRIPT_ILLEGAL;
 						handle->state.to = state;
 
 						_inbuf = (const uint8_t *) ((*inbuf) += 2);
@@ -277,20 +277,20 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 				}
 
 				switch (check_escapes(handle, inbuf, inbuflimit, false)) {
-					case CHARCONV_INCOMPLETE:
+					case TRANSCRIPT_INCOMPLETE:
 						goto incomplete_char;
-					case CHARCONV_ILLEGAL:
-						return CHARCONV_ILLEGAL;
-					case CHARCONV_SUCCESS:
+					case TRANSCRIPT_ILLEGAL:
+						return TRANSCRIPT_ILLEGAL;
+					case TRANSCRIPT_SUCCESS:
 						_inbuf = (const uint8_t *) *inbuf;
 						continue;
 					default:
-						return CHARCONV_INTERNAL_ERROR;
+						return TRANSCRIPT_INTERNAL_ERROR;
 				}
 			} else if (*_inbuf == 0xe) {
 				/* Shift out. */
 				if (handle->state.g_to[1] == NULL)
-					return CHARCONV_ILLEGAL;
+					return TRANSCRIPT_ILLEGAL;
 				handle->state.to = 1;
 				_inbuf = (const uint8_t *) ++(*inbuf);
 				continue;
@@ -308,7 +308,7 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 			_inbuf++;
 		} else if (*_inbuf & 0x80) {
 			/* All ISO-2022 convertors implemented here are 7 bit only. */
-			return CHARCONV_ILLEGAL;
+			return TRANSCRIPT_ILLEGAL;
 		} else {
 			char buffer[8]; /*FIXME: is this big enough?*/
 			const char *buffer_ptr = buffer;
@@ -327,7 +327,7 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 				buffer[i] = _inbuf[i] | (handle->state.g_to[state]->high_bit << 7);
 
 			if ((result = handle->state.g_to[state]->cct->convert_to(handle->state.g_to[state]->cct, &buffer_ptr,
-					buffer + handle->state.g_to[state]->bytes_per_char, &codepoint_ptr, codepoint_ptr + 4, 0)) != CHARCONV_SUCCESS)
+					buffer + handle->state.g_to[state]->bytes_per_char, &codepoint_ptr, codepoint_ptr + 4, 0)) != TRANSCRIPT_SUCCESS)
 				return result;
 			PUT_UNICODE(codepoint);
 			_inbuf += handle->state.g_to[state]->bytes_per_char;
@@ -335,33 +335,33 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 
 		handle->state.to &= 3;
 		*inbuf = (const char *) _inbuf;
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 
 incomplete_char:
-	if (flags & CHARCONV_END_OF_TEXT) {
-		if (flags & CHARCONV_SUBST_ILLEGAL) {
+	if (flags & TRANSCRIPT_END_OF_TEXT) {
+		if (flags & TRANSCRIPT_SUBST_ILLEGAL) {
 			PUT_UNICODE(0xfffd);
 			(*inbuf) = inbuflimit;
-			return CHARCONV_SUCCESS;
+			return TRANSCRIPT_SUCCESS;
 		}
-		return CHARCONV_ILLEGAL_END;
+		return TRANSCRIPT_ILLEGAL_END;
 	}
-	return CHARCONV_INCOMPLETE;
+	return TRANSCRIPT_INCOMPLETE;
 }
 
 /** skip_to implementation for ISO-2022 convertors. */
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	uint_fast8_t state;
 
 	if ((*inbuf) == inbuflimit)
-		return CHARCONV_INCOMPLETE;
+		return TRANSCRIPT_INCOMPLETE;
 
 	if (**inbuf == 0x1b)
-		return check_escapes(handle, inbuf, inbuflimit, true) == CHARCONV_INCOMPLETE ?
-			CHARCONV_INCOMPLETE : CHARCONV_SUCCESS;
+		return check_escapes(handle, inbuf, inbuflimit, true) == TRANSCRIPT_INCOMPLETE ?
+			TRANSCRIPT_INCOMPLETE : TRANSCRIPT_SUCCESS;
 
 	state = handle->state.to;
 	if (state > 3)
@@ -369,12 +369,12 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **
 
 
 	if ((*inbuf) + handle->state.g_to[state]->bytes_per_char > inbuflimit)
-		return CHARCONV_INCOMPLETE;
+		return TRANSCRIPT_INCOMPLETE;
 
 	handle->state.to &= 3;
 
 	*inbuf += handle->state.g_to[state]->bytes_per_char;
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** reset_to implementation for ISO-2022 convertors. */
@@ -386,7 +386,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 /** Simplification macro for writing a set of output bytes, which returns if not enough space is available. */
 #define PUT_BYTES(count, buffer) do { size_t _i, _count = count; \
 	if ((*outbuf) + _count > outbuflimit) \
-		return CHARCONV_NO_SPACE; \
+		return TRANSCRIPT_NO_SPACE; \
 	for (_i = 0; _i < _count; _i++) \
 		(*outbuf)[_i] = buffer[_i] & 0x7f; \
 	*outbuf += _count; \
@@ -402,7 +402,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
     This function both updates the @a handle and write the associated sequence
     to the output.
 */
-static charconv_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *cct, uint_fast8_t g,
+static transcript_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *cct, uint_fast8_t g,
 		char **outbuf, const char const *outbuflimit)
 {
 	if (handle->state.g_from[g] != cct) {
@@ -418,18 +418,18 @@ static charconv_error_t switch_to_set(convertor_state_t *handle, cct_handle_t *c
 			handle->state.from = (handle->state.from & 3) | (g << 2);
 		}
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** Simplification macro calling switch_to_set, which returns if not enough space is available. */
 #define SWITCH_TO_SET(cct, g) do { \
-	if (switch_to_set(handle, cct, g, outbuf, outbuflimit) != CHARCONV_SUCCESS) \
-		return CHARCONV_NO_SPACE; \
+	if (switch_to_set(handle, cct, g, outbuf, outbuflimit) != TRANSCRIPT_SUCCESS) \
+		return TRANSCRIPT_NO_SPACE; \
 } while (0)
 
 
 /** convert_from implementation for ISO-2022 convertors. */
-static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint32_t codepoint;
@@ -443,18 +443,18 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 
 	while ((const char *) _inbuf < inbuflimit) {
 		switch (codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false)) {
-			case CHARCONV_UTF_ILLEGAL:
-				return CHARCONV_ILLEGAL;
-			case CHARCONV_UTF_INCOMPLETE:
-				if (flags & CHARCONV_END_OF_TEXT) {
-					if (!(flags & CHARCONV_SUBST_ILLEGAL))
-						return CHARCONV_ILLEGAL_END;
+			case TRANSCRIPT_UTF_ILLEGAL:
+				return TRANSCRIPT_ILLEGAL;
+			case TRANSCRIPT_UTF_INCOMPLETE:
+				if (flags & TRANSCRIPT_END_OF_TEXT) {
+					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+						return TRANSCRIPT_ILLEGAL_END;
 					SWITCH_TO_SET(handle->ascii, 0);
 					buffer[0] = 0x1a;
 					PUT_BYTES(1, buffer);
-					return CHARCONV_SUCCESS;
+					return TRANSCRIPT_SUCCESS;
 				}
-				return CHARCONV_INCOMPLETE;
+				return TRANSCRIPT_INCOMPLETE;
 			case 0x0d:
 			case 0x0a:
 				/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
@@ -478,21 +478,21 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		codepoint_ptr = (const char *) &codepoint;
 		buffer_ptr = buffer;
 		switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, (const char *) &codepoint + 4, &buffer_ptr, buffer + 4, 0)) {
-			case CHARCONV_SUCCESS:
+			case TRANSCRIPT_SUCCESS:
 				PUT_BYTES(buffer_ptr - buffer, buffer);
 				*inbuf = (const char *) _inbuf;
 				handle->state.from &= 3;
 				continue;
-			case CHARCONV_NO_SPACE:
-				return CHARCONV_NO_SPACE;
-			case CHARCONV_FALLBACK:
+			case TRANSCRIPT_NO_SPACE:
+				return TRANSCRIPT_NO_SPACE;
+			case TRANSCRIPT_FALLBACK:
 				fallback.cct = ptr;
 				fallback.state = state;
 				break;
-			case CHARCONV_UNASSIGNED:
+			case TRANSCRIPT_UNASSIGNED:
 				break;
 			default:
-				return CHARCONV_INTERNAL_ERROR;
+				return TRANSCRIPT_INTERNAL_ERROR;
 		}
 
 		/* Search for a suitable character set. Note that if the conversion succeeded
@@ -508,20 +508,20 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				switch (ptr->cct->convert_from(ptr->cct, &codepoint_ptr, (const char *) &codepoint + 4,
 						&buffer_ptr, buffer + 4, 0))
 				{
-					case CHARCONV_SUCCESS:
+					case TRANSCRIPT_SUCCESS:
 						SWITCH_TO_SET(ptr, i);
 						PUT_BYTES(buffer_ptr - buffer, buffer);
 						goto next_codepoint;
-					case CHARCONV_UNASSIGNED:
+					case TRANSCRIPT_UNASSIGNED:
 						break;
-					case CHARCONV_FALLBACK:
+					case TRANSCRIPT_FALLBACK:
 						if (fallback.cct != NULL) {
 							fallback.cct = ptr;
 							fallback.state = i;
 						}
 						break;
 					default:
-						return CHARCONV_INTERNAL_ERROR;
+						return TRANSCRIPT_INTERNAL_ERROR;
 				}
 			}
 		}
@@ -529,27 +529,27 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
 			   uses the code in parentheses when even that doesn't result in a mapping. */
 			HANDLE_UNASSIGNED(
-				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-					return CHARCONV_UNASSIGNED;
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
 				SWITCH_TO_SET(handle->ascii, 0);
 				buffer[0] = 0x1a;
 				PUT_BYTES(1, buffer);
 			)
 		} else {
 			/* Fallback */
-			if (!(flags & CHARCONV_ALLOW_FALLBACK))
-				return CHARCONV_FALLBACK;
+			if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
+				return TRANSCRIPT_FALLBACK;
 			SWITCH_TO_SET(fallback.cct, fallback.state);
 			codepoint_ptr = (char *) &codepoint;
 			switch (fallback.cct->cct->convert_from(fallback.cct->cct, &codepoint_ptr, (const char *) &codepoint + 4,
-					outbuf, outbuflimit, CHARCONV_ALLOW_FALLBACK))
+					outbuf, outbuflimit, TRANSCRIPT_ALLOW_FALLBACK))
 			{
-				case CHARCONV_NO_SPACE:
-					return CHARCONV_NO_SPACE;
-				case CHARCONV_SUCCESS:
+				case TRANSCRIPT_NO_SPACE:
+					return TRANSCRIPT_NO_SPACE;
+				case TRANSCRIPT_SUCCESS:
 					break;
 				default:
-					return CHARCONV_INTERNAL_ERROR;
+					return TRANSCRIPT_INTERNAL_ERROR;
 			}
 		}
 
@@ -557,19 +557,19 @@ next_codepoint:
 		*inbuf = (const char *) _inbuf;
 		handle->state.from &= 3;
 
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
 
-	if (flags & CHARCONV_END_OF_TEXT)
+	if (flags & TRANSCRIPT_END_OF_TEXT)
 		SWITCH_TO_SET(handle->ascii, 0);
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** flush_from implementation for ISO-2022 convertors. */
-static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	SWITCH_TO_SET(handle->ascii, 0);
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** reset_from implementation for ISO-2022 convertors. */
@@ -599,29 +599,29 @@ static void reset_state_cn(convertor_state_t *handle) {
 
     Used internally to load the different convertors used by ISO-2022.
 */
-static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
+static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
 	cct_handle_t *cct_handle, *extra_handle;
-	charconv_t *ext_handle;
+	transcript_t *ext_handle;
 	uint_fast8_t idx = 0;
 
 	flags |= desc->flags;
 
 	if ((flags & CCT_FLAG_LARGE_SET) && g == 0)
-		return CHARCONV_INTERNAL_ERROR;
+		return TRANSCRIPT_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = _charconv_fill_utf(_charconv_open_iso8859_1_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591",
-			0, error), CHARCONV_UTF32);
+		ext_handle = _transcript_fill_utf(_transcript_open_iso8859_1_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591",
+			0, error), TRANSCRIPT_UTF32);
 	else
-		ext_handle = _charconv_fill_utf(_charconv_open_cct_convertor_internal(desc->name, 0, error, true), CHARCONV_UTF32);
+		ext_handle = _transcript_fill_utf(_transcript_open_cct_convertor_internal(desc->name, 0, error, true), TRANSCRIPT_UTF32);
 
 	if (ext_handle == NULL)
 		return false;
 
 	if ((cct_handle = malloc(sizeof(cct_handle_t))) == NULL) {
-		charconv_close_convertor(ext_handle);
+		transcript_close_convertor(ext_handle);
 		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
+			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return false;
 	}
 
@@ -645,10 +645,10 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 	   the short sequence or the long sequence is used for from-Unicode conversions. */
 	if (desc->final_byte < 0x43 && desc->bytes_per_char > 1) {
 		if ((extra_handle = malloc(sizeof(cct_handle_t))) == NULL) {
-			charconv_close_convertor(ext_handle);
+			transcript_close_convertor(ext_handle);
 			free(cct_handle);
 			if (error != NULL)
-				*error = CHARCONV_OUT_OF_MEMORY;
+				*error = TRANSCRIPT_OUT_OF_MEMORY;
 			return false;
 		}
 		memcpy(extra_handle, cct_handle, sizeof(cct_handle_t));
@@ -667,7 +667,7 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 }
 
 /** Probe the availability of a convertor. */
-static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags) {
+static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
 	(void) handle;
 	(void) g;
 	(void) error;
@@ -676,7 +676,7 @@ static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, char
 	if (desc->name == NULL)
 		return true; /* Builtin convertors (ISO-8859-1) */
 	else
-		return _charconv_probe_convertor(desc->name);
+		return _transcript_probe_convertor(desc->name);
 }
 
 /** Convenience macro which tries to load a convertor and exits the function if it is not available. */
@@ -685,10 +685,10 @@ static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, char
 		return false; \
 } while (0)
 
-typedef bool (*load_table_func)(convertor_state_t *handle, cct_descriptor_t *desc, int g, charconv_error_t *error, uint_fast8_t flags);
+typedef bool (*load_table_func)(convertor_state_t *handle, cct_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags);
 
 /** Load the convertors required for a specific ISO-2022 convertor. */
-static bool do_load(load_table_func load, convertor_state_t *handle, int type, charconv_error_t *error) {
+static bool do_load(load_table_func load, convertor_state_t *handle, int type, transcript_error_t *error) {
 		switch (type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
 		   JIS X 0213 has two planes: the first plane which is a superset of
@@ -801,14 +801,14 @@ static bool do_load(load_table_func load, convertor_state_t *handle, int type, c
 			break;
 		default:
 			if (error != NULL)
-				*error = CHARCONV_INTERNAL_ERROR;
+				*error = TRANSCRIPT_INTERNAL_ERROR;
 			return false;
 	}
 	return true;
 }
 
 /** Open an ISO-2022 convertor. */
-void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error) {
+void *_transcript_open_iso2022_convertor(const char *name, int flags, transcript_error_t *error) {
 	static const name_to_iso2022type map[] = {
 		{ "iso2022jp", ISO2022_JP },
 		{ "iso2022jp1", ISO2022_JP1 },
@@ -830,16 +830,16 @@ void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_err
 
 	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL) {
 		if (error != NULL)
-			*error = CHARCONV_INTERNAL_ERROR;
+			*error = TRANSCRIPT_INTERNAL_ERROR;
 		return NULL;
 	}
 
-	if (flags & CHARCONV_PROBE_ONLY)
+	if (flags & TRANSCRIPT_PROBE_ONLY)
 		return do_load(probe, NULL, ptr->iso2022_type, error) ? (void *) 1 : NULL;
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
 		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
+			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
 	}
 	retval->g_sets[0] = NULL;
@@ -890,7 +890,7 @@ static void close_convertor(convertor_state_t *handle) {
 	for (i = 0; i < 4; i++) {
 		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = next) {
 			if (!(ptr->flags & CCT_FLAGS_DUPCCT))
-				charconv_close_convertor(ptr->cct);
+				transcript_close_convertor(ptr->cct);
 			next = ptr->next;
 			free(ptr);
 		}

@@ -16,24 +16,24 @@
 #include <pthread.h>
 #endif
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "cct_convertor.h"
 #include "utf.h"
 #include "static_assert.h"
 
 /** @struct save_state_t
     Structure holding the shift state of a CCT convertor. */
-typedef struct _charconv_cct_state_t {
+typedef struct _transcript_cct_state_t {
 	uint8_t to, from;
 } save_state_t;
 
 /* Make sure that the saved state will fit in an allocated block. */
-static_assert(sizeof(save_state_t) <= CHARCONV_SAVE_STATE_SIZE);
+static_assert(sizeof(save_state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
 /** @struct convertor_state_t
     Structure holding the pointers to the data and the state of a CCT convertor. */
 typedef struct {
-	charconv_common_t common;
+	transcript_common_t common;
 	convertor_t *convertor;
 	variant_t *variant;
 	multi_mapping_t **codepage_sorted_multi_mappings;
@@ -42,7 +42,7 @@ typedef struct {
 	save_state_t state;
 } convertor_state_t;
 
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
+static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
 static void close_convertor(convertor_state_t *handle);
 
 #ifndef WITHOUT_PTHREAD
@@ -51,12 +51,12 @@ static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
-	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != CHARCONV_SUCCESS) \
+	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != TRANSCRIPT_SUCCESS) \
 		return result; \
 } while (0)
 
 /** Get the minimum of two @c size_t values. */
-static _CHARCONV_INLINE size_t min(size_t a, size_t b) {
+static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
 }
 
@@ -107,7 +107,7 @@ static void find_to_unicode_variant(const variant_t *variant, const uint8_t *byt
 }
 
 /** convert_to implementation for CCT convertors. */
-static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -142,7 +142,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 			/* NOTE: we don't check for FINAL_PAIR, because that was converted when loading. */
 			conv_flags = handle->convertor->codepage_flags.get_flags(&handle->convertor->codepage_flags, idx);
 			if ((conv_flags & TO_UNICODE_MULTI_START) &&
-					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+					(flags & (TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION)) < TRANSCRIPT_NO_1N_CONVERSION)
 			{
 				size_t check_len;
 				uint_fast32_t i, j;
@@ -161,9 +161,9 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 
 					/* Handle the case where the input is a prefix of the multi-mapping. */
 					if (check_len != handle->codepage_sorted_multi_mappings[i]->bytes_length) {
-						if (flags & (CHARCONV_END_OF_TEXT | CHARCONV_NO_MN_CONVERSION))
+						if (flags & (TRANSCRIPT_END_OF_TEXT | TRANSCRIPT_NO_MN_CONVERSION))
 							continue;
-						return CHARCONV_INCOMPLETE;
+						return TRANSCRIPT_INCOMPLETE;
 					}
 
 					/* We found the longest matching multi-mapping. Write the associated
@@ -178,7 +178,7 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 							codepoint += handle->codepage_sorted_multi_mappings[i]->codepoints[j] - UINT32_C(0xdc00);
 							codepoint += 0x10000;
 						}
-						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) != CHARCONV_SUCCESS)
+						if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) != TRANSCRIPT_SUCCESS)
 							return result;
 					}
 					*outbuf = outbuf_tmp;
@@ -190,10 +190,10 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 					handle->state.to = state = entry->next_state;
 					while ((const uint8_t *) *inbuf < _inbuf)
 						if (to_unicode_skip(handle, inbuf, inbuflimit) != 0)
-							return CHARCONV_INTERNAL_ERROR;
+							return TRANSCRIPT_INTERNAL_ERROR;
 					idx = handle->convertor->codepage_states[handle->state.to].base;
-					if (flags & CHARCONV_SINGLE_CONVERSION)
-						return CHARCONV_SUCCESS;
+					if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+						return TRANSCRIPT_SUCCESS;
 					break; /* Break from multi-mapping search. */
 				}
 				if (i != handle->nr_multi_mappings)
@@ -206,15 +206,15 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 					&conv_flags, &codepoint);
 			}
 
-			if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & CHARCONV_ALLOW_PRIVATE_USE)) {
-				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-					return CHARCONV_PRIVATE_USE;
+			if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE)) {
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_PRIVATE_USE;
 				PUT_UNICODE(UINT32_C(0xfffd));
-			} else if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK)) {
-				return CHARCONV_FALLBACK;
+			} else if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
+				return TRANSCRIPT_FALLBACK;
 			} else if (codepoint == UINT32_C(0xffff)) {
-				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-					return CHARCONV_UNASSIGNED;
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
 				PUT_UNICODE(UINT32_C(0xfffd));
 			} else {
 				if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
@@ -226,41 +226,41 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, const c
 				PUT_UNICODE(codepoint);
 			}
 		} else if (entry->action == ACTION_ILLEGAL) {
-			if (!(flags & CHARCONV_SUBST_ILLEGAL))
-				return CHARCONV_ILLEGAL;
+			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+				return TRANSCRIPT_ILLEGAL;
 			PUT_UNICODE(UINT32_C(0xfffd));
 		} else if (entry->action == ACTION_UNASSIGNED) {
-			if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-				return CHARCONV_UNASSIGNED;
+			if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+				return TRANSCRIPT_UNASSIGNED;
 			PUT_UNICODE(UINT32_C(0xfffd));
 		} else if (entry->action != ACTION_SHIFT) {
-			return CHARCONV_INTERNAL_ERROR;
+			return TRANSCRIPT_INTERNAL_ERROR;
 		}
 		/* Update state. */
 		*inbuf = (const char *) _inbuf;
 		handle->state.to = state = entry->next_state;
 		idx = handle->convertor->codepage_states[handle->state.to].base;
 
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
 
 	/* Check for incomplete characters at the end of the buffer. */
 	if (*inbuf != inbuflimit) {
-		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(flags & CHARCONV_SUBST_ILLEGAL))
-				return CHARCONV_ILLEGAL_END;
+		if (flags & TRANSCRIPT_END_OF_TEXT) {
+			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+				return TRANSCRIPT_ILLEGAL_END;
 			PUT_UNICODE(UINT32_C(0xFFFD));
 			*inbuf = inbuflimit;
 		} else {
-			return CHARCONV_INCOMPLETE;
+			return TRANSCRIPT_INCOMPLETE;
 		}
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** skip_to implementation for CCT convertors. */
-static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
 	uint_fast32_t idx = handle->convertor->codepage_states[handle->state.to].base;
@@ -283,13 +283,13 @@ static charconv_error_t to_unicode_skip(convertor_state_t *handle, const char **
 			case ACTION_UNASSIGNED:
 				*inbuf = (const char *) _inbuf;
 				handle->state.to = state = entry->next_state;
-				return CHARCONV_SUCCESS;
+				return TRANSCRIPT_SUCCESS;
 			default:
-				return CHARCONV_INTERNAL_ERROR;
+				return TRANSCRIPT_INTERNAL_ERROR;
 		}
 	}
 
-	return CHARCONV_INCOMPLETE;
+	return TRANSCRIPT_INCOMPLETE;
 }
 
 /** reset_to implementation for CCT convertors. */
@@ -302,14 +302,14 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
 } while (0)
 
-/** Simplification macro for the put_bytes call, which automatically returns on CHARCONV_NO_SPACE. */
+/** Simplification macro for the put_bytes call, which automatically returns on TRANSCRIPT_NO_SPACE. */
 #define PUT_BYTES(count, buffer) do { \
-	if (put_bytes(handle, outbuf, outbuflimit, count, buffer) == CHARCONV_NO_SPACE) \
-		return CHARCONV_NO_SPACE; \
+	if (put_bytes(handle, outbuf, outbuflimit, count, buffer) == TRANSCRIPT_NO_SPACE) \
+		return TRANSCRIPT_NO_SPACE; \
 } while (0)
 
 /** Write a byte sequence to the output, prepending a shift sequence if necessary. */
-static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, char **outbuf,
+static _TRANSCRIPT_INLINE transcript_error_t put_bytes(convertor_state_t *handle, char **outbuf,
 		const char const *outbuflimit, size_t count, const uint8_t *bytes)
 {
 	uint_fast8_t required_state;
@@ -326,7 +326,7 @@ static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, ch
 						handle->convertor->shift_states[i].to_state == required_state)
 				{
 					if ((*outbuf) + count + handle->convertor->shift_states[i].len > outbuflimit)
-						return CHARCONV_NO_SPACE;
+						return TRANSCRIPT_NO_SPACE;
 					memcpy(*outbuf, handle->convertor->shift_states[i].bytes, handle->convertor->shift_states[i].len);
 					*outbuf += handle->convertor->shift_states[i].len;
 					handle->state.from = required_state;
@@ -338,7 +338,7 @@ static _CHARCONV_INLINE charconv_error_t put_bytes(convertor_state_t *handle, ch
 		}
 	}
 	if ((*outbuf) + count > outbuflimit)
-		return CHARCONV_NO_SPACE;
+		return TRANSCRIPT_NO_SPACE;
 
 write_bytes:
 	/* Using the switch here is faster than memcpy, which has to be completely general. */
@@ -354,11 +354,11 @@ write_bytes:
 		case 1: *(*outbuf)++ = *bytes++;
 		default: ;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** Check if the current input is a multi-mapping for a from-Unicode conversion. */
-static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -371,14 +371,14 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	size_t check_len;
 	size_t mapping_check_len;
-	bool can_read_more = flags & CHARCONV_NO_MN_CONVERSION ? false : true;
+	bool can_read_more = flags & TRANSCRIPT_NO_MN_CONVERSION ? false : true;
 
 	/* Note: we specifically use the codepoint_sorted_multi_mappings to ensure that we always use
 	   the longest possible match. */
 
 	GET_UNICODE();
-	if (_charconv_put_utf16_no_check(codepoint, &ptr) != 0)
-		return CHARCONV_INTERNAL_ERROR;
+	if (_transcript_put_utf16_no_check(codepoint, &ptr) != 0)
+		return TRANSCRIPT_INTERNAL_ERROR;
 
 	for (i = 0; i < handle->nr_multi_mappings; i++) {
 		/* Skip if the first codepoint is smaller. */
@@ -396,33 +396,33 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 		while (can_read_more && check_len < mapping_check_len) {
 			GET_UNICODE();
 
-			if (codepoint == CHARCONV_UTF_INCOMPLETE) {
-				if (flags & CHARCONV_END_OF_TEXT) {
+			if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) {
+				if (flags & TRANSCRIPT_END_OF_TEXT) {
 					can_read_more = false;
 					goto check_next_mapping;
 				}
-				return CHARCONV_INCOMPLETE;
+				return TRANSCRIPT_INCOMPLETE;
 			}
 
-			if (codepoint == CHARCONV_UTF_ILLEGAL) {
+			if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
 				can_read_more = false;
 				goto check_next_mapping;
 			}
 
-			switch (_charconv_put_utf16_no_check(codepoint, &ptr)) {
-				case CHARCONV_INCOMPLETE:
-					if (flags & CHARCONV_END_OF_TEXT) {
+			switch (_transcript_put_utf16_no_check(codepoint, &ptr)) {
+				case TRANSCRIPT_INCOMPLETE:
+					if (flags & TRANSCRIPT_END_OF_TEXT) {
 						can_read_more = false;
 						goto check_next_mapping;
 					}
-					return CHARCONV_INCOMPLETE;
-				case CHARCONV_SUCCESS:
+					return TRANSCRIPT_INCOMPLETE;
+				case TRANSCRIPT_SUCCESS:
 					break;
-				case CHARCONV_NO_SPACE:
+				case TRANSCRIPT_NO_SPACE:
 					can_read_more = false;
 					goto check_next_mapping;
 				default:
-					return CHARCONV_INTERNAL_ERROR;
+					return TRANSCRIPT_INTERNAL_ERROR;
 			}
 			check_len = ptr - (char *) codepoints;
 		}
@@ -441,7 +441,7 @@ static charconv_error_t from_unicode_check_multi_mappings(convertor_state_t *han
 					GET_UNICODE();
 			}
 			*inbuf = (const char *) _inbuf;
-			return CHARCONV_SUCCESS;
+			return TRANSCRIPT_SUCCESS;
 		}
 check_next_mapping: ;
 	}
@@ -483,7 +483,7 @@ static void find_from_unicode_variant(const variant_t *variant, uint32_t codepoi
 }
 
 /** convert_from implementation for CCT convertors. */
-static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf;
@@ -503,12 +503,12 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 
 	while (*inbuf < inbuflimit) {
 		GET_UNICODE();
-		if (codepoint == CHARCONV_UTF_INCOMPLETE)
+		if (codepoint == TRANSCRIPT_UTF_INCOMPLETE)
 			break;
 
-		if (codepoint == CHARCONV_UTF_ILLEGAL) {
-			if (!(flags & CHARCONV_SUBST_ILLEGAL))
-				return CHARCONV_ILLEGAL;
+		if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
+			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+				return TRANSCRIPT_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf = (const char *) _inbuf;
 			continue;
@@ -545,22 +545,22 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 		} else if (entry->action == ACTION_FINAL) {
 			conv_flags = handle->convertor->unicode_flags.get_flags(&handle->convertor->unicode_flags, idx);
 			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
-					(flags & (CHARCONV_NO_MN_CONVERSION | CHARCONV_NO_1N_CONVERSION)) < CHARCONV_NO_1N_CONVERSION)
+					(flags & (TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION)) < TRANSCRIPT_NO_1N_CONVERSION)
 			{
 				/* Check multi-mappings. */
 				switch (from_unicode_check_multi_mappings(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags)) {
-					case CHARCONV_SUCCESS:
+					case TRANSCRIPT_SUCCESS:
 						_inbuf = (const uint8_t *) *inbuf;
-						if (flags & CHARCONV_SINGLE_CONVERSION)
-							return CHARCONV_SUCCESS;
+						if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+							return TRANSCRIPT_SUCCESS;
 						continue;
-					case CHARCONV_INCOMPLETE:
-						return CHARCONV_INCOMPLETE;
-					case CHARCONV_INTERNAL_ERROR:
+					case TRANSCRIPT_INCOMPLETE:
+						return TRANSCRIPT_INCOMPLETE;
+					case TRANSCRIPT_INTERNAL_ERROR:
 					default:
-						return CHARCONV_INTERNAL_ERROR;
-					case CHARCONV_NO_SPACE:
-						return CHARCONV_NO_SPACE;
+						return TRANSCRIPT_INTERNAL_ERROR;
+					case TRANSCRIPT_NO_SPACE:
+						return TRANSCRIPT_NO_SPACE;
 					case -1:
 						break;
 				}
@@ -570,15 +570,15 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 			if (conv_flags & FROM_UNICODE_VARIANT)
 				find_from_unicode_variant(handle->variant, codepoint, &conv_flags, &bytes);
 
-			if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & CHARCONV_ALLOW_FALLBACK))
-				return CHARCONV_FALLBACK;
+			if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & TRANSCRIPT_ALLOW_FALLBACK))
+				return TRANSCRIPT_FALLBACK;
 
 			if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
 				/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
 				   uses the code in parentheses when even that doesn't result in a mapping. */
 				HANDLE_UNASSIGNED(
-					if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-						return CHARCONV_UNASSIGNED;
+					if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+						return TRANSCRIPT_UNASSIGNED;
 					if (conv_flags & FROM_UNICODE_SUBCHAR1)
 						PUT_BYTES(1, &handle->convertor->subchar1);
 					else
@@ -588,44 +588,44 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, const
 				PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
 			}
 		} else if (entry->action == ACTION_ILLEGAL) {
-			if (!(flags & CHARCONV_SUBST_ILLEGAL))
-				return CHARCONV_ILLEGAL;
+			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+				return TRANSCRIPT_ILLEGAL;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 		} else if (entry->action == ACTION_UNASSIGNED) {
 			/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
 			   uses the code in parentheses when even that doesn't result in a mapping. */
 			HANDLE_UNASSIGNED(
-				if (!(flags & CHARCONV_SUBST_UNASSIGNED))
-					return CHARCONV_UNASSIGNED;
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
 				PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			)
 		} else {
-			return CHARCONV_INTERNAL_ERROR;
+			return TRANSCRIPT_INTERNAL_ERROR;
 		}
 		*inbuf = (const char *) _inbuf;
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
 
 	/* Check for incomplete characters at the end of the buffer. */
 	if (*inbuf < inbuflimit) {
-		if (flags & CHARCONV_END_OF_TEXT) {
-			if (!(flags & CHARCONV_SUBST_ILLEGAL))
-				return CHARCONV_ILLEGAL_END;
+		if (flags & TRANSCRIPT_END_OF_TEXT) {
+			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+				return TRANSCRIPT_ILLEGAL_END;
 			PUT_BYTES(handle->convertor->subchar_len, handle->convertor->subchar);
 			*inbuf = inbuflimit;
 		} else {
-			return CHARCONV_INCOMPLETE;
+			return TRANSCRIPT_INCOMPLETE;
 		}
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** flush_from implementation for CCT convertors. */
-static charconv_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** reset_from implementation for CCT convertors. */
@@ -650,14 +650,14 @@ static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
     @param error The location to store an error.
     @param internal_use Boolean indicating whether the table is intended for use by another convertor.
 */
-void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use) {
+void *_transcript_open_cct_convertor_internal(const char *name, int flags, transcript_error_t *error, bool internal_use) {
 	convertor_state_t *retval;
 	variant_t *variant;
 	convertor_t *ptr;
 
-	if (flags & CHARCONV_PROBE_ONLY) {
+	if (flags & TRANSCRIPT_PROBE_ONLY) {
 		FILE *file;
-		if ((file = _charconv_db_open(name, ".cct", NULL)) != NULL) {
+		if ((file = _transcript_db_open(name, ".cct", NULL)) != NULL) {
 			fclose(file);
 			return (void *) 1;
 		}
@@ -667,23 +667,23 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	/* Loading the convertor should be done one at a time. All locking is done in this file. */
 	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex););
 
-	if ((ptr = _charconv_load_cct_convertor(name, error, &variant)) == NULL) {
+	if ((ptr = _transcript_load_cct_convertor(name, error, &variant)) == NULL) {
 		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
 
 	if (!internal_use && ((variant == NULL ? ptr->flags : variant->flags) & (INTERNAL_TABLE | VARIANTS_AVAILABLE))) {
-		_charconv_unload_cct_convertor(ptr);
+		_transcript_unload_cct_convertor(ptr);
 		if (error != NULL)
-			*error = CHARCONV_INTERNAL_TABLE;
+			*error = TRANSCRIPT_INTERNAL_TABLE;
 		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
-		_charconv_unload_cct_convertor(ptr);
+		_transcript_unload_cct_convertor(ptr);
 		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
+			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 		return NULL;
 	}
@@ -718,15 +718,15 @@ void *_charconv_open_cct_convertor_internal(const char *name, int flags, charcon
 	return retval;
 }
 
-/** Wrapper function around _charconv_open_cct_convertor_internal for loading CCT convertors. */
-void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error) {
-	return _charconv_open_cct_convertor_internal(name, flags, error, false);
+/** Wrapper function around _transcript_open_cct_convertor_internal for loading CCT convertors. */
+void *_transcript_open_cct_convertor(const char *name, int flags, transcript_error_t *error) {
+	return _transcript_open_cct_convertor_internal(name, flags, error, false);
 }
 
 /** close implementation for CCT convertors. */
 static void close_convertor(convertor_state_t *handle) {
 	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex));
-	_charconv_unload_cct_convertor(handle->convertor);
+	_transcript_unload_cct_convertor(handle->convertor);
 	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
 	free(handle);
 }

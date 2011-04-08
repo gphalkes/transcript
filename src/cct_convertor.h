@@ -15,7 +15,7 @@
 #define CCT_CONVERTOR_H
 
 #include <stdint.h>
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 
 /* FIXME: we might consider converting some uintXX_t to uint_fastXX_t variables for speed. */
 
@@ -163,6 +163,6 @@ typedef struct convertor_t {
 	flags_t unicode_flags;
 } convertor_t;
 
-CHARCONV_LOCAL convertor_t *_charconv_load_cct_convertor(const char *file_name, charconv_error_t *error, variant_t **variant);
-CHARCONV_LOCAL void _charconv_unload_cct_convertor(convertor_t *convertor);
+TRANSCRIPT_LOCAL convertor_t *_transcript_load_cct_convertor(const char *file_name, transcript_error_t *error, variant_t **variant);
+TRANSCRIPT_LOCAL void _transcript_unload_cct_convertor(convertor_t *convertor);
 #endif

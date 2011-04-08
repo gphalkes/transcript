@@ -17,7 +17,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "cct_convertor.h"
 
 /* FIXME: check limits on everything read! */
@@ -26,18 +26,18 @@
 typedef int (*compar_func_t)(const void *, const void *);
 
 static bool read_states(FILE *file, uint_fast32_t nr, state_t *states, entry_t *entries,
-	uint_fast32_t max_entries, charconv_error_t *error);
+	uint_fast32_t max_entries, transcript_error_t *error);
 static bool validate_states(state_t *states, uint_fast32_t nr_states, uint8_t flags, uint32_t range);
 static void update_state_attributes(state_t *states, uint_fast32_t idx);
 static uint8_t get_default_flags(const flags_t *flags, uint_fast32_t idx);
-static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv_error_t *error);
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, transcript_error_t *error);
 static int compare_multi_mapping_codepage(const multi_mapping_t **a, const multi_mapping_t **b);
 static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const multi_mapping_t **b);
-static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_error_t *error);
-static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *error);
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, transcript_error_t *error);
+static bool load_variants(FILE *file, convertor_t *convertor, transcript_error_t *error);
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
-#define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(CHARCONV_TRUNCATED_MAP); } while (0)
+#define READ(count, buf) do { if (fread(buf, 1, count, file) != (size_t) count) ERROR(TRANSCRIPT_TRUNCATED_MAP); } while (0)
 #define READ_BYTE(store) do { uint8_t value; READ(1, &value); store = value; } while (0)
 #define READ_WORD(store) do { uint16_t value; READ(2, &value); store = ntohs(value); } while (0)
 #define READ_DWORD(store) do { uint32_t value; READ(4, &value); store = ntohl(value); } while (0)
@@ -45,7 +45,7 @@ static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *
 static const int flag_info_to_shift[16] = { 0, 2, 2, 1, 2, 1, 1, 0, 2, 1, 1, 0, 1, 0, 0, 0 };
 static convertor_t *cct_head = NULL;
 
-convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *error, variant_t **variant) {
+convertor_t *_transcript_load_cct_convertor(const char *name, transcript_error_t *error, variant_t **variant) {
 	convertor_t *convertor = NULL;
 	FILE *file;
 	char magic[4];
@@ -70,18 +70,18 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 		}
 	}
 
-	if ((file = _charconv_db_open(name, ".cct", error)) == NULL)
+	if ((file = _transcript_db_open(name, ".cct", error)) == NULL)
 		goto end_error;
 
 	READ(4, magic);
 	if (memcmp(magic, "T3CM", 4) != 0)
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 	READ_DWORD(version);
 	if (version != UINT32_C(0))
-		ERROR(CHARCONV_WRONG_VERSION);
+		ERROR(TRANSCRIPT_WRONG_VERSION);
 
 	if ((convertor = calloc(1, sizeof(convertor_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 
 	/* Make sure all pointers are correctly initialized, even if the NULL pointer
 	   is not actually zero. */
@@ -121,15 +121,15 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 	READ_BYTE(convertor->single_size);
 
 	if ((convertor->shift_states = calloc(convertor->nr_shift_states, sizeof(shift_state_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->codepage_states = calloc(convertor->nr_codepage_states + 1, sizeof(state_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->codepage_entries = malloc((convertor->nr_codepage_entries + 1) * sizeof(entry_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->unicode_states = calloc(convertor->nr_unicode_states + 1, sizeof(state_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->unicode_entries = malloc((convertor->nr_unicode_entries + 1) * sizeof(entry_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 
 	for (i = 0; i < convertor->nr_shift_states; i++) {
 		READ_BYTE(convertor->shift_states[i].from_state);
@@ -146,14 +146,14 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 		goto end_error;
 
 	if (!validate_states(convertor->codepage_states, convertor->nr_codepage_states, convertor->flags, convertor->codepage_range))
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 	if (!validate_states(convertor->unicode_states, convertor->nr_unicode_states, 0, convertor->unicode_range))
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
 	if ((convertor->codepage_mappings = malloc(convertor->codepage_range * sizeof(uint16_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->unicode_mappings = calloc(convertor->unicode_range, convertor->single_size)) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	memset(convertor->codepage_mappings, 0xff, convertor->codepage_range * sizeof(uint16_t));
 
 	for (i = 0; i < convertor->codepage_range; i++)
@@ -174,10 +174,10 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 		goto end_error;
 
 	if (fread(magic, 1, 1, file) != 0 || !feof(file))
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
-	if ((convertor->name = _charconv_strdup(name)) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+	if ((convertor->name = _transcript_strdup(name)) == NULL)
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 
 	fclose(file);
 	convertor->next = cct_head;
@@ -200,17 +200,17 @@ convertor_t *_charconv_load_cct_convertor(const char *name, charconv_error_t *er
 
 	if (error != NULL) {
 		errno = ENOENT;
-		*error = CHARCONV_ERRNO;
+		*error = TRANSCRIPT_ERRNO;
 	}
 end_error:
 	if (file != NULL)
 		fclose(file);
 	if (convertor != NULL)
-		_charconv_unload_cct_convertor(convertor);
+		_transcript_unload_cct_convertor(convertor);
 	return NULL;
 }
 
-void _charconv_unload_cct_convertor(convertor_t *convertor) {
+void _transcript_unload_cct_convertor(convertor_t *convertor) {
 	if (--convertor->refcount > 0)
 		return;
 	if (cct_head == convertor) {
@@ -249,7 +249,7 @@ void _charconv_unload_cct_convertor(convertor_t *convertor) {
 }
 
 static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, entry_t *entries,
-		uint_fast32_t max_entries, charconv_error_t *error)
+		uint_fast32_t max_entries, transcript_error_t *error)
 {
 	uint_fast32_t i, j, entries_idx = 0;
 
@@ -266,20 +266,20 @@ static bool read_states(FILE *file, uint_fast32_t nr_states, state_t *states, en
 			READ_BYTE(entries[entries_idx].action);
 			if (j > 0) {
 				if (entries[entries_idx].low <= entries[entries_idx - 1].low)
-					ERROR(CHARCONV_INVALID_FORMAT);
+					ERROR(TRANSCRIPT_INVALID_FORMAT);
 				memset(states[i].map + entries[entries_idx - 1].low, j - 1, entries[entries_idx].low - entries[entries_idx - 1].low);
 			} else {
 				if (entries[entries_idx].low != 0)
-					ERROR(CHARCONV_INVALID_FORMAT);
+					ERROR(TRANSCRIPT_INVALID_FORMAT);
 			}
 			entries_idx++;
 		}
 		memset(states[i].map + entries[entries_idx - 1].low, j - 1, 256 - entries[entries_idx - 1].low);
 		if (j < states[i].nr_entries)
-			ERROR(CHARCONV_INVALID_FORMAT);
+			ERROR(TRANSCRIPT_INVALID_FORMAT);
 	}
 	if (entries_idx != max_entries)
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
 	return true;
 end_error:
@@ -398,7 +398,7 @@ static uint8_t get_flags_8_trie(const flags_t *flags, uint_fast32_t idx) {
 }
 
 
-static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv_error_t *error) {
+static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, transcript_error_t *error) {
 	uint_fast32_t nr_flag_bytes, nr_blocks, i;
 	uint8_t flag_info;
 	bool trie;
@@ -407,7 +407,7 @@ static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv
 	trie = (flag_info & 0x80) != 0;
 	flag_info &= 0x7f;
 	if (flag_info > 106) {
-		ERROR(CHARCONV_INVALID_FORMAT);
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
 	} else if (flag_info > 98) {
 		flags->bits2flags = bits2flags1[flag_info - 99];
 		flags->get_flags = trie ? get_flags_1_trie : get_flags_1;
@@ -428,18 +428,18 @@ static bool read_flags(FILE *file, flags_t *flags, uint_fast32_t range, charconv
 	if (trie) {
 		nr_flag_bytes = (nr_flag_bytes + 15) / 16;
 		if ((flags->indices = malloc(nr_flag_bytes * 2)) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		for (i = 0; i < nr_flag_bytes; i++)
 			READ_WORD(flags->indices[i]);
 
 		READ_WORD(nr_blocks);
 		nr_blocks++;
 		if ((flags->flags = malloc(nr_blocks * 16)) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		READ(nr_blocks * 16, flags->flags);
 	} else {
 		if ((flags->flags = malloc(nr_flag_bytes)) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		READ(nr_flag_bytes, flags->flags);
 	}
 
@@ -465,14 +465,14 @@ static int compare_multi_mapping_codepoints(const multi_mapping_t **a, const mul
 }
 
 
-static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_error_t *error) {
+static bool load_multi_mappings(FILE *file, convertor_t *convertor, transcript_error_t *error) {
 	uint_fast32_t i, j;
 
 	/* FIXME: check length fields for maximum permissable lengths */
 	READ_DWORD(convertor->nr_multi_mappings);
 
 	if ((convertor->multi_mappings = calloc(convertor->nr_multi_mappings, sizeof(multi_mapping_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	for (i = 0; i < convertor->nr_multi_mappings; i++) {
 		READ_BYTE(convertor->multi_mappings[i].codepoints_length);
 		for (j = 0; j < convertor->multi_mappings[i].codepoints_length; j++)
@@ -483,10 +483,10 @@ static bool load_multi_mappings(FILE *file, convertor_t *convertor, charconv_err
 
 	if ((convertor->codepage_sorted_multi_mappings =
 			malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	if ((convertor->codepoint_sorted_multi_mappings =
 			malloc(convertor->nr_multi_mappings * sizeof(multi_mapping_t *))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	for (i = 0; i < convertor->nr_multi_mappings; i++) {
 		convertor->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
 		convertor->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
@@ -501,14 +501,14 @@ end_error:
 }
 
 
-static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *error) {
+static bool load_variants(FILE *file, convertor_t *convertor, transcript_error_t *error) {
 	uint_fast32_t i, j;
 	variant_t *variant;
 	size_t id_len;
 
 	READ_WORD(convertor->nr_variants);
 	if ((convertor->variants = malloc(convertor->nr_variants * sizeof(variant_t))) == NULL)
-		ERROR(CHARCONV_OUT_OF_MEMORY);
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 	for (i = 0; i < convertor->nr_variants; i++) {
 		convertor->variants[i].simple_mappings = NULL;
 		convertor->variants[i].multi_mappings = NULL;
@@ -520,7 +520,7 @@ static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *
 
 		READ_BYTE(id_len);
 		if ((variant->id = malloc(id_len + 1)) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		READ(id_len, variant->id);
 		variant->id[id_len] = 0;
 		READ_BYTE(variant->flags);
@@ -528,7 +528,7 @@ static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *
 		READ_WORD(variant->nr_simple_mappings);
 		if ((variant->simple_mappings =
 				calloc(variant->nr_simple_mappings, sizeof(variant_mapping_t))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		for (j = 0; j < variant->nr_simple_mappings; j++) {
 			READ_BYTE(variant->simple_mappings[j].to_unicode_flags);
 			READ_BYTE(variant->simple_mappings[j].from_unicode_flags);
@@ -550,7 +550,7 @@ static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *
 
 		if ((variant->multi_mappings =
 				malloc(variant->nr_multi_mappings * sizeof(multi_mapping_t))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		for (j = 0; j < variant->nr_multi_mappings; j++) {
 			READ_BYTE(variant->multi_mappings[j].codepoints_length);
 			for (j = 0; j < variant->multi_mappings[j].codepoints_length; j++)
@@ -561,10 +561,10 @@ static bool load_variants(FILE *file, convertor_t *convertor, charconv_error_t *
 
 		if ((variant->codepage_sorted_multi_mappings =
 				malloc((convertor->nr_multi_mappings + variant->nr_multi_mappings) * sizeof(multi_mapping_t *))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		if ((variant->codepoint_sorted_multi_mappings =
 				malloc((convertor->nr_multi_mappings + variant->nr_multi_mappings) * sizeof(multi_mapping_t *))) == NULL)
-			ERROR(CHARCONV_OUT_OF_MEMORY);
+			ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 		for (i = 0; i < convertor->nr_multi_mappings; i++) {
 			variant->codepage_sorted_multi_mappings[i] = &convertor->multi_mappings[i];
 			variant->codepoint_sorted_multi_mappings[i] = &convertor->multi_mappings[i];

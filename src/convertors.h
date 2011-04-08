@@ -14,20 +14,20 @@
 #ifndef CONVERTORS_H
 #define CONVERTORS_H
 #include <stdlib.h>
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 
 /* CCT based convertors */
-CHARCONV_LOCAL void *_charconv_open_cct_convertor(const char *name, int flags, charconv_error_t *error);
-CHARCONV_LOCAL void *_charconv_open_cct_convertor_internal(const char *name, int flags, charconv_error_t *error, bool internal_use);
+TRANSCRIPT_LOCAL void *_transcript_open_cct_convertor(const char *name, int flags, transcript_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_open_cct_convertor_internal(const char *name, int flags, transcript_error_t *error, bool internal_use);
 
 /* Unicode UTF-X/GB-18030 convertors */
-CHARCONV_LOCAL void *_charconv_open_unicode_convertor(const char *name, int flags, charconv_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_open_unicode_convertor(const char *name, int flags, transcript_error_t *error);
 
 /* ISO-8859-1 and ASCII convertor */
-CHARCONV_LOCAL void *_charconv_open_iso8859_1_convertor(const char *name, int flags, charconv_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_open_iso8859_1_convertor(const char *name, int flags, transcript_error_t *error);
 
 /* ISO-2022-* convertor */
-CHARCONV_LOCAL void *_charconv_open_iso2022_convertor(const char *name, int flags, charconv_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_open_iso2022_convertor(const char *name, int flags, transcript_error_t *error);
 
 /* NOTE: if you add a convertor here, also add it's display names to the builtin_names array in aliases.c */
 

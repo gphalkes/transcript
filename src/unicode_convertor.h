@@ -14,7 +14,7 @@
 #ifndef UNICODE_CONVERTOR_H
 #define UNICODE_CONVERTOR_H
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 
 typedef struct convertor_state_t convertor_state_t;
 
@@ -28,7 +28,7 @@ typedef struct {
 } state_t;
 
 struct convertor_state_t {
-	charconv_common_t common;
+	transcript_common_t common;
 	put_unicode_func_t from_unicode_put;
 	get_unicode_func_t to_unicode_get;
 
@@ -37,7 +37,7 @@ struct convertor_state_t {
 
 	state_t state;
 
-	charconv_t *gb18030_cct;
+	transcript_t *gb18030_cct;
 	int utf_type;
 };
 
@@ -49,11 +49,11 @@ enum {
 	UTF7_MODE_BASE64_4
 };
 
-CHARCONV_LOCAL int _charconv_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-CHARCONV_LOCAL uint_fast32_t _charconv_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
-CHARCONV_LOCAL int _charconv_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit);
+TRANSCRIPT_LOCAL int _transcript_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL int _transcript_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit);
 
-CHARCONV_LOCAL int _charconv_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-CHARCONV_LOCAL uint_fast32_t _charconv_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
 
 #endif

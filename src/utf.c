@@ -14,7 +14,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "utf.h"
 
 #if defined(USE_ENDIAN) || defined(USE_SYS_ENDIAN)
@@ -44,19 +44,19 @@ static inline uint32_t swapl(uint32_t value) {
 #endif
 
 /* GCC will recognize this as a byte swap, and will optimize (uses rolw $8, <reg> on IA-32) */
-static _CHARCONV_INLINE uint16_t swaps(uint16_t value) {
+static _TRANSCRIPT_INLINE uint16_t swaps(uint16_t value) {
 	return (value << 8) | (value >> 8);
 }
 #endif
 
 
 #define CHECK_CODEPOINT_RANGE() do { if (codepoint > UINT32_C(0x10ffff) || \
-	(codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff))) return CHARCONV_INTERNAL_ERROR; } while (0)
+	(codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff))) return TRANSCRIPT_INTERNAL_ERROR; } while (0)
 
 
-#define CHECK_OUTBYTESLEFT(_x) if ((*outbuf) + (_x) > outbuflimit) return CHARCONV_NO_SPACE;
+#define CHECK_OUTBYTESLEFT(_x) if ((*outbuf) + (_x) > outbuflimit) return TRANSCRIPT_NO_SPACE;
 
-static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -78,10 +78,10 @@ static charconv_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const c
 		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
 		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
-static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -110,14 +110,14 @@ static charconv_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const 
 		*(*outbuf)++ = ((codepoint >> 6) & 0x3f) | 0x80;
 		*(*outbuf)++ = (codepoint & 0x3f) | 0x80;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 #define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint >= 0xfdd0 && (codepoint > UINT32_C(0x10ffff) || \
 	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfffe) || \
-	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint <= UINT32_C(0xfdef)))) return CHARCONV_UTF_ILLEGAL; } while (0)
+	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint <= UINT32_C(0xfdef)))) return TRANSCRIPT_UTF_ILLEGAL; } while (0)
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
-	return CHARCONV_UTF_ILLEGAL; } while (0)
+	return TRANSCRIPT_UTF_ILLEGAL; } while (0)
 
 static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbuflimit, bool skip, bool strict) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -153,7 +153,7 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
 		case 184: case 185: case 186: case 187: case 188: case 189: case 190: case 191:
 		case 192: case 193:
 			if (!skip)
-				return CHARCONV_UTF_ILLEGAL;
+				return TRANSCRIPT_UTF_ILLEGAL;
 			(*inbuf)++;
 			return 0;
 		case 194: case 195: case 196: case 197: case 198: case 199: case 200: case 201:
@@ -177,19 +177,19 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
 			break;
 		default:
 			if (!skip)
-				return CHARCONV_UTF_ILLEGAL;
+				return TRANSCRIPT_UTF_ILLEGAL;
 			(*inbuf)++;
 			return 0;
 	}
 
 	if ((*inbuf) + bytes > inbuflimit)
-		return CHARCONV_UTF_INCOMPLETE;
+		return TRANSCRIPT_UTF_INCOMPLETE;
 
 	_inbuf++;
 	for (; bytes > 1; _inbuf++, bytes--) {
 		if ((*_inbuf & 0xc0) != 0x80) {
 			if (!skip)
-				return CHARCONV_UTF_ILLEGAL;
+				return TRANSCRIPT_UTF_ILLEGAL;
 			*inbuf = (char *) inbuf;
 			return 0;
 		}
@@ -200,7 +200,7 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
 	if (strict) {
 		if (codepoint < least) {
 			if (!skip)
-				return CHARCONV_UTF_ILLEGAL;
+				return TRANSCRIPT_UTF_ILLEGAL;
 			*inbuf = (const char *) _inbuf;
 			return 0;
 		}
@@ -239,7 +239,7 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 
 		if ((next_codepoint & UINT32_C(0x1ffc00)) != UINT32_C(0xdc00)) {
 			if (!skip)
-				return CHARCONV_UTF_ILLEGAL;
+				return TRANSCRIPT_UTF_ILLEGAL;
 			*inbuf = _inbuf_save;
 			return 0;
 		}
@@ -267,24 +267,24 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
 
-put_unicode_func_t _charconv_get_put_unicode(charconv_utf_t type) {
+put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 	switch (type) {
-		case CHARCONV_UTF8:
+		case TRANSCRIPT_UTF8:
 		case UTF8_LOOSE:
 		case UTF8_BOM:
 			return put_utf8;
-		case CHARCONV_UTF16:
+		case TRANSCRIPT_UTF16:
 			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
-		case CHARCONV_UTF32:
+		case TRANSCRIPT_UTF32:
 			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
 
-		case CHARCONV_UTF16BE:
+		case TRANSCRIPT_UTF16BE:
 			return htons(1) == swaps_a(1) ? put_utf16_a : put_utf16_b;
-		case CHARCONV_UTF16LE:
+		case TRANSCRIPT_UTF16LE:
 			return htons(1) == swaps_a(1) ? put_utf16_b : put_utf16_a;
-		case CHARCONV_UTF32BE:
+		case TRANSCRIPT_UTF32BE:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
-		case CHARCONV_UTF32LE:
+		case TRANSCRIPT_UTF32LE:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 
 		case CESU8:
@@ -294,13 +294,13 @@ put_unicode_func_t _charconv_get_put_unicode(charconv_utf_t type) {
 	}
 }
 
-get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
+get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 	switch (type) {
-		case CHARCONV_UTF8:
+		case TRANSCRIPT_UTF8:
 			return get_utf8strict;
-		case CHARCONV_UTF16:
+		case TRANSCRIPT_UTF16:
 			return swaps_a(1) == 1 ? get_utf16_a : get_utf16_b;
-		case CHARCONV_UTF32:
+		case TRANSCRIPT_UTF32:
 			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
 
 		case UTF8_LOOSE:
@@ -308,13 +308,13 @@ get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 		case CESU8:
 			return get_utf8;
 
-		case CHARCONV_UTF16BE:
+		case TRANSCRIPT_UTF16BE:
 			return htons(1) == swaps_a(1) ? get_utf16_a : get_utf16_b;
-		case CHARCONV_UTF16LE:
+		case TRANSCRIPT_UTF16LE:
 			return htons(1) == swaps_a(1) ? get_utf16_b : get_utf16_a;
-		case CHARCONV_UTF32BE:
+		case TRANSCRIPT_UTF32BE:
 			return htons(1) == swaps_a(1) ? get_utf32_a : get_utf32_b;
-		case CHARCONV_UTF32LE:
+		case TRANSCRIPT_UTF32LE:
 			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
 
 		default:
@@ -322,7 +322,7 @@ get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type) {
 	}
 }
 
-uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
+uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint32_t codepoint;
 
 	(void) inbuflimit;
@@ -334,7 +334,7 @@ uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const 
 	return codepoint;
 }
 
-charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf) {
+transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf) {
 	uint16_t tmp;
 
 	if (codepoint < UINT32_C(0xffff)) {
@@ -349,6 +349,6 @@ charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **ou
 		memcpy((*outbuf) + 2, &tmp, 2);
 		*outbuf += 4;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 

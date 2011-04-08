@@ -3,7 +3,7 @@ HIGH PRIORITY
 - proper testing of all the convertors!!! This means both correct and
   incorrect input!
 - private use handling in the unicode convertor! Should private use chars
-  be allowed, and what interaction should be used wrt CHARCONV_ALLOW_PRIVATE_USE
+  be allowed, and what interaction should be used wrt TRANSCRIPT_ALLOW_PRIVATE_USE
 - need formats which force endianess and use of BOM for UTF-16/32
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
@@ -12,11 +12,8 @@ HIGH PRIORITY
 - use pthread-stubs compile in dist Makefile [glibc provides the required
   stubs, but should compile with `pkg-config --cflags pthread-stubs`]
 - provide pkg-config stuf for our own library
-- do the library rename to libtranscribe transcribe_? Transliterate would be
-  a better name, but is too long for convenience.
 - after renaming the library, also rename the cc_iconv interface
 - add documentation
-- API versioning
 
 MEDIUM PRIORITY
 ===============
@@ -60,9 +57,9 @@ IDEAS/MISC
   other libraries may use the library. This complicates matters, as the other
   library needs to share a locking mechanism with its users.
 
-  [Sepcial attention should be given to charconv_squash_name. Best option: make
-  charconv_init compulsory, and mark charconv_init and
-  charconv_{open,close}_convertor as not thread-safe.]
+  [Sepcial attention should be given to transcript_squash_name. Best option: make
+  transcript_init compulsory, and mark transcript_init and
+  transcript_{open,close}_convertor as not thread-safe.]
 
 RELEASE ENGINEERING
 ===================

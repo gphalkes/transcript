@@ -24,37 +24,37 @@
 
 /* Make sure that for us the struct members are not constant, so we can modify
    them. */
-#define _CHARCONV_CONST
-#include "charconv_internal.h"
+#define _TRANSCRIPT_CONST
+#include "transcript_internal.h"
 
 #define LOOP_LIST(type, iter, head) { type *iter; for (iter = head; iter != NULL; iter = iter->next) {
 #define END_LOOP_LIST }}
 
-/** @addtogroup charconv */
+/** @addtogroup transcript */
 /** @{ */
 
-static charconv_name_desc_t *convertors, /**< The SL-list of known convertors. */
+static transcript_name_desc_t *convertors, /**< The SL-list of known convertors. */
 	*convertors_tail; /**< Tail of the known convertors SL-list. */
-static charconv_name_t *display_names; /**< The array of names that may be used for display purposes. */
+static transcript_name_t *display_names; /**< The array of names that may be used for display purposes. */
 static int display_names_allocated, /**< The number of elements allocated in the ::display_names array. */
 	display_names_used; /**< The number of elements in the ::display_names array that is currently in use. */
 
 /** Add a name to the ::display_names array, resizing the array if necessary. */
 static void add_display_name(const char *name, int available) {
 	if (display_names_allocated == 0) {
-		if ((display_names = malloc(64 * sizeof(charconv_name_t))) == NULL)
+		if ((display_names = malloc(64 * sizeof(transcript_name_t))) == NULL)
 			return;
 		display_names_allocated = 64;
 	} else if (display_names_used >= display_names_allocated) {
-		charconv_name_t *tmp;
+		transcript_name_t *tmp;
 
-		if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(charconv_name_t))) == NULL)
+		if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(transcript_name_t))) == NULL)
 			return;
 		display_names = tmp;
 		display_names_allocated *= 2;
 	}
 
-	if ((display_names[display_names_used].name = _charconv_strdup(name)) == NULL)
+	if ((display_names[display_names_used].name = _transcript_strdup(name)) == NULL)
 		return;
 	display_names[display_names_used].available = available;
 	display_names_used++;
@@ -62,37 +62,37 @@ static void add_display_name(const char *name, int available) {
 
 /** Process the next non-alias name found in the aliases.txt file. */
 static bool add_convertor_name(const char *name) {
-	charconv_name_desc_t *convertor = NULL;
+	transcript_name_desc_t *convertor = NULL;
 	char normalized_name[NORMALIZE_NAME_MAX];
 	bool is_display_name = *name == '*';
 
 	if (is_display_name)
 		name++;
 
-	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if (normalized_name[0] == 0) {
-		_charconv_log("error: convertor name '%s' is invalid\n", name);
+		_transcript_log("error: convertor name '%s' is invalid\n", name);
 		goto return_error;
 	}
 
 	/* Check if the name is already in use as a convertor or an alias. */
-	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
+	LOOP_LIST(transcript_name_desc_t, ptr, convertors)
 		if (strcmp(normalized_name, ptr->name) == 0) {
-			_charconv_log("error: convertor name '%s' is already known\n", name);
+			_transcript_log("error: convertor name '%s' is already known\n", name);
 			goto return_error;
 		}
-		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
+		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
 			if (strcmp(normalized_name, alias->name) == 0)
-				_charconv_log("warning: convertor name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
+				_transcript_log("warning: convertor name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
 
-	if ((convertor = malloc(sizeof(charconv_name_desc_t))) == NULL ||
-			(convertor->real_name = _charconv_strdup(name)) == NULL ||
-			(convertor->name = _charconv_strdup(normalized_name)) == NULL)
+	if ((convertor = malloc(sizeof(transcript_name_desc_t))) == NULL ||
+			(convertor->real_name = _transcript_strdup(name)) == NULL ||
+			(convertor->name = _transcript_strdup(normalized_name)) == NULL)
 	{
-		_charconv_log("error: out of memory while loading aliases\n");
+		_transcript_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
 	}
@@ -100,8 +100,8 @@ static bool add_convertor_name(const char *name) {
 	convertor->aliases = NULL;
 	convertor->next = NULL;
 
-	if ((convertor->name = _charconv_strdup(normalized_name)) == NULL) {
-		_charconv_log("error: out of memory while loading aliases\n");
+	if ((convertor->name = _transcript_strdup(normalized_name)) == NULL) {
+		_transcript_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
 	}
@@ -142,39 +142,39 @@ static void convertor_done(void) {
 
 /** Process an alias found in the aliases.txt file. */
 static bool add_convertor_alias(const char *name) {
-	charconv_alias_name_t *alias = NULL;
+	transcript_alias_name_t *alias = NULL;
 	char normalized_name[NORMALIZE_NAME_MAX];
 	bool is_display_name = *name == '*';
 
 	if (is_display_name)
 		name++;
 
-	_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if (*normalized_name == 0) {
-		_charconv_log("error: alias name '%s' is invalid\n", name);
+		_transcript_log("error: alias name '%s' is invalid\n", name);
 		goto return_error;
 	}
 
 	/* Check if the name is already in use as a convertor or an alias. */
-	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
+	LOOP_LIST(transcript_name_desc_t, ptr, convertors)
 		if (strcmp(normalized_name, ptr->name) == 0)
-			_charconv_log("error: alias name '%s' is shadowd by a convertor\n", name);
+			_transcript_log("error: alias name '%s' is shadowd by a convertor\n", name);
 
-		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
+		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
 			if (strcmp(normalized_name, alias->name) == 0)
-				_charconv_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
+				_transcript_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
 		END_LOOP_LIST
 	END_LOOP_LIST
 
-	if ((alias = malloc(sizeof(charconv_name_desc_t))) == NULL) {
-		_charconv_log("error: out of memory while loading aliases\n");
+	if ((alias = malloc(sizeof(transcript_name_desc_t))) == NULL) {
+		_transcript_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
 	}
 
-	if ((alias->name = _charconv_strdup(normalized_name)) == NULL) {
-		_charconv_log("error: out of memory while loading aliases\n");
+	if ((alias->name = _transcript_strdup(normalized_name)) == NULL) {
+		_transcript_log("error: out of memory while loading aliases\n");
 		/* FIXME: should really jump out of the whole parsing here. */
 		goto return_error;
 	}
@@ -198,19 +198,19 @@ return_error:
 
 /** @internal
     @brief Get the descriptor for a convertor by name. */
-charconv_name_desc_t *_charconv_get_name_desc(const char *name, int need_normalization) {
+transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_normalization) {
 	char normalized_name[NORMALIZE_NAME_MAX];
 
 	if (need_normalization) {
-		_charconv_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+		_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 		name = normalized_name;
 	}
 
-	LOOP_LIST(charconv_name_desc_t, ptr, convertors)
+	LOOP_LIST(transcript_name_desc_t, ptr, convertors)
 		if (strcmp(name, ptr->name) == 0)
 			return ptr;
 
-		LOOP_LIST(charconv_alias_name_t, alias, ptr->aliases)
+		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
 			if (strcmp(name, alias->name) == 0)
 				return ptr;
 		END_LOOP_LIST
@@ -247,7 +247,7 @@ static const char *builtin_names[] = {
     @brief Initialize the list of available convertor names.
 
     This function tries to find all convertors which are available. Unlike
-    ::_charconv_init_aliases_from_file, it actually checks the file system to
+    ::_transcript_init_aliases_from_file, it actually checks the file system to
     see which tables are available. Furthermore, it checks which convertors from
     the list built by ::init_availability is available.
 */
@@ -276,13 +276,13 @@ static void init_availability(void) {
 #endif
 	/* Probe all the convertors listed as aliases from the file. */
 	for (i = 0; i < (size_t) display_names_used; i++)
-		display_names[i].available = _charconv_probe_convertor(display_names[i].name);
+		display_names[i].available = _transcript_probe_convertor(display_names[i].name);
 
 
 	/* Add the built-in convertors, in as far as they are not already defined through the aliases file. */
 	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
-		if (_charconv_get_name_desc(builtin_names[i], 1) == NULL)
-			add_display_name(builtin_names[i], _charconv_probe_convertor(builtin_names[i]));
+		if (_transcript_get_name_desc(builtin_names[i], 1) == NULL)
+			add_display_name(builtin_names[i], _transcript_probe_convertor(builtin_names[i]));
 	}
 
 	/* Add all the file names we can find in the DB dir, if they are not already present. */
@@ -296,8 +296,8 @@ static void init_availability(void) {
 			if (strcmp(entry->d_name + entry_name_len - 4, ".cct") != 0)
 				continue;
 			entry->d_name[entry_name_len - 4] = 0;
-			if (_charconv_get_name_desc(entry->d_name, 1) == NULL)
-				add_display_name(entry->d_name, _charconv_probe_convertor(entry->d_name));
+			if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
+				add_display_name(entry->d_name, _transcript_probe_convertor(entry->d_name));
 		}
 		closedir(dir);
 	}
@@ -308,10 +308,10 @@ static void init_availability(void) {
 
 /** Retrieve the list of display names known to this instantiation of the library.
     @param count A location to store the number of names returned.
-    @return An array of ::charconv_name_t structures listing the known convertors.
+    @return An array of ::transcript_name_t structures listing the known convertors.
 */
-const charconv_name_t *charconv_get_names(int *count) {
-	_charconv_init();
+const transcript_name_t *transcript_get_names(int *count) {
+	_transcript_init();
 	init_availability();
 	if (count != NULL)
 		*count = display_names_used;
@@ -328,7 +328,7 @@ const charconv_name_t *charconv_get_names(int *count) {
 /** @internal
     @brief Read the list of convertors and their aliases from the aliases.txt file.
 */
-void _charconv_init_aliases_from_file(void) {
+void _transcript_init_aliases_from_file(void) {
 	FILE *aliases;
 	int convertor_found = 0;
 	size_t idx = 0;
@@ -346,8 +346,8 @@ void _charconv_init_aliases_from_file(void) {
 	} state = LINE_START;
 
 
-	if ((aliases = _charconv_db_open("aliases", ".txt", NULL)) == NULL) {
-		_charconv_log("Error opening aliases.txt: %s\n", strerror(errno));
+	if ((aliases = _transcript_db_open("aliases", ".txt", NULL)) == NULL) {
+		_transcript_log("Error opening aliases.txt: %s\n", strerror(errno));
 		return;
 	}
 
@@ -358,7 +358,7 @@ void _charconv_init_aliases_from_file(void) {
 		switch (state) {
 			case LINE_START:
 			case LINE_CONTINUED:
-				if (_charconv_isspace(c)) {
+				if (_transcript_isspace(c)) {
 					state = LINE_CONTINUED;
 					break;
 				}
@@ -368,8 +368,8 @@ void _charconv_init_aliases_from_file(void) {
 					break;
 				}
 
-				if (!_charconv_isidchr(c) && c != '*') {
-					_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+				if (!_transcript_isidchr(c) && c != '*') {
+					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 					state = SKIP_REST;
 					break;
 				}
@@ -394,13 +394,13 @@ void _charconv_init_aliases_from_file(void) {
 				}
 				/* FALLTHROUGH */
 			case ID_ALIAS:
-				if (_charconv_isidchr(c)) {
+				if (_transcript_isidchr(c)) {
 					if (idx < MAX_ID)
 						id[idx++] = c;
 					break;
 				}
 
-				if (_charconv_isspace(c) || c == '#') {
+				if (_transcript_isspace(c) || c == '#') {
 					id[idx] = 0;
 					if (state == ID_FIRST) {
 						/* Finish handling the previous convertor. */
@@ -412,14 +412,14 @@ void _charconv_init_aliases_from_file(void) {
 					}
 					state = c == '#' ? COMMENT : AFTER_ID;
 				} else {
-					_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 					state = SKIP_REST;
 				}
 				break;
 			case AFTER_ID:
-				if (_charconv_isspace(c))
+				if (_transcript_isspace(c))
 					break;
-				if (_charconv_isidchr(c) || c == '*') {
+				if (_transcript_isidchr(c) || c == '*') {
 					id[0] = c;
 					idx = 1;
 					state = ID_ALIAS;
@@ -429,14 +429,14 @@ void _charconv_init_aliases_from_file(void) {
 					state = COMMENT;
 					break;
 				}
-				_charconv_log("aliases.txt:%d: invalid character\n", line_number);
+				_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 				state = SKIP_REST;
 				break;
 			case SKIP_REST:
 			case COMMENT:
 				break;
 			default:
-				_charconv_log("Program logic error while reading aliases.txt\n");
+				_transcript_log("Program logic error while reading aliases.txt\n");
 				fclose(aliases);
 				return;
 		}

@@ -14,18 +14,18 @@
 
 /* This convertor implements the ISO-8859-1 and ASCII codepages. */
 #include <string.h>
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 #include "utf.h"
 #include "generic_fallbacks.h"
 
 typedef struct {
-	charconv_common_t common;
+	transcript_common_t common;
 	unsigned int charmax;
 } convertor_state_t;
 
-static void close_convertor(charconv_common_t *handle);
+static void close_convertor(transcript_common_t *handle);
 
-static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
+static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -33,30 +33,30 @@ static charconv_error_t to_unicode_conversion(convertor_state_t *handle, char **
 	while ((*inbuf) < inbuflimit) {
 		codepoint = *(uint8_t *) *inbuf;
 		if (codepoint > handle->charmax) {
-			if (flags & CHARCONV_SUBST_ILLEGAL)
+			if (flags & TRANSCRIPT_SUBST_ILLEGAL)
 				codepoint = 0x1a;
 			else
-				return CHARCONV_ILLEGAL;
+				return TRANSCRIPT_ILLEGAL;
 		}
-		if (handle->common.put_unicode(codepoint, outbuf, outbuflimit) == CHARCONV_NO_SPACE)
-			return CHARCONV_NO_SPACE;
+		if (handle->common.put_unicode(codepoint, outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
+			return TRANSCRIPT_NO_SPACE;
 		(*inbuf)++;
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
-static charconv_error_t to_unicode_skip(charconv_common_t *handle, char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(transcript_common_t *handle, char **inbuf, const char const *inbuflimit) {
 	(void) handle;
 
 	if ((*inbuf) >= inbuflimit)
-		return CHARCONV_INCOMPLETE;
+		return TRANSCRIPT_INCOMPLETE;
 	(*inbuf)++;
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
-static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
+static transcript_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -65,75 +65,75 @@ static charconv_error_t from_unicode_conversion(convertor_state_t *handle, char 
 	while ((*inbuf) < inbuflimit) {
 		codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
 		switch (codepoint) {
-			case CHARCONV_UTF_ILLEGAL:
-				return CHARCONV_ILLEGAL;
-			case CHARCONV_UTF_INCOMPLETE:
-				if (flags & CHARCONV_END_OF_TEXT) {
-					if (!(flags & CHARCONV_SUBST_ILLEGAL))
-						return CHARCONV_ILLEGAL_END;
+			case TRANSCRIPT_UTF_ILLEGAL:
+				return TRANSCRIPT_ILLEGAL;
+			case TRANSCRIPT_UTF_INCOMPLETE:
+				if (flags & TRANSCRIPT_END_OF_TEXT) {
+					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+						return TRANSCRIPT_ILLEGAL_END;
 					codepoint = 0x1a;
 					break;
 				}
-				return CHARCONV_INCOMPLETE;
+				return TRANSCRIPT_INCOMPLETE;
 			default:
 				if (codepoint > handle->charmax) {
 					if ((codepoint = get_generic_fallback(codepoint)) <= handle->charmax) {
-						if (!(flags & CHARCONV_ALLOW_FALLBACK))
-							return CHARCONV_FALLBACK;
-					} else if (flags & CHARCONV_SUBST_UNASSIGNED) {
+						if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
+							return TRANSCRIPT_FALLBACK;
+					} else if (flags & TRANSCRIPT_SUBST_UNASSIGNED) {
 						codepoint = 0x1a;
 					} else {
-						return CHARCONV_UNASSIGNED;
+						return TRANSCRIPT_UNASSIGNED;
 					}
 				}
 				break;
 		}
 
 		if ((*outbuf) >= outbuflimit)
-			return CHARCONV_NO_SPACE;
+			return TRANSCRIPT_NO_SPACE;
 		**outbuf = codepoint;
 		(*outbuf)++;
 
 		*inbuf = (char *) _inbuf;
-		if (flags & CHARCONV_SINGLE_CONVERSION)
-			return CHARCONV_SUCCESS;
+		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+			return TRANSCRIPT_SUCCESS;
 	}
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
 
-static charconv_error_t flush_nop(charconv_t *handle, char **outbuf, const char *outbuflimit) {
+static transcript_error_t flush_nop(transcript_t *handle, char **outbuf, const char *outbuflimit) {
 	(void) handle;
 	(void) outbuf;
 	(void) outbuflimit;
 
-	return CHARCONV_SUCCESS;
+	return TRANSCRIPT_SUCCESS;
 }
 
-static void reset_nop(charconv_common_t *handle) {
+static void reset_nop(transcript_common_t *handle) {
 	(void) handle;
 }
 
-static void save_load_nop(charconv_common_t *handle, void *state) {
+static void save_load_nop(transcript_common_t *handle, void *state) {
 	(void) handle;
 	(void) state;
 }
 
-void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error) {
+void *_transcript_open_iso8859_1_convertor(const char *name, int flags, int *error) {
 	convertor_state_t *retval;
 
 	if (strcmp(name, "iso88591") != 0 && strcmp(name, "ascii") != 0) {
 		if (error != NULL)
-			*error = CHARCONV_INTERNAL_ERROR;
+			*error = TRANSCRIPT_INTERNAL_ERROR;
 		return NULL;
 	}
 
-	if (flags & CHARCONV_PROBE_ONLY)
+	if (flags & TRANSCRIPT_PROBE_ONLY)
 		return (void *) 1;
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
 		if (error != NULL)
-			*error = CHARCONV_OUT_OF_MEMORY;
+			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
 	}
 
@@ -151,7 +151,7 @@ void *_charconv_open_iso8859_1_convertor(const char *name, int flags, int *error
 	return retval;
 }
 
-static void close_convertor(charconv_common_t *handle) {
+static void close_convertor(transcript_common_t *handle) {
 	free(handle);
 }
 

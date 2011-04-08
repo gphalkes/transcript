@@ -16,8 +16,8 @@
 
 #include <errno.h>
 
-#define CHARCONV_ICONV_API
-#include "charconv_internal.h"
+#define TRANSCRIPT_ICONV_API
+#include "transcript_internal.h"
 #include "utf.h"
 
 /* iconv compatible interface */
@@ -34,7 +34,7 @@
 */
 cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	cc_iconv_t retval = NULL;
-	charconv_error_t error;
+	transcript_error_t error;
 
 	if ((retval = malloc(sizeof(*retval))) == NULL)
 		ERROR(ENOMEM);
@@ -42,18 +42,18 @@ cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode) {
 	retval->from = NULL;
 	retval->to = NULL;
 
-	if ((retval->from = charconv_open_convertor(fromcode, CHARCONV_UTF32, 0, &error)) == NULL) {
-		if (error == CHARCONV_OUT_OF_MEMORY)
+	if ((retval->from = transcript_open_convertor(fromcode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
+		if (error == TRANSCRIPT_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
-		else if (error == CHARCONV_ERRNO)
+		else if (error == TRANSCRIPT_ERRNO)
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
 
-	if ((retval->to = charconv_open_convertor(tocode, CHARCONV_UTF32, 0, &error)) == NULL) {
-		if (error == CHARCONV_OUT_OF_MEMORY)
+	if ((retval->to = transcript_open_convertor(tocode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
+		if (error == TRANSCRIPT_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
-		else if (error == CHARCONV_ERRNO)
+		else if (error == TRANSCRIPT_ERRNO)
 			ERROR(errno);
 		ERROR(EINVAL);
 	}
@@ -63,8 +63,8 @@ end_error:
 	if (retval == NULL)
 		return (cc_iconv_t) -1;
 
-	charconv_close_convertor(retval->from);
-	charconv_close_convertor(retval->to);
+	transcript_close_convertor(retval->from);
+	transcript_close_convertor(retval->to);
 	return (cc_iconv_t) -1;
 }
 
@@ -75,8 +75,8 @@ end_error:
 int cc_iconv_close(cc_iconv_t cd) {
 	if (cd == NULL)
 		return 0;
-	charconv_close_convertor(cd->from);
-	charconv_close_convertor(cd->to);
+	transcript_close_convertor(cd->from);
+	transcript_close_convertor(cd->to);
 	free(cd);
 	return 0;
 }
@@ -108,7 +108,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	size_t result = 0;
 
 	char *_inbuf;
-	char saved_state[CHARCONV_SAVE_STATE_SIZE];
+	char saved_state[TRANSCRIPT_SAVE_STATE_SIZE];
 
 	uint32_t codepoints[20];
 	char *codepoint_ptr;
@@ -120,20 +120,20 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 		/* There is no need to convert the input buffer, because even if it had an incomplete
 		   seqeunce at the end, that would have been reported on the previous call. A reset
 		   is necessary however. */
-		charconv_to_unicode_reset(cd->from);
+		transcript_to_unicode_reset(cd->from);
 
 		if (outbuf == NULL || *outbuf == NULL) {
 			/* If the user only asks for a reset, make it so. */
-			charconv_from_unicode_reset(cd->to);
+			transcript_from_unicode_reset(cd->to);
 			return 0;
 		}
 
 		outbuflimit = (*outbuf) + (*outbytesleft);
-		switch (charconv_from_unicode_flush(cd->to, outbuf, outbuflimit))
+		switch (transcript_from_unicode_flush(cd->to, outbuf, outbuflimit))
 		{
-			case CHARCONV_SUCCESS:
+			case TRANSCRIPT_SUCCESS:
 				break;
-			case CHARCONV_NO_SPACE:
+			case TRANSCRIPT_NO_SPACE:
 				ERROR(E2BIG);
 			default:
 				ERROR(EBADF);
@@ -146,36 +146,36 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 	outbuflimit = (*outbuf) + (*outbytesleft);
 
 	while (_inbuf < inbuflimit) {
-		charconv_save_state(cd->from, saved_state);
+		transcript_save_state(cd->from, saved_state);
 		non_reversible = false;
 		codepoint_ptr = (char *) &codepoints;
 		/* Convert a single character of the input, by forcing a single conversion. */
-		switch (charconv_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit, &codepoint_ptr,
-				(const char *) &codepoints + 20 * 4, CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION))
+		switch (transcript_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit, &codepoint_ptr,
+				(const char *) &codepoints + 20 * 4, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_MN_CONVERSION))
 		{
-			case CHARCONV_ILLEGAL_END:
-			case CHARCONV_INCOMPLETE:
+			case TRANSCRIPT_ILLEGAL_END:
+			case TRANSCRIPT_INCOMPLETE:
 				ERROR(EINVAL);
-			case CHARCONV_FALLBACK:
-				charconv_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit,
+			case TRANSCRIPT_FALLBACK:
+				transcript_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit,
 						&codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]),
-						CHARCONV_SINGLE_CONVERSION | CHARCONV_NO_MN_CONVERSION | CHARCONV_ALLOW_FALLBACK);
+						TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_ALLOW_FALLBACK);
 				non_reversible = true;
 				break;
-			case CHARCONV_PRIVATE_USE:
-			case CHARCONV_UNASSIGNED:
+			case TRANSCRIPT_PRIVATE_USE:
+			case TRANSCRIPT_UNASSIGNED:
 				codepoints[0] = 0xFFFD;
-				charconv_to_unicode_skip(cd->from, (const char **) &_inbuf, inbuflimit);
+				transcript_to_unicode_skip(cd->from, (const char **) &_inbuf, inbuflimit);
 				non_reversible = true;
 				break;
-			case CHARCONV_ILLEGAL:
+			case TRANSCRIPT_ILLEGAL:
 				ERROR(EILSEQ);
-			case CHARCONV_SUCCESS:
+			case TRANSCRIPT_SUCCESS:
 				break;
 			/* These should not happen, but we need to handle them anyway. Thus we
 			   return EBADF, which is what gconv returns on internal errors as well. */
-			case CHARCONV_NO_SPACE:
-			case CHARCONV_INTERNAL_ERROR:
+			case TRANSCRIPT_NO_SPACE:
+			case TRANSCRIPT_INTERNAL_ERROR:
 			default:
 				ERROR(EBADF);
 		}
@@ -191,15 +191,15 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 			codepoint_ptr = (char *) &codepoints;
 		try_again:
 			/* Try to convert. If so far the conversion is reversible, try without substitutions and fallbacks first. */
-			switch (charconv_from_unicode(cd->to, (const char **) &codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]), outbuf,
-					outbuflimit, CHARCONV_NO_1N_CONVERSION |
-					(non_reversible ? CHARCONV_SUBST_UNASSIGNED | CHARCONV_SUBST_ILLEGAL | CHARCONV_ALLOW_FALLBACK : 0)))
+			switch (transcript_from_unicode(cd->to, (const char **) &codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]), outbuf,
+					outbuflimit, TRANSCRIPT_NO_1N_CONVERSION |
+					(non_reversible ? TRANSCRIPT_SUBST_UNASSIGNED | TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_ALLOW_FALLBACK : 0)))
 			{
-				case CHARCONV_SUCCESS:
+				case TRANSCRIPT_SUCCESS:
 					break;
-				case CHARCONV_FALLBACK:
-				case CHARCONV_UNASSIGNED:
-				case CHARCONV_PRIVATE_USE:
+				case TRANSCRIPT_FALLBACK:
+				case TRANSCRIPT_UNASSIGNED:
+				case TRANSCRIPT_PRIVATE_USE:
 					/* Apparently, we couldn't convert (all) the characters, so this counts as
 					   as a non-reversible conversion. */
 					if (non_reversible)
@@ -207,7 +207,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 						ERROR(EBADF);
 					non_reversible = true;
 					goto try_again;
-				case CHARCONV_NO_SPACE:
+				case TRANSCRIPT_NO_SPACE:
 					ERROR(E2BIG);
 				/* None of the other errors should happen, as we feed it only valid codepoints. So
 				   we handle all of them as internal errors. */
@@ -225,7 +225,7 @@ size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf,
 
 	return result;
 end_error:
-	charconv_load_state(cd->from, saved_state);
+	transcript_load_state(cd->from, saved_state);
 	return (size_t) -1;
 }
 #undef ERROR

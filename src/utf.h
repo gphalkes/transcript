@@ -14,16 +14,16 @@
 #ifndef UTF_H
 #define UTF_H
 
-#include "charconv_internal.h"
+#include "transcript_internal.h"
 
-#define CHARCONV_UTF_ILLEGAL UINT32_C(0xffffffff)
-#define CHARCONV_UTF_INCOMPLETE UINT32_C(0xfffffffe)
-/* CHARCONV_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
+#define TRANSCRIPT_UTF_ILLEGAL UINT32_C(0xffffffff)
+#define TRANSCRIPT_UTF_INCOMPLETE UINT32_C(0xfffffffe)
+/* TRANSCRIPT_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
    from UTF-7/GB-18030/SCSU/BOCU-1 decoders. */
-#define CHARCONV_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
+#define TRANSCRIPT_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
 
 enum {
-	UTF8_LOOSE = _CHARCONV_UTFLAST,
+	UTF8_LOOSE = _TRANSCRIPT_UTFLAST,
 	UTF8_BOM,
 	CESU8,
 	GB18030,
@@ -31,8 +31,8 @@ enum {
 	UTF7
 };
 
-CHARCONV_LOCAL put_unicode_func_t _charconv_get_put_unicode(charconv_utf_t type);
-CHARCONV_LOCAL get_unicode_func_t _charconv_get_get_unicode(charconv_utf_t type);
-CHARCONV_LOCAL uint_fast32_t _charconv_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip);
-CHARCONV_LOCAL charconv_error_t _charconv_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf);
+TRANSCRIPT_LOCAL put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type);
+TRANSCRIPT_LOCAL get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf);
 #endif

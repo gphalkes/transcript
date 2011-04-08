@@ -11,8 +11,8 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef CHARCONV_H
-#define CHARCONV_H
+#ifndef TRANSCRIPT_H
+#define TRANSCRIPT_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,163 +22,179 @@ extern "C" {
 #include <stdint.h>
 
 #if defined _WIN32 || defined __CYGWIN__
-	#define CHARCONV_EXPORT __declspec(dllexport)
-	#define CHARCONV_IMPORT __declspec(dllimport)
-	#define CHARCONV_LOCAL
+	#define TRANSCRIPT_EXPORT __declspec(dllexport)
+	#define TRANSCRIPT_IMPORT __declspec(dllimport)
+	#define TRANSCRIPT_LOCAL
 #else
 	#if __GNUC__ >= 4
-		#define CHARCONV_EXPORT __attribute__((visibility("default")))
-		#define CHARCONV_IMPORT __attribute__((visibility("default")))
-		#define CHARCONV_LOCAL __attribute__((visibility("hidden")))
+		#define TRANSCRIPT_EXPORT __attribute__((visibility("default")))
+		#define TRANSCRIPT_IMPORT __attribute__((visibility("default")))
+		#define TRANSCRIPT_LOCAL __attribute__((visibility("hidden")))
 	#else
-		#define CHARCONV_EXPORT
-		#define CHARCONV_IMPORT
-		#define CHARCONV_LOCAL
+		#define TRANSCRIPT_EXPORT
+		#define TRANSCRIPT_IMPORT
+		#define TRANSCRIPT_LOCAL
 	#endif
 #endif
 
-#ifdef CHARCONV_BUILD_DSO
-	#define CHARCONV_API CHARCONV_EXPORT
+#ifdef TRANSCRIPT_BUILD_DSO
+	#define TRANSCRIPT_API TRANSCRIPT_EXPORT
 #else
-	#define CHARCONV_API CHARCONV_IMPORT
+	#define TRANSCRIPT_API TRANSCRIPT_IMPORT
 #endif
 
-/** @defgroup charconv Native charconv interface. */
-/** @addtogroup charconv */
+/** @defgroup transcript Native transcript interface. */
+/** @addtogroup transcript */
 /** @{ */
 
-/** @struct charconv_t
+/** The version of libtranscript encoded as a single integer.
+
+    The least significant 8 bits represent the patch level.
+    The second 8 bits represent the minor version.
+    The third 8 bits represent the major version.
+
+	At runtime, the value of TRANSCRIPT_VERSION can be retrieved by calling
+	::transcript_get_version.
+
+    @internal
+    The value 0 is an invalid value which should be replaced by the script
+    that builds the release package.
+*/
+#define TRANSCRIPT_VERSION 0
+
+/** @struct transcript_t
     An opaque structure describing a convertor and its state.
 */
-typedef struct charconv_common_t charconv_t;
+typedef struct transcript_common_t transcript_t;
 
 /** Flags for convertors and conversions. */
-enum charconv_flags_t {
-	CHARCONV_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
-	CHARCONV_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
-	CHARCONV_SUBST_ILLEGAL = (1<<2), /**< Automatically insert a substitution character on illegal input. */
-	CHARCONV_ALLOW_PRIVATE_USE = (1<<3), /**< Allow private-use mappings. If not allowed, they are handled like unassigned sequences, with the exception that they return a different error.. */
+enum transcript_flags_t {
+	TRANSCRIPT_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
+	TRANSCRIPT_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
+	TRANSCRIPT_SUBST_ILLEGAL = (1<<2), /**< Automatically insert a substitution character on illegal input. */
+	TRANSCRIPT_ALLOW_PRIVATE_USE = (1<<3), /**< Allow private-use mappings. If not allowed, they are handled like unassigned sequences, with the exception that they return a different error.. */
 
-	/* These are only valid as argument to charconv_from_unicode and charconv_to_unicode. */
-	CHARCONV_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
-	CHARCONV_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text.
+	/* These are only valid as argument to transcript_from_unicode and transcript_to_unicode. */
+	TRANSCRIPT_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
+	TRANSCRIPT_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text.
 
-		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 
 		@note This flag is only used to determine whether an incomplete sequence
 		at the end of the buffer is allowed or not. Clients still need to call
-		::charconv_from_unicode_flush to properly end the output buffer.
+		::transcript_from_unicode_flush to properly end the output buffer.
 	*/
-	CHARCONV_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
+	TRANSCRIPT_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
 
-		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
-	CHARCONV_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions.
+	TRANSCRIPT_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions.
 
-		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
-	CHARCONV_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::CHARCONV_NO_MN_CONVERSION.
+	TRANSCRIPT_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::TRANSCRIPT_NO_MN_CONVERSION.
 
-		This flag is only valid when passed to ::charconv_from_unicode or ::charconv_to_unicode.
+		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
 
-	/* NOTE: internal flags are defined in charconv_internal.h. Make sure these don't overlap! */
+	/* NOTE: internal flags are defined in transcript_internal.h. Make sure these don't overlap! */
 };
 
 /** Error values. */
 typedef enum {
-	CHARCONV_SUCCESS, /**< All OK. */
-	CHARCONV_NO_SPACE, /**< There was no space left in the output buffer. */
-	CHARCONV_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
+	TRANSCRIPT_SUCCESS, /**< All OK. */
+	TRANSCRIPT_NO_SPACE, /**< There was no space left in the output buffer. */
+	TRANSCRIPT_INCOMPLETE, /**< The buffer ended with an incomplete sequence, or more data was needed to verify a M:N conversion. */
 
-	CHARCONV_FALLBACK, /**< The next character to convert is a fallback mapping. */
-	CHARCONV_UNASSIGNED, /**< The next character to convert is an unassigned sequence. */
-	CHARCONV_ILLEGAL, /**< The input is an illegal sequence. */
-	CHARCONV_ILLEGAL_END, /**< The end of the input does not form a valid sequence. */
-	CHARCONV_INTERNAL_ERROR, /**< The charconv library screwed up; no recovery possible. */
-	CHARCONV_PRIVATE_USE, /**< The next character to convert maps to a private use codepoint. */
+	TRANSCRIPT_FALLBACK, /**< The next character to convert is a fallback mapping. */
+	TRANSCRIPT_UNASSIGNED, /**< The next character to convert is an unassigned sequence. */
+	TRANSCRIPT_ILLEGAL, /**< The input is an illegal sequence. */
+	TRANSCRIPT_ILLEGAL_END, /**< The end of the input does not form a valid sequence. */
+	TRANSCRIPT_INTERNAL_ERROR, /**< The transcript library screwed up; no recovery possible. */
+	TRANSCRIPT_PRIVATE_USE, /**< The next character to convert maps to a private use codepoint. */
 
-	CHARCONV_ERRNO, /**< See errno for error code. */
-	CHARCONV_BAD_ARG, /**< Bad argument. */
-	CHARCONV_OUT_OF_MEMORY, /**< Out of memory. */
-	CHARCONV_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
-	CHARCONV_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
-	CHARCONV_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
-	CHARCONV_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
+	TRANSCRIPT_ERRNO, /**< See errno for error code. */
+	TRANSCRIPT_BAD_ARG, /**< Bad argument. */
+	TRANSCRIPT_OUT_OF_MEMORY, /**< Out of memory. */
+	TRANSCRIPT_INVALID_FORMAT, /**< Invalid format while reading conversion map. */
+	TRANSCRIPT_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
+	TRANSCRIPT_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
+	TRANSCRIPT_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
 
-	CHARCONV_PART_SUCCESS_MAX = CHARCONV_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
+	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 
-} charconv_error_t;
+} transcript_error_t;
 
 typedef enum {
-	CHARCONV_UTF8 = 1,
-	CHARCONV_UTF16,
-	CHARCONV_UTF32,
-	CHARCONV_UTF16BE,
-	CHARCONV_UTF16LE,
-	CHARCONV_UTF32BE,
-	CHARCONV_UTF32LE,
-	_CHARCONV_UTFLAST
-} charconv_utf_t;
+	TRANSCRIPT_UTF8 = 1,
+	TRANSCRIPT_UTF16,
+	TRANSCRIPT_UTF32,
+	TRANSCRIPT_UTF16BE,
+	TRANSCRIPT_UTF16LE,
+	TRANSCRIPT_UTF32BE,
+	TRANSCRIPT_UTF32LE,
+	_TRANSCRIPT_UTFLAST
+} transcript_utf_t;
 
 
-#ifndef _CHARCONV_CONST
-#define _CHARCONV_CONST const
+#ifndef _TRANSCRIPT_CONST
+#define _TRANSCRIPT_CONST const
 #endif
 
-/** @struct charconv_name_t
+/** @struct transcript_name_t
     A structure holding a display name and availability information about a convertor.
 */
 typedef struct {
-	_CHARCONV_CONST char *name; /**< The (display) name of the convertor. */
+	_TRANSCRIPT_CONST char *name; /**< The (display) name of the convertor. */
 	int available; /**< A boolean indicating whether the convertor is available.
 
 	@note If availability is indicated, a load failure may still occur if the
 	conversion table is corrupt. */
-} charconv_name_t;
+} transcript_name_t;
 
 /** Required size of a buffer for saving convertor state. */
-#define CHARCONV_SAVE_STATE_SIZE 72
+#define TRANSCRIPT_SAVE_STATE_SIZE 72
 
-CHARCONV_API int charconv_probe_convertor(const char *name);
-CHARCONV_API charconv_t *charconv_open_convertor(const char *name, charconv_utf_t utf_type, int flags, charconv_error_t *error);
-CHARCONV_API void charconv_close_convertor(charconv_t *handle);
-CHARCONV_API int charconv_equal(const char *name_a, const char *name_b);
-CHARCONV_API charconv_error_t charconv_to_unicode(charconv_t *handle, const char **inbuf,
+TRANSCRIPT_API int transcript_probe_convertor(const char *name);
+TRANSCRIPT_API transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
+TRANSCRIPT_API void transcript_close_convertor(transcript_t *handle);
+TRANSCRIPT_API int transcript_equal(const char *name_a, const char *name_b);
+TRANSCRIPT_API transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbuf,
 	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);
-CHARCONV_API charconv_error_t charconv_from_unicode(charconv_t *handle, const char **inbuf,
+TRANSCRIPT_API transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf,
 	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);
-CHARCONV_API charconv_error_t charconv_to_unicode_skip(charconv_t *handle, const char **inbuf, const char *inbuflimit);
-CHARCONV_API charconv_error_t charconv_from_unicode_skip(charconv_t *handle, const char **inbuf, const char *inbuflimit);
-CHARCONV_API charconv_error_t charconv_from_unicode_flush(charconv_t *handle, char **outbuf, const char *outbuflimit);
-CHARCONV_API void charconv_to_unicode_reset(charconv_t *handle);
-CHARCONV_API void charconv_from_unicode_reset(charconv_t *handle);
-CHARCONV_API void charconv_save_state(charconv_t *handle, void *state);
+TRANSCRIPT_API transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit);
+TRANSCRIPT_API transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit);
+TRANSCRIPT_API transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **outbuf, const char *outbuflimit);
+TRANSCRIPT_API void transcript_to_unicode_reset(transcript_t *handle);
+TRANSCRIPT_API void transcript_from_unicode_reset(transcript_t *handle);
+TRANSCRIPT_API void transcript_save_state(transcript_t *handle, void *state);
 /*FIXME: should we do loading (and perhaps saving) per direction?*/
-CHARCONV_API void charconv_load_state(charconv_t *handle, void *state);
-CHARCONV_API const char *charconv_strerror(charconv_error_t error);
-CHARCONV_API const charconv_name_t *charconv_get_names(int *count);
-CHARCONV_API void charconv_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
-CHARCONV_API const char *charconv_get_codeset(void);
+TRANSCRIPT_API void transcript_load_state(transcript_t *handle, void *state);
+TRANSCRIPT_API const char *transcript_strerror(transcript_error_t error);
+TRANSCRIPT_API const transcript_name_t *transcript_get_names(int *count);
+TRANSCRIPT_API void transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
+TRANSCRIPT_API const char *transcript_get_codeset(void);
+TRANSCRIPT_API long transcript_get_version(void);
 
-/** Minimum required size for an output buffer for ::charconv_to_unicode, if M:N conversion are allowed. */
-#define CHARCONV_MIN_UNICODE_BUFFER_SIZE (4*20)
-/** Minimum required size for an output buffer for ::charconv_from_unicode, if M:N conversion are allowed. */
-#define CHARCONV_MIN_CODEPAGE_BUFFER_SIZE (32)
-/** Minimum required size for an output buffer for either ::charconv_to_unicode or
-	::charconv_from_unicode, if M:N conversion are allowed. */
-#define CHARCONV_MIN_BUFFER_SIZE CHARCONV_MIN_UNICODE_BUFFER_SIZE
+/** Minimum required size for an output buffer for ::transcript_to_unicode, if M:N conversion are allowed. */
+#define TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE (4*20)
+/** Minimum required size for an output buffer for ::transcript_from_unicode, if M:N conversion are allowed. */
+#define TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE (32)
+/** Minimum required size for an output buffer for either ::transcript_to_unicode or
+	::transcript_from_unicode, if M:N conversion are allowed. */
+#define TRANSCRIPT_MIN_BUFFER_SIZE TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE
 
 /** @} */
 
-#if defined(CHARCONV_ICONV_API) || defined(CHARCONV_ICONV)
+#if defined(TRANSCRIPT_ICONV_API) || defined(TRANSCRIPT_ICONV)
 
 /** @defgroup cc_iconv Iconv compatible interface.
     This interface allows very limited control over the conversion and
     is only provided for systems without an iconv library. To make the interface
-	available, define @c CHARCONV_ICONV_API before including the @c charconv.h
+	available, define @c TRANSCRIPT_ICONV_API before including the @c transcript.h
 	header. If you want the interface to be available without the @c cc_ prefix,
-	as well, define @c CHARCONV_ICONV instead.
+	as well, define @c TRANSCRIPT_ICONV instead.
 */
 /** @addtogroup cc_iconv */
 /** @{ */
@@ -188,13 +204,13 @@ CHARCONV_API const char *charconv_get_codeset(void);
 */
 typedef struct _cc_iconv_t *cc_iconv_t;
 
-CHARCONV_API cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
-CHARCONV_API int cc_iconv_close(cc_iconv_t cd);
-CHARCONV_API size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
+TRANSCRIPT_API cc_iconv_t cc_iconv_open(const char *tocode, const char *fromcode);
+TRANSCRIPT_API int cc_iconv_close(cc_iconv_t cd);
+TRANSCRIPT_API size_t cc_iconv(cc_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft);
 
 /** @} */
 
-#ifdef CHARCONV_ICONV
+#ifdef TRANSCRIPT_ICONV
 typedef cc_iconv_t iconv_t;
 #define iconv(_a, _b, _c, _d, _e) cc_iconv((_a), (_b), (_c), (_d), (_e))
 #define iconv_open(_a, _b) cc_iconv_open((_a), (_b))
