@@ -18,10 +18,15 @@
 #include "utf.h"
 #include "unicode_convertor.h"
 
+/** @internal
+    @struct gb_range_map_t
+    @brief A structure to hold a mapping from a range in GB-18030 format to a Unicode range.
+*/
 typedef struct {
 	uint_fast32_t low, high, unicode_low, unicode_high;
 } gb_range_map_t;
 
+/** Mappings from ranges in GB-18030 format to Unicode ranges. */
 static const gb_range_map_t gb_range_map[] = {
 	{ UINT32_C(0x0334), UINT32_C(0x1ef1), UINT32_C(0x0452), UINT32_C(0x200f) },
 	{ UINT32_C(0x2403), UINT32_C(0x2c40), UINT32_C(0x2643), UINT32_C(0x2e80) },
@@ -37,6 +42,9 @@ static const gb_range_map_t gb_range_map[] = {
 	{ UINT32_C(0x99e2), UINT32_C(0x99fb), UINT32_C(0xffe6), UINT32_C(0xffff) },
 	{ UINT32_C(0x2e248), UINT32_C(0x12e247), UINT32_C(0x10000), UINT32_C(0x10ffff) }};
 
+/** @internal
+    @brief Write a Unicode codepoint in GB-18030 encoding to a buffer.
+*/
 int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
@@ -98,6 +106,9 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 	return TRANSCRIPT_SUCCESS;
 }
 
+/** @internal
+    @brief Read a Unicode codepoint in GB-18030 encoding from a buffer.
+*/
 uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	char *codepoint_ptr;
 	size_t low, mid, high;
