@@ -61,7 +61,7 @@ static transcript_t *try_convertors(const char *normalized_name, const char *rea
 /*================ API functions ===============*/
 /** Check if a named convertor is available.
     @param name The name of the convertor to check.
-	@return 1 if the convertor is avaible, 0 otherwise.
+    @return 1 if the convertor is avaible, 0 otherwise.
 */
 int transcript_probe_convertor(const char *name) {
 	_transcript_init();
@@ -138,25 +138,25 @@ int transcript_equal(const char *name_a, const char *name_b) {
     @param outbuflimit A pointer to the end of the output buffer.
     @param flags Flags for this conversion (see ::transcript_flags_t for possible values).
     @retval ::TRANSCRIPT_SUCCESS
-	@retval ::TRANSCRIPT_NO_SPACE
-	@retval ::TRANSCRIPT_INCOMPLETE
-	@retval ::TRANSCRIPT_FALLBACK
-	@retval ::TRANSCRIPT_UNASSIGNED
-	@retval ::TRANSCRIPT_ILLEGAL
-	@retval ::TRANSCRIPT_ILLEGAL_END
-	@retval ::TRANSCRIPT_INTERNAL_ERROR
-	@retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
+    @retval ::TRANSCRIPT_NO_SPACE
+    @retval ::TRANSCRIPT_INCOMPLETE
+    @retval ::TRANSCRIPT_FALLBACK
+    @retval ::TRANSCRIPT_UNASSIGNED
+    @retval ::TRANSCRIPT_ILLEGAL
+    @retval ::TRANSCRIPT_ILLEGAL_END
+    @retval ::TRANSCRIPT_INTERNAL_ERROR
+    @retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
 
     This function uses the convertor indicated by @a handle to convert data from
     the character set named in opening @a handle to Unicode. The interface is
     designed to work with incomplete buffers, and may return ::TRANSCRIPT_INCOMPLETE
-	if the bytes at the end of the input buffer do not form a complete sequence.
-	If the output buffer is not large enough to store all the converted data,
-	::TRANSCRIPT_NO_SPACE is returned.
+    if the bytes at the end of the input buffer do not form a complete sequence.
+    If the output buffer is not large enough to store all the converted data,
+    ::TRANSCRIPT_NO_SPACE is returned.
 
-	If M:N conversions are enabled, the output buffer must be able to hold at
-	least 20 codepoints. This is guaranteed if the size of the output buffer is
-	at least 80 (::TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE) bytes.
+    If M:N conversions are enabled, the output buffer must be able to hold at
+    least 20 codepoints. This is guaranteed if the size of the output buffer is
+    at least 80 (::TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE) bytes.
 */
 transcript_error_t transcript_to_unicode(transcript_t *handle, const char const **inbuf, const char const *inbuflimit, char **outbuf,
 		const char const *outbuflimit, int flags)
@@ -172,24 +172,24 @@ transcript_error_t transcript_to_unicode(transcript_t *handle, const char const 
     @param outbuflimit A pointer to the end of the output buffer.
     @param flags Flags for this conversion (see ::transcript_flags_t for possible values).
     @retval ::TRANSCRIPT_SUCCESS
-	@retval ::TRANSCRIPT_NO_SPACE
-	@retval ::TRANSCRIPT_INCOMPLETE
-	@retval ::TRANSCRIPT_FALLBACK
-	@retval ::TRANSCRIPT_UNASSIGNED
-	@retval ::TRANSCRIPT_ILLEGAL
-	@retval ::TRANSCRIPT_ILLEGAL_END
-	@retval ::TRANSCRIPT_INTERNAL_ERROR
-	@retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
+    @retval ::TRANSCRIPT_NO_SPACE
+    @retval ::TRANSCRIPT_INCOMPLETE
+    @retval ::TRANSCRIPT_FALLBACK
+    @retval ::TRANSCRIPT_UNASSIGNED
+    @retval ::TRANSCRIPT_ILLEGAL
+    @retval ::TRANSCRIPT_ILLEGAL_END
+    @retval ::TRANSCRIPT_INTERNAL_ERROR
+    @retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
 
     This function uses the convertor indicated by @a handle to convert data from
     Unicode to the character set named in opening @a handle. The interface is
     designed to work with incomplete buffers, and may return ::TRANSCRIPT_INCOMPLETE
-	if the bytes at the end of the input buffer do not form a complete sequence.
-	If the output buffer is not large enough to store all the converted data,
-	::TRANSCRIPT_NO_SPACE is returned.
+    if the bytes at the end of the input buffer do not form a complete sequence.
+    If the output buffer is not large enough to store all the converted data,
+    ::TRANSCRIPT_NO_SPACE is returned.
 
-	If M:N conversions are enabled, the output buffer must be able to hold at
-	least 32 bytes (::TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE).
+    If M:N conversions are enabled, the output buffer must be able to hold at
+    least 32 bytes (::TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE).
 */
 transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf, const char const *inbuflimit, char **outbuf,
 		const char const *outbuflimit, int flags) {
@@ -201,8 +201,8 @@ transcript_error_t transcript_from_unicode(transcript_t *handle, const char **in
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @retval ::TRANSCRIPT_SUCCESS
-	@retval ::TRANSCRIPT_INCOMPLETE
-	@retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
+    @retval ::TRANSCRIPT_INCOMPLETE
+    @retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
 
     This function can be used to recover stopped to-Unicode conversions, if the
     next input character can not be converted (either because the input is
@@ -217,8 +217,8 @@ transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char *
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @retval ::TRANSCRIPT_SUCCESS
-	@retval ::TRANSCRIPT_INCOMPLETE
-	@retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
+    @retval ::TRANSCRIPT_INCOMPLETE
+    @retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
 
     This function can be used to recover stopped from-Unicode conversions, if
     the next input character can not be converted (either because the input is
@@ -235,8 +235,8 @@ transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char
     @param outbuf A double pointer to the start of the output buffer.
     @param outbuflimit A pointer to the end of the output buffer.
     @retval ::TRANSCRIPT_SUCCESS
-	@retval ::TRANSCRIPT_NO_SPACE
-	@retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
+    @retval ::TRANSCRIPT_NO_SPACE
+    @retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
 
     Some stateful encoding convertors need to store a shift sequence or some
     closing bytes at the end of the output, that can only be computed when it
@@ -563,7 +563,7 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
 /** @internal
     @brief Handle an unassigned codepoint in a from-Unicode conversion.
 
-	This function does a lookup in the generic fall-back table. If no generic
+    This function does a lookup in the generic fall-back table. If no generic
     fall-back is found, this function simply returns ::TRANSCRIPT_UNASSIGNED.
     Otherwise, it handles conversion of the generic fall-back as if it were
     specified in the convertor table.

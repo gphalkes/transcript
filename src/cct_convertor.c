@@ -718,7 +718,9 @@ void *_transcript_open_cct_convertor_internal(const char *name, int flags, trans
 	return retval;
 }
 
-/** Wrapper function around _transcript_open_cct_convertor_internal for loading CCT convertors. */
+/** @internal
+    @brief Wrapper function around _transcript_open_cct_convertor_internal for loading CCT convertors.
+*/
 void *_transcript_open_cct_convertor(const char *name, int flags, transcript_error_t *error) {
 	return _transcript_open_cct_convertor_internal(name, flags, error, false);
 }

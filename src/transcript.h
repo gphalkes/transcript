@@ -53,8 +53,8 @@ extern "C" {
     The second 8 bits represent the minor version.
     The third 8 bits represent the major version.
 
-	At runtime, the value of TRANSCRIPT_VERSION can be retrieved by calling
-	::transcript_get_version.
+    At runtime, the value of TRANSCRIPT_VERSION can be retrieved by calling
+    ::transcript_get_version.
 
     @internal
     The value 0 is an invalid value which should be replaced by the script
@@ -76,26 +76,30 @@ enum transcript_flags_t {
 
 	/* These are only valid as argument to transcript_from_unicode and transcript_to_unicode. */
 	TRANSCRIPT_FILE_START = (1<<8), /**< The begining of the input buffer is the begining of a file and a BOM should be expected/generated. */
-	TRANSCRIPT_END_OF_TEXT = (1<<9), /**< The end of the input buffer is the end of the text.
+	/** The end of the input buffer is the end of the text.
 
-		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
+	    This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 
-		@note This flag is only used to determine whether an incomplete sequence
-		at the end of the buffer is allowed or not. Clients still need to call
-		::transcript_from_unicode_flush to properly end the output buffer.
+	    @note This flag is only used to determine whether an incomplete sequence
+	    at the end of the buffer is allowed or not. Clients still need to call
+	    ::transcript_from_unicode_flush to properly end the output buffer.
 	*/
-	TRANSCRIPT_SINGLE_CONVERSION = (1<<10), /**< Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
+	TRANSCRIPT_END_OF_TEXT = (1<<9),
+	/** Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
 
-		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
+	    This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
-	TRANSCRIPT_NO_MN_CONVERSION = (1<<11), /**< Do not use M:N conversions.
+	TRANSCRIPT_SINGLE_CONVERSION = (1<<10),
+	/** Do not use M:N conversions.
 
-		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
+	    This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
-	TRANSCRIPT_NO_1N_CONVERSION = (1<<12) /**< Do not use 1:N conversions. Implies ::TRANSCRIPT_NO_MN_CONVERSION.
+	TRANSCRIPT_NO_MN_CONVERSION = (1<<11),
+	/** Do not use 1:N conversions. Implies ::TRANSCRIPT_NO_MN_CONVERSION.
 
-		This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
+	    This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/
+	TRANSCRIPT_NO_1N_CONVERSION = (1<<12)
 
 	/* NOTE: internal flags are defined in transcript_internal.h. Make sure these don't overlap! */
 };
@@ -182,7 +186,7 @@ TRANSCRIPT_API long transcript_get_version(void);
 /** Minimum required size for an output buffer for ::transcript_from_unicode, if M:N conversion are allowed. */
 #define TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE (32)
 /** Minimum required size for an output buffer for either ::transcript_to_unicode or
-	::transcript_from_unicode, if M:N conversion are allowed. */
+    ::transcript_from_unicode, if M:N conversion are allowed. */
 #define TRANSCRIPT_MIN_BUFFER_SIZE TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE
 
 /** @} */
@@ -192,9 +196,9 @@ TRANSCRIPT_API long transcript_get_version(void);
 /** @defgroup transcript_iconv Iconv compatible interface.
     This interface allows very limited control over the conversion and
     is only provided for systems without an iconv library. To make the interface
-	available, define @c TRANSCRIPT_ICONV_API before including the @c transcript.h
-	header. If you want the interface to be available without the @c cc_ prefix,
-	as well, define @c TRANSCRIPT_ICONV instead.
+    available, define @c TRANSCRIPT_ICONV_API before including the @c transcript.h
+    header. If you want the interface to be available without the @c cc_ prefix,
+    as well, define @c TRANSCRIPT_ICONV instead.
 */
 /** @addtogroup transcript_iconv */
 /** @{ */
