@@ -104,7 +104,7 @@ Value | Meaning
 2     | Byte is the last byte of a sequence encoding an unassigned code point
 3     | Byte is the last byte of a sequence encoding a state shift
 4     | Byte is illegal at this point in the input
-5-255 | Reserverd
+5-255 | Reserved
 
 
 Lookup tables

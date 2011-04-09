@@ -1,3 +1,20 @@
+- for shared library format (which should be the only format) we should consider
+  the following:
+  - make a function get_convertor_type, which will indicate what the interface
+    will be
+  - for SBC, we should use a two-level trie, with 5 bit steps for the Unicode
+    to codepage conversion. This gives a small file and good look-up speed.
+	Using a fixed parameter trie is makes the implementation faster and we can
+	more easily encorporate it in the ucm2cct code. Finally, we should only do
+	this for codepages which map to the BMP (which is all of them, but we should
+	check).
+  - for larger codepages, we should use the scheme we have now, but include the
+    full states. This will allow best memory sharing, at the expense of some
+	disk space.
+  - to get the tables, use a function which can be different for the different
+	supported table types (at least the return value should be different).
+
+
 - if we use zlib/lzo for compression, then we can optimize our tables for
   in-memory size. This makes the state machine minimization easier. On the
   other hand, that would introduce a dependency which we may want to avoid, and
