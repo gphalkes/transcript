@@ -9,6 +9,13 @@ HIGH PRIORITY
 - use pthread-stubs compile in dist Makefile [glibc provides the required
   stubs, but should compile with `pkg-config --cflags pthread-stubs`]
 - provide pkg-config stuf for our own library
+- the now "built-in" convertors should be made modules as well, and the open
+  interface needs to pass a pointer to the internal generic open function to
+  allow loading of tables.
+- the Unicode convertor needs to check whether the requested conversion is
+  actually a Unicode conversion with invalid flags.
+- need to add a TRANSCRIPT_INVALID_FLAG error, for which we should check in all
+  convertors
 
 MEDIUM PRIORITY
 ===============

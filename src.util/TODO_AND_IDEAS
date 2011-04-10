@@ -1,5 +1,4 @@
-- for shared library format (which should be the only format) we should consider
-  the following:
+- for shared library format we should consider the following:
   - make a function get_convertor_type, which will indicate what the interface
     will be
   - for SBC, we should use a two-level trie, with 5 bit steps for the Unicode
@@ -7,13 +6,28 @@
 	Using a fixed parameter trie is makes the implementation faster and we can
 	more easily encorporate it in the ucm2cct code. Finally, we should only do
 	this for codepages which map to the BMP (which is all of them, but we should
-	check).
+	check). We should also exclude the whole multi-mapping stuf. There is only
+	one SBC codepage which uses that (i.e. mac-os-21-10.5.ucm), which is not
+	even distributed with the standard library anyway. Of course we need to
+	check before generating.
   - for larger codepages, we should use the scheme we have now, but include the
     full states. This will allow best memory sharing, at the expense of some
 	disk space.
   - to get the tables, use a function which can be different for the different
 	supported table types (at least the return value should be different).
+  - for small tables, we may want to create bundles. For example, we may want
+	to bundle all the ISO-8859 convertors in a single library. This way, we
+	spread the overhead (~6KB).
+  - the open/get_table interface needs to be parameterized on the name of the
+	convertor, to allow variants and bundled convertors to be told apart.
+- figure out what is the best block size for the flags trie. It may well be
+  different than what we have now.
 
+
+- we probably want to retain the CCT based format for platforms which do not
+  have shared libraries. But here we may want two separate formats (one for SBC
+  and one for the rest) as well. The first library release may do without the
+  CCT based format though.
 
 - if we use zlib/lzo for compression, then we can optimize our tables for
   in-memory size. This makes the state machine minimization easier. On the
@@ -23,13 +37,6 @@
   read-only mmap and a small set of pointers into the file.
 - allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also
   set
-- for large tables it is useful to create a shared library format such that
-  the data can be shared between processes. For single byte tables the
-  resulting shared library will be so much larger than the cct file that it
-  makes little sense, unless we bunch several together (the overhead is ~6KB).
-
-- when a variant contains a |1 or |3 mapping, it must also contain the |0
-  mapping
 - The following checks have to be implemented:
 	- for each |3 fallback there is at least a |0 mapping as well
 	- for each |1 fallback there is at least a |0 mapping as well
