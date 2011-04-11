@@ -18,6 +18,7 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <climits>
 
 #include "ucm2cct.h"
 #include "ucmparser.h"
@@ -32,6 +33,13 @@ bool option_abort = true;
 const char *option_output_name = NULL;
 char *output_name;
 extern FILE *yyin;
+
+#define IS_ALNUM (1<<0)
+#define IS_DIGIT (1<<1)
+#define IS_UPPER (1<<2)
+#define IS_SPACE (1<<3)
+#define IS_IDCHR_EXTRA (1<<4)
+static char char_info[CHAR_MAX];
 
 /** Alert the user of a fatal error and quit.
     @param fmt The format string for the message. See fprintf(3) for details.
@@ -100,11 +108,53 @@ char *safe_strdup(const char *str) {
 	size_t len = strlen(str) + 1;
 	char *retval;
 
+	/* Not all systems may have strdup, so just implement it here based on malloc. */
 	if ((retval = (char *) malloc(len)) == NULL)
 		OOM();
 	memcpy(retval, str, len);
 	return retval;
 }
+
+/* We want to make sure that a locale setting doesn't corrupt our comparison
+   algorithms. So we use our own versions of isalnum, isdigit and tolower,
+   rather than using the library supplied versions. */
+static void init_char_info(void) {
+	static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+	static const char digit[] = "0123456789";
+	static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+	static const char space[] = " \t\f\n\r\v";
+	static const char idhcr_extra[] = "-_+.:";
+
+	const char *ptr;
+
+	for (ptr = alnum; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_ALNUM;
+	for (ptr = digit; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_DIGIT;
+	for (ptr = upper; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_UPPER;
+	for (ptr = space; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_SPACE;
+	for (ptr = idhcr_extra; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_IDCHR_EXTRA;
+}
+
+static int ucm2cct_isalnum(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_ALNUM); }
+static int ucm2cct_isdigit(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
+static int ucm2cct_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
+
+void normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
+	size_t write_idx = 0;
+	bool last_was_digit = false;
+
+	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
+		if (!ucm2cct_isalnum(*name) && *name != ',') {
+			last_was_digit = false;
+		} else {
+			if (!last_was_digit && *name == '0')
+				continue;
+			normalized_name[write_idx++] = ucm2cct_tolower(*name);
+			last_was_digit = ucm2cct_isdigit(*name);
+		}
+	}
+	normalized_name[write_idx] = 0;
+}
+
 
 void print_state_machine(const vector<State *> &states) {
 	for (size_t i = 0; i < states.size(); i++) {
@@ -328,6 +378,8 @@ int main(int argc, char *argv[]) {
 	Ucm *ucm;
 	int c;
 
+	init_char_info();
+
 	while ((c = getopt(argc, argv, "hio:vD" NO_ABORT_OPTION)) != -1) {
 		switch (c) {
 			case 'h':
@@ -439,7 +491,7 @@ int main(int argc, char *argv[]) {
 		if (len < 4 || strcmp(file_name + len - 4, ".ucm") != 0)
 			fatal("Input file does not end in .ucm. Please use explicit output name (-o)\n");
 		output_name = safe_strdup(file_name);
-		strcpy(output_name + len - 3, "cct");
+		strcpy(output_name + len - 3, "c");
 	}
 
 	if ((output = fopen(output_name, "w+b")) == NULL)

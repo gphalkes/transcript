@@ -187,7 +187,7 @@ void Ucm::check_duplicates(void) {
 		fprintf(stderr, "Checking for duplicate mappings\n");
 	check_duplicates(simple_mappings, NULL);
 	check_duplicates(multi_mappings, NULL);
-	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		check_variant_duplicates(simple_mappings, (*iter)->simple_mappings, (*iter)->id);
 		check_variant_duplicates(multi_mappings, (*iter)->multi_mappings, (*iter)->id);
 	}
@@ -216,7 +216,7 @@ void Ucm::calculate_item_costs(void) {
 	int length_counts[4] = { 0, 0, 0, 0 };
 
 	find_used_flags(simple_mappings, length_counts);
-	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		if ((*iter)->simple_mappings.size() > 0) {
 			used_from_unicode_flags |= Mapping::FROM_UNICODE_VARIANT;
 			used_to_unicode_flags |= Mapping::TO_UNICODE_VARIANT;
@@ -459,7 +459,7 @@ void Ucm::subtract(Ucm *other) {
 }
 
 void Ucm::fixup_variants(void) {
-	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		(*iter)->simple_mappings.insert((*iter)->simple_mappings.end(), variant.simple_mappings.begin(), variant.simple_mappings.end());
 		(*iter)->multi_mappings.insert((*iter)->multi_mappings.end(), variant.multi_mappings.begin(), variant.multi_mappings.end());
 	}

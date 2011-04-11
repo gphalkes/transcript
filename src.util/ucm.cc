@@ -337,7 +337,7 @@ void Ucm::remove_generic_fallbacks(void) {
 		fprintf(stderr, "Removing generic fallbacks\n");
 
 	remove_generic_fallbacks_internal(this, NULL);
-	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
 		remove_generic_fallbacks_internal(*variant_iter, *variant_iter);
 }
 
@@ -399,7 +399,7 @@ void Ucm::remove_private_use_fallbacks(void) {
 	if (option_verbose)
 		fprintf(stderr, "Removing fallbacks from private-use codepoints\n");
 	remove_private_use_fallbacks_internal(this);
-	for (list<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
 		remove_private_use_fallbacks_internal(*variant_iter);
 }
 
@@ -596,7 +596,7 @@ bool Ucm::UnicodeStateMachineInfo::unassigned_needs_flags(void) {
 }
 
 void Ucm::add_variant(Variant *_variant) {
-	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++)
+	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++)
 		if (_variant->id == (*iter)->id)
 			fatal("%s:%d: Multiple _variants with the same ID specified\n", file_name, line_number);
 	variants.push_back(_variant);
@@ -630,7 +630,7 @@ void Ucm::dump(void) {
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
 	printf("END CHARMAP\n");
 
-	for (list<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		printf("\n");
 		(*iter)->dump();
 	}

@@ -255,11 +255,11 @@ static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info
 	int i;
 	double cost;
 
-	cost = 256; //FIXME: chose: either calculate in memory costs, or on disk cost, but not something inbetween!!!
+	cost = 256 + 8; //FIXME: chose: either calculate in memory costs, or on disk cost, but not something inbetween!!!
 
 	for (i = 0; i < 256; i++) {
 		if (last_action != state->entries[i].action)
-			cost += 4;
+			cost += 12;
 		switch (state->entries[i].action) {
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:

@@ -72,6 +72,7 @@ class State {
 		vector<Entry> entries;
 		int base, range;
 		bool complete;
+		unsigned int entries_start;
 
 		State(void);
 		void new_entry(Entry entry);
@@ -151,6 +152,7 @@ class Variant : public UcmBase {
 		virtual const char *get_tag_value(tag_t tag);
 		void sort_simple_mappings(void);
 		void dump(void);
+		void write_simple_mappings(FILE *output, int variant_nr);
 };
 
 class Ucm : public UcmBase {
@@ -159,7 +161,7 @@ class Ucm : public UcmBase {
 		vector<State *> unicode_states;
 
 		Variant variant;
-		list<Variant *> variants;
+		deque<Variant *> variants;
 
 		uint32_t codepage_range;
 		uint32_t unicode_range;
@@ -186,7 +188,7 @@ class Ucm : public UcmBase {
 
 		class StateMachineInfo {
 			protected:
-				list<Variant *>::iterator variant_iter;
+				deque<Variant *>::iterator variant_iter;
 				Ucm &source;
 				bool iterating_simple_mappings;
 				size_t idx;
@@ -218,11 +220,17 @@ class Ucm : public UcmBase {
 		void check_variant_duplicates(vector<Mapping *> &base_mappings, vector<Mapping *> &variant_mappings, const char *variant_id);
 		int calculate_depth(Entry *entry);
 		void trace_back(size_t idx, shift_sequence_t &shift_sequence);
-		void write_multi_mappings(FILE *output, vector<Mapping *> &mappings);
+
+		static void write_entries(FILE *output, vector<State *> &states, unsigned int &total_entries);
+		static void write_states(FILE *output, vector<State *> &states, const char *name);
+		static void write_multi_mappings(FILE *output, vector<Mapping *> &mappings, unsigned int &mapping_idx);
+		void write_sorted_multi_mappings(FILE *output, int variant_nr);
 		void write_to_unicode_table(FILE *output);
 		void write_from_unicode_table(FILE *output);
 		void write_to_unicode_flags(FILE *output);
 		void write_from_unicode_flags(FILE *output);
+		void write_interface(FILE *output, const char *normalized_name, int variant_nr);
+
 		void check_state_machine(Ucm *other, int this_state, int other_state);
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
 			vector<Mapping *> &this_variant_mappings);
@@ -301,4 +309,7 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags);
 
 bool compare_codepage_bytes(Mapping *a, Mapping *b);
 bool compare_codepoints(Mapping *a, Mapping *b);
+
+char *safe_strdup(const char *str);
+void normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 #endif
