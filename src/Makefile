@@ -15,7 +15,7 @@ SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.
 	cct_convertor_io.c unicode_convertor.c unicode_convertor_utf7.c \
 	unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c \
 	aliases.c generic_fallbacks.c
-LDFLAGS.libtranscript.la := -pthread
+LDFLAGS.libtranscript.la := -pthread -lltdl
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 

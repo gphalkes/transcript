@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include "transcript.h"
+#include "moduledefs.h"
 
 #define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
 
@@ -101,7 +102,8 @@ typedef struct transcript_name_desc_t {
 	int flags;
 } transcript_name_desc_t;
 
-
+/* FIXME: some of these should be exported for use in convertors. */
+TRANSCRIPT_LOCAL transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
 TRANSCRIPT_LOCAL transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_type);
 
 TRANSCRIPT_LOCAL void _transcript_log(const char *fmt, ...);

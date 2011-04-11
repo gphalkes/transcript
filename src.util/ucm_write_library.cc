@@ -533,8 +533,8 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 }
 
 void Ucm::write_interface(FILE *output, const char *normalized_name, int variant_nr) {
-	fprintf(output, "TRANSCRIPT_API int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
-	fprintf(output, "TRANSCRIPT_API void transcript_get_table_%s(convertor_tables_v1_t *conv) {\n", normalized_name);
+	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
+	fprintf(output, "TRANSCRIPT_EXPORT void transcript_get_table_%s(convertor_tables_v1_t *conv) {\n", normalized_name);
 	fprintf(output, "\tconv->convertor = &convertor;\n");
 	if (variant_nr < 0)
 		fprintf(output, "\tconv->variant = NULL;\n");

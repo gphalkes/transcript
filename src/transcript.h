@@ -124,6 +124,7 @@ typedef enum {
 	TRANSCRIPT_TRUNCATED_MAP, /**< Tried to read a truncated conversion map. */
 	TRANSCRIPT_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
 	TRANSCRIPT_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
+	TRANSCRIPT_DLOPEN_FAILURE, /**< Opening if the plugin failed. */
 
 	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 

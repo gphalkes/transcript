@@ -27,6 +27,8 @@
 #ifdef HAS_NL_LANGINFO
 #include <langinfo.h>
 #endif
+#include <ltdl.h>
+
 
 #include "transcript_internal.h"
 #include "utf.h"
@@ -40,6 +42,8 @@
 #else
 #define _(x) x
 #endif
+
+#define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 
 /** @addtogroup transcript */
 /** @{ */
@@ -56,7 +60,7 @@
 #define IS_IDCHR_EXTRA (1<<4)
 static char char_info[CHAR_MAX];
 
-static transcript_t *try_convertors(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error);
+static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error);
 
 /*================ API functions ===============*/
 /** Check if a named convertor is available.
@@ -80,22 +84,16 @@ int transcript_probe_convertor(const char *name) {
     the normalized name are considered.
 */
 transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
-	transcript_name_desc_t *convertor;
-	char normalized_name[NORMALIZE_NAME_MAX];
+	#ifndef WITHOUT_PTHREAD
+	static pthread_mutex_t open_mutex = PTHREAD_MUTEX_INITIALIZER;
+	#endif
+	transcript_t *result;
 
 	_transcript_init();
-
-	if (utf_type > TRANSCRIPT_UTF32LE || utf_type <= 0) {
-		if (error != NULL)
-			*error = TRANSCRIPT_BAD_ARG;
-		return NULL;
-	}
-
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
-
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
-		return _transcript_fill_utf(try_convertors(convertor->name, convertor->real_name, flags, error), utf_type);
-	return _transcript_fill_utf(try_convertors(normalized_name, name, flags, error), utf_type);
+	PTHREAD_ONLY(pthread_mutex_lock(&open_mutex););
+	result = _transcript_open_convertor(name, utf_type, flags, error);
+	PTHREAD_ONLY(pthread_mutex_unlock(&open_mutex););
+	return result;
 }
 
 /** Close a convertor.
@@ -397,12 +395,43 @@ long transcript_get_version(void) {
 int _transcript_probe_convertor(const char *name) {
 	transcript_name_desc_t *convertor;
 	char normalized_name[NORMALIZE_NAME_MAX];
+	FILE *handle;
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
-		return try_convertors(convertor->name, convertor->real_name, TRANSCRIPT_PROBE_ONLY, NULL) != NULL;
-	return try_convertors(normalized_name, name, TRANSCRIPT_PROBE_ONLY, NULL) != NULL;
+		handle = _transcript_db_open(convertor->real_name, ".tct", NULL);
+	else
+		handle = _transcript_db_open(name, ".tct", NULL);
+
+	if (handle != NULL)
+		fclose(handle);
+
+	return handle != NULL;
+}
+
+/** @internal
+    @brief Open a convertor.
+
+    This function is called by ::transcript_open_convertor, after locking the
+    internal mutex. This function is provided such that convertors can open
+    other convertors without causing a deadlock.
+*/
+transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
+	transcript_name_desc_t *convertor;
+	char normalized_name[NORMALIZE_NAME_MAX];
+
+	if (utf_type > TRANSCRIPT_UTF32LE || utf_type <= 0) {
+		if (error != NULL)
+			*error = TRANSCRIPT_BAD_ARG;
+		return NULL;
+	}
+
+	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+
+	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
+		return _transcript_fill_utf(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
+	return _transcript_fill_utf(open_convertor(normalized_name, name, flags, error), utf_type);
 }
 
 /** @internal
@@ -416,16 +445,78 @@ transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_ty
 	return handle;
 }
 
-/** Try the different convertors to see if one of them recognizes the name. */
-static transcript_t *try_convertors(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
-	transcript_t *result;
-	if ((result = _transcript_open_unicode_convertor(normalized_name, flags, error)) != NULL)
-		return result;
-	if ((result = _transcript_open_iso8859_1_convertor(normalized_name, flags, error)) != NULL)
-		return result;
-	if ((result = _transcript_open_iso2022_convertor(normalized_name, flags, error)) != NULL)
-		return result;
-	return _transcript_open_cct_convertor(real_name, flags, error);
+/** Load a suffixed symbol from a plugin. */
+static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
+	char buffer[160];
+	strcpy(buffer, sym);
+	strcat(buffer, convertor_name);
+	return lt_dlsym(handle, buffer);
+}
+
+/** Open a convertor plugin. */
+static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
+	lt_dlhandle handle = NULL;
+	int (*get_iface)(void);
+	transcript_t *result = NULL;
+
+	if ((handle = lt_dlopenext(real_name)) == NULL)
+		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
+
+	if ((get_iface = get_sym(handle, "transcript_get_iface_", normalized_name)) == NULL)
+		ERROR(TRANSCRIPT_INVALID_FORMAT);
+
+	switch (get_iface()) {
+		case TRANSCRIPT_STATE_TABLE_V1: {
+			void (*get_table)(convertor_tables_v1_t *);
+			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
+				ERROR(TRANSCRIPT_INVALID_FORMAT);
+			//result = cct_convertor_open(get_table);
+			break;
+		}
+		case TRANSCRIPT_FULL_MODULE_V1: {
+			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
+			if ((open_convertor = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
+				ERROR(TRANSCRIPT_INVALID_FORMAT);
+			result = open_convertor(normalized_name, flags, error);
+			break;
+		}
+		default:
+			ERROR(TRANSCRIPT_INVALID_FORMAT);
+	}
+
+end_error:
+	if (handle != NULL)
+		lt_dlclose(handle);
+	return result;
+}
+
+/** Reentrant version of strtok
+	@param string The string to tokenise.
+	@param separators The list of token separators.
+	@param state A user allocated character pointer.
+
+	This function emulates the functionality of the Un*x function strtok_r.
+	Note that this function destroys the contents of @a string.
+*/
+static char *ts_strtok(char *string, const char *separators, char **state) {
+	char *retval;
+	if (string != NULL)
+		*state = string;
+
+	/* Skip to the first character that is not in 'separators' */
+	while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
+	retval = *state;
+	if (*retval == 0)
+		return NULL;
+	/* Skip to the first character that IS in 'separators' */
+	while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
+	if (**state != 0) {
+		/* Overwrite it with 0 */
+		**state = 0;
+		/* Advance the state pointer so we know where to start next time */
+		(*state)++;
+	}
+	return retval;
 }
 
 /** Try to open a file from a database directory.
@@ -441,25 +532,18 @@ static FILE *try_db_open(const char *name, const char *ext, const char *dir, tra
 	size_t len;
 
 	len = strlen(dir) + strlen(name) + 2 + strlen(ext);
-	if ((file_name = malloc(len)) == NULL) {
-		if (error != NULL)
-			*error = TRANSCRIPT_OUT_OF_MEMORY;
-		goto end;
-	}
+	if ((file_name = malloc(len)) == NULL)
+		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 
 	strcpy(file_name, dir);
-	/*FIXME: dir separator may not be / */
-	strcat(file_name, "/");
+	strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
 	strcat(file_name, name);
 	strcat(file_name, ext);
 
-	if ((file = fopen(file_name, "r")) == NULL) {
-		if (error != NULL)
-			*error = TRANSCRIPT_ERRNO;
-		goto end;
-	}
+	if ((file = fopen(file_name, "r")) == NULL)
+		ERROR(TRANSCRIPT_ERRNO);
 
-end:
+end_error:
 	free(file_name);
 	return file;
 }
@@ -476,12 +560,27 @@ end:
     directory.
 */
 FILE *_transcript_db_open(const char *name, const char *ext, transcript_error_t *error) {
+	const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
+	const char *const_search_path;
+	char *search_path, *next_dir, *state;
 	FILE *result;
-	const char *dir = getenv("TRANSCRIPT_PATH");
-	/*FIXME: allow colon delimited list*/
-	if (dir != NULL && (result = try_db_open(name, ext, dir, error)) != NULL)
-		return result;
-	return try_db_open(name, ext, DB_DIRECTORY, error);
+
+	if ((const_search_path = lt_dlgetsearchpath()) == NULL)
+		return NULL;
+
+	if ((search_path = _transcript_strdup(const_search_path)) == NULL) {
+		/* If we can't allocate enough memory to copy this string, we're doomed anyway. So just quit now. */
+		return NULL;
+	}
+
+	for (next_dir = ts_strtok(search_path, path_sep, &state); next_dir != NULL; next_dir = ts_strtok(NULL, path_sep, &state)) {
+		if ((result = try_db_open(name, ext, next_dir, error)) != NULL) {
+			free(search_path);
+			return result;
+		}
+	}
+	free(search_path);
+	return NULL;
 }
 
 #ifndef HAS_STRDUP
@@ -624,6 +723,8 @@ void _transcript_init(void) {
 	if (!initialized) {
 		PTHREAD_ONLY(pthread_mutex_lock(&init_mutex));
 		if (!initialized) {
+			const char *transcript_path;
+			char *user_path;
 			/* Initialize aliases defined in the aliases.txt file. This does not
 			   check availability, nor does it build the complete set of display
 			   names. That will be done when that list is requested. */
@@ -631,6 +732,27 @@ void _transcript_init(void) {
 			bindtextdomain("libtranscript", LOCALEDIR);
 			#endif
 			init_char_info();
+
+			/* Initialize the search path for libraries. */
+			lt_dlinit();
+			if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
+				lt_dlsetsearchpath(transcript_path);
+			} else {
+				if ((transcript_path = getenv("HOME")) != NULL) {
+					if ((user_path = malloc(strlen(transcript_path) + 1 + 10 + 1)) == NULL) {
+						lt_dlsetsearchpath(DB_DIRECTORY);
+					} else {
+						strcpy(user_path, transcript_path);
+						strcpy(user_path, "/"); /* Windows also recognises / as directory separator internally. */
+						strcpy(user_path, ".transcript");
+						lt_dlsetsearchpath(user_path);
+						free(user_path);
+						lt_dladdsearchdir(DB_DIRECTORY);
+					}
+				} else {
+					lt_dlsetsearchpath(DB_DIRECTORY);
+				}
+			}
 			_transcript_init_aliases_from_file();
 		}
 		initialized = true;
