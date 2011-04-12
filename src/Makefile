@@ -12,15 +12,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c \
-	cct_convertor_io.c unicode_convertor.c unicode_convertor_utf7.c \
-	unicode_convertor_gb18030.c iso-2022_convertor.c \
-	aliases.c generic_fallbacks.c
+	cct_convertor_io.c aliases.c generic_fallbacks.c
 LDFLAGS.libtranscript.la := -pthread -lltdl
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
-MODULES := iso-8859-1
+MODULES := iso-8859-1 unicode iso-2022
 
 # If SOURCES is not defined for a module, assume that module*.c are the sources
 $(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard modules/$(MODULE)*.c)))
@@ -47,7 +45,7 @@ CFLAGS += -DHAS_STRDUP
 #~ CFLAGS += -DWITHOUT_PTHREAD
 #~ CFLAGS += -std=c89
 
-test: | libtranscript.la
+test $(patsubst %, modules/%.la, $(MODULES)): | libtranscript.la
 
 $(OBJECTS): generic_fallbacks.c
 
@@ -65,5 +63,6 @@ links:
 	[ -L transcript/api.h ] || ln -s ../api.h transcript
 	[ -L transcript/bool.h ] || ln -s ../bool.h transcript
 	[ -L transcript/handle.h ] || ln -s ../handle.h transcript
+	[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
 .PHONY: links

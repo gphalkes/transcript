@@ -23,10 +23,8 @@ per set:
 #include <string.h>
 #include <search.h>
 
-#include "transcript_internal.h"
-#include "convertors.h"
-#include "utf.h"
-#include "static_assert.h"
+#include <transcript/static_assert.h>
+#include <transcript/moduledefs.h>
 
 /** Flags for describing CCT based convertors. */
 enum {
@@ -66,6 +64,22 @@ typedef struct {
 	const char *name;
 	int iso2022_type;
 } name_to_iso2022type;
+
+static const name_to_iso2022type map[] = {
+	{ "jp", ISO2022_JP },
+	{ "jp1", ISO2022_JP1 },
+	{ "jp2", ISO2022_JP2 },
+	{ "jp3", ISO2022_JP3 },
+	{ "jp2004", ISO2022_JP2004 },
+	{ "kr", ISO2022_KR },
+	{ "cn", ISO2022_CN },
+	{ "cnext", ISO2022_CNEXT }
+#ifdef DEBUG
+#warning using ISO-2022-TEST
+	, { "test", ISO2022_TEST }
+#endif
+};
+
 
 typedef struct _transcript_iso2022_cct_handle_t cct_handle_t;
 
@@ -612,7 +626,7 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 	if (desc->name == NULL)
 		ext_handle = _transcript_open_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
 	else
-		ext_handle = _transcript_fill_utf(_transcript_open_cct_convertor_internal(desc->name, 0, error, true), TRANSCRIPT_UTF32);
+		ext_handle = _transcript_open_convertor(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
 		return false;
@@ -673,9 +687,9 @@ static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, tran
 	(void) flags;
 
 	if (desc->name == NULL)
-		return true; /* Builtin convertors (ISO-8859-1) */
+		return transcript_probe_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591");
 	else
-		return _transcript_probe_convertor(desc->name);
+		return transcript_probe_convertor(desc->name);
 }
 
 /** Convenience macro which tries to load a convertor and exits the function if it is not available. */
@@ -809,34 +823,16 @@ static bool do_load(load_table_func load, convertor_state_t *handle, int type, t
 /** @internal
     @brief Open an ISO-2022 convertor.
 */
-void *_transcript_open_iso2022_convertor(const char *name, int flags, transcript_error_t *error) {
-	static const name_to_iso2022type map[] = {
-		{ "iso2022jp", ISO2022_JP },
-		{ "iso2022jp1", ISO2022_JP1 },
-		{ "iso2022jp2", ISO2022_JP2 },
-		{ "iso2022jp3", ISO2022_JP3 },
-		{ "iso2022jp2004", ISO2022_JP2004 },
-		{ "iso2022kr", ISO2022_KR },
-		{ "iso2022cn", ISO2022_CN },
-		{ "iso2022cnext", ISO2022_CNEXT }
-#ifdef DEBUG
-#warning using ISO-2022-TEST
-		, { "iso2022test", ISO2022_TEST }
-#endif
-	};
-
+TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, transcript_error_t *error) {
 	convertor_state_t *retval;
 	name_to_iso2022type *ptr;
-	size_t array_size = ARRAY_SIZE(map);
+	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL) {
+	if ((ptr = lfind(name + 8, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL) {
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_ERROR;
 		return NULL;
 	}
-
-	if (flags & TRANSCRIPT_PROBE_ONLY)
-		return do_load(probe, NULL, ptr->iso2022_type, error) ? (void *) 1 : NULL;
 
 	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
 		if (error != NULL)
@@ -881,6 +877,17 @@ void *_transcript_open_iso2022_convertor(const char *name, int flags, transcript
 	to_unicode_reset(retval);
 	from_unicode_reset(retval);
 	return retval;
+}
+
+TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
+	name_to_iso2022type *ptr;
+	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
+	transcript_error_t error;
+
+	if ((ptr = lfind(name + 8, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL)
+		return false;
+
+	return do_load(probe, NULL, ptr->iso2022_type, &error);
 }
 
 /** close implementation for ISO-2022 convertors. */

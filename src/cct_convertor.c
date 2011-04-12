@@ -655,15 +655,6 @@ void *_transcript_open_cct_convertor_internal(const char *name, int flags, trans
 	variant_t *variant;
 	convertor_t *ptr;
 
-	if (flags & TRANSCRIPT_PROBE_ONLY) {
-		FILE *file;
-		if ((file = _transcript_db_open(name, ".cct", NULL)) != NULL) {
-			fclose(file);
-			return (void *) 1;
-		}
-		return NULL;
-	}
-
 	/* Loading the convertor should be done one at a time. All locking is done in this file. */
 	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex););
 

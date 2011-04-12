@@ -14,7 +14,7 @@
 #ifndef UNICODE_CONVERTOR_H
 #define UNICODE_CONVERTOR_H
 
-#include "transcript_internal.h"
+#include <transcript/moduledefs.h>
 
 typedef struct convertor_state_t convertor_state_t;
 

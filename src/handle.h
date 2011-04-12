@@ -43,4 +43,8 @@ struct transcript_t {
 	int utf_type;
 };
 
+/* FIXME: rename! */
+TRANSCRIPT_API transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_type,
+	int flags, transcript_error_t *error);
+
 #endif

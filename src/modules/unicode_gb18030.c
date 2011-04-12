@@ -14,9 +14,7 @@
 
 /* Get and put routines for GB-18030. This uses the internal gb18030.cct tables. */
 
-#include "transcript_internal.h"
-#include "utf.h"
-#include "unicode_convertor.h"
+#include "unicode.h"
 
 /** @internal
     @struct gb_range_map_t
@@ -76,7 +74,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 	}
 
 	low = 0;
-	high = ARRAY_SIZE(gb_range_map);
+	high = TRANSCRIPT_ARRAY_SIZE(gb_range_map);
 
 	do {
 		mid = low + ((high - low) / 2);
@@ -86,7 +84,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 			high = mid;
 	} while (low < high);
 
-	if (low == ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].unicode_high ||
+	if (low == TRANSCRIPT_ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].unicode_high ||
 			codepoint < gb_range_map[low].unicode_low)
 		return TRANSCRIPT_INTERNAL_ERROR;
 
@@ -156,7 +154,7 @@ uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **in
 	codepoint = codepoint * (0x3a - 0x30) + _inbuf[3] - 0x30;
 
 	low = 0;
-	high = ARRAY_SIZE(gb_range_map);
+	high = TRANSCRIPT_ARRAY_SIZE(gb_range_map);
 
 	do {
 		mid = low + ((high - low) / 2);
@@ -166,7 +164,7 @@ uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **in
 			high = mid;
 	} while (low < high);
 
-	if (low == ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].high || codepoint < gb_range_map[low].low)
+	if (low == TRANSCRIPT_ARRAY_SIZE(gb_range_map) || codepoint > gb_range_map[low].high || codepoint < gb_range_map[low].low)
 		return TRANSCRIPT_UTF_ILLEGAL;
 
 	*inbuf += 4;

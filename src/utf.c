@@ -346,6 +346,9 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 		case _TRANSCRIPT_UTF32LE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
 
+		case _TRANSCRIPT_UTF32_NO_CHECK:
+			return _transcript_get_utf32_no_check;
+
 		default:
 			return NULL;
 	}

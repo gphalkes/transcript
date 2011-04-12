@@ -164,9 +164,11 @@ TRANSCRIPT_EXPORT void *transcript_open_iso88591(const char *name, int flags, in
 	return retval;
 }
 
-TRANSCRIPT_EXPORT bool transcript_probe_iso88591(const char *name) {
-	return strcmp(name, "iso88591") == 0 || strcmp(name, "ascii") == 0;
+/*
+TRANSCRIPT_EXPORT int transcript_size_iso88591(void) {
+	return 0;
 }
+*/
 
 /** close implementation for ISO-8859-1/ASCII convertors. */
 static void close_convertor(transcript_t*handle) {

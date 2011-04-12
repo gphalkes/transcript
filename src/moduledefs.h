@@ -28,6 +28,10 @@ enum {
 	TRANSCRIPT_SBCS_TABLE_V1 /* Simple set of tables for SBCSs. See sbcs_convertor for details. */
 };
 
+enum {
+	TRANSCRIPT_INTERNAL = (1<<15)
+};
+
 #define MAX_CHAR_BYTES_V1 4
 
 typedef struct {
@@ -122,5 +126,13 @@ TRANSCRIPT_API transcript_error_t transcript_handle_unassigned(transcript_t *han
 		default: \
 			return TRANSCRIPT_INTERNAL_ERROR; \
 	}
+
+#define TRANSCRIPT_ALIAS_OPEN(_func, _name) \
+	TRANSPORT_EXPORT transcript_t *transcript_open_#_name(const char *name, int flags, transcript_error_t *error) { \
+		return _func(name, flags, error); }
+#define TRANSCRIPT_ALIAS_PROBE(_func, _name) \
+	TRANSPORT_EXPORT bool transcript_probe_#_name(const char *name) { return _func(name); }
+
+#define TRANSCRIPT_ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
 
 #endif

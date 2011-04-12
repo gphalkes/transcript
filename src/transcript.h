@@ -81,7 +81,7 @@ enum transcript_flags_t {
 	*/
 	TRANSCRIPT_NO_1N_CONVERSION = (1<<12)
 
-	/* NOTE: internal flags are defined in transcript_internal.h. Make sure these don't overlap! */
+	/* NOTE: internal flags are defined in transcript_internal.h and moduledefs.h. Make sure these don't overlap! */
 };
 
 /** Error values. */

@@ -18,8 +18,6 @@
 #include "transcript.h"
 #include "moduledefs.h"
 
-#define ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
-
 #ifndef DB_DIRECTORY
 #define DB_DIRECTORY "/usr/local/share/libtranscript"
 #endif
@@ -43,10 +41,6 @@ TRANSCRIPT_LOCAL char *_transcript_strdup(const char *str);
 #define PTHREAD_ONLY(_x) do { _x; } while(0)
 #endif
 
-enum {
-	TRANSCRIPT_PROBE_ONLY = (1<<15)
-};
-
 struct _transcript_iconv_t {
 	transcript_t *from, *to;
 };
@@ -66,8 +60,6 @@ typedef struct transcript_name_desc_t {
 	int flags;
 } transcript_name_desc_t;
 
-/* FIXME: some of these should be exported for use in convertors. */
-TRANSCRIPT_LOCAL transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
 TRANSCRIPT_LOCAL transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_type);
 
 TRANSCRIPT_LOCAL void _transcript_log(const char *fmt, ...);

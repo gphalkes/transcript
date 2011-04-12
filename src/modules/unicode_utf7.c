@@ -14,9 +14,7 @@
 
 /* Get/put routines for UTF-7. */
 
-#include "transcript_internal.h"
-#include "utf.h"
-#include "unicode_convertor.h"
+#include "unicode.h"
 
 #define PLUS 43
 #define MINUS 45
