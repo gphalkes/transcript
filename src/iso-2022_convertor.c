@@ -610,8 +610,7 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 		return TRANSCRIPT_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = _transcript_fill_utf(_transcript_open_iso8859_1_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591",
-			0, error), TRANSCRIPT_UTF32);
+		ext_handle = _transcript_open_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
 	else
 		ext_handle = _transcript_fill_utf(_transcript_open_cct_convertor_internal(desc->name, 0, error, true), TRANSCRIPT_UTF32);
 

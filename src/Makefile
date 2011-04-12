@@ -13,18 +13,25 @@
 
 SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c \
 	cct_convertor_io.c unicode_convertor.c unicode_convertor_utf7.c \
-	unicode_convertor_gb18030.c iso-8859-1_convertor.c iso-2022_convertor.c \
+	unicode_convertor_gb18030.c iso-2022_convertor.c \
 	aliases.c generic_fallbacks.c
 LDFLAGS.libtranscript.la := -pthread -lltdl
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
+
+MODULES := iso-8859-1_convertor
+
+SOURCES.modules/iso-8859-1_convertor.la := modules/iso-8859-1_convertor.c
+
+#$(foreach MODULE, $(MODULES), $(eval $(foreach SOURCE, $(SOURCES.modules/$(MODULE).la), $(eval CFLAGS.$(SOURCE:.c=) := -shared))))
+$(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la := -module -avoid-version -L.libs -ltranscript))
 
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs
 LDLIBS.test := -ltranscript
 
 TARGETS := test
-LTTARGETS := libtranscript.la
+LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES))
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
