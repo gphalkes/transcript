@@ -22,6 +22,8 @@
 	convertor, to allow variants and bundled convertors to be told apart.
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now.
+- post-process flags like cct_convertor_io.c does before storing. Note that this
+  may obviate the need for saving certain flags!
 
 
 - we probably want to retain the CCT based format for platforms which do not

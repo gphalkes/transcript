@@ -30,6 +30,22 @@ HIGH PRIORITY
 - the new library stuf has made the save state size determination more difficult
   Perhaps a new state_destroy method should be provide, such that if needed
   the state can be allocated on the heap.
+- need to fix (as in fixate) the extension, such that for probing we can suffice
+  with opening the name. Otherwise, we need to know the extension for dynamic
+  objects on each platform.
+- thread safety can't be guaranteed when other parts of the program call the
+  dynamic linker as well. It is probably better to define an API for acquiring
+  and releasing a lock. Defining two simple callbacks would probably suffice,
+  with examples for pthreads on how to use it:
+
+  #include <pthread.h>
+  static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+  static void acquire_lock(void *data) { (void) data; pthread_mutex_lock(&lock); }
+  static void release_lock(void *data) { (void) data; pthread_mutex_unlock(&lock); }
+
+      transcript_set_lock_callbacks(acquire_lock, release_lock, NULL);
+- should options be normalized as well, or should normalization stop as soon as
+  we see a comma?
 
 MEDIUM PRIORITY
 ===============

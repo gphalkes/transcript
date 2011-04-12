@@ -824,11 +824,20 @@ static bool do_load(load_table_func load, convertor_state_t *handle, int type, t
     @brief Open an ISO-2022 convertor.
 */
 TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, transcript_error_t *error) {
+	char name_option[32];
 	convertor_state_t *retval;
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name + 8, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL) {
+	if (!transcript_get_option(name, name_option, sizeof(name_option), "name")) {
+		if (error != NULL)
+			*error = TRANSCRIPT_BAD_ARG;
+		return NULL;
+	}
+
+	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) strcmp)) == NULL)
+	{
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_ERROR;
 		return NULL;

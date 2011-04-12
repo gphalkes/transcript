@@ -25,12 +25,16 @@ $(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard 
 # Modules need to be linked with special flags
 $(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la += -module -avoid-version -L.libs -ltranscript))
 
+TABLES := $(patsubst %.c, %, $(wildcard tables/*.c))
+$(foreach TABLE, $(TABLES), $(eval SOURCES.$(TABLE).la := $(TABLE).c))
+$(foreach TABLE, $(TABLES), $(eval LDFLAGS.$(TABLE).la += -module -avoid-version -L.libs -ltranscript))
+
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs
 LDLIBS.test := -ltranscript
 
 TARGETS := test
-LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES))
+LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#

@@ -395,14 +395,25 @@ long transcript_get_version(void) {
 int _transcript_probe_convertor(const char *name) {
 	transcript_name_desc_t *convertor;
 	char normalized_name[NORMALIZE_NAME_MAX];
+	const char *load_option;
 	FILE *handle;
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	if ((load_option = strstr(normalized_name, ",probe=load")) != NULL && (load_option[11] == 0 || load_option[11] == ',')) {
+		/* FIXME: lt_dlopen the name, and try if a transcript_probe_<name> is available. If so return its result. */
+		return 0;
+	}
 
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
-		handle = _transcript_db_open(convertor->real_name, ".tct", NULL);
-	else
-		handle = _transcript_db_open(name, ".tct", NULL);
+	/* For most convertors it is sufficient to know that the file is readable. */
+	/* FIXME: shouldn't we try to open the convertor without going through the aliases
+	   table if we can't find it through the aliases table? */
+	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
+		transcript_get_option(convertor->real_name, normalized_name, NORMALIZE_NAME_MAX, NULL);
+		handle = _transcript_db_open(normalized_name, ".tct", NULL);
+	} else {
+		transcript_get_option(name, normalized_name, NORMALIZE_NAME_MAX, NULL);
+		handle = _transcript_db_open(normalized_name, ".tct", NULL);
+	}
 
 	if (handle != NULL)
 		fclose(handle);
@@ -429,6 +440,8 @@ transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
+	/* FIXME: shouldn't we try to open the convertor without going through the aliases
+	   table if we can't find it through the aliases table? */
 	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
 		return _transcript_fill_utf(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
 	return _transcript_fill_utf(open_convertor(normalized_name, name, flags, error), utf_type);
@@ -458,24 +471,29 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 	lt_dlhandle handle = NULL;
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
+	char base_name[NORMALIZE_NAME_MAX];
 
-	if ((handle = lt_dlopenext(real_name)) == NULL)
+	transcript_get_option(real_name, base_name, NORMALIZE_NAME_MAX, NULL);
+
+	if ((handle = lt_dlopenext(base_name)) == NULL)
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
 
-	if ((get_iface = get_sym(handle, "transcript_get_iface_", normalized_name)) == NULL)
+	transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
+
+	if ((get_iface = get_sym(handle, "transcript_get_iface_", base_name)) == NULL)
 		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
 	switch (get_iface()) {
 		case TRANSCRIPT_STATE_TABLE_V1: {
 			void (*get_table)(convertor_tables_v1_t *);
-			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
+			if ((get_table = get_sym(handle, "transcript_get_table_", base_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
 			//result = cct_convertor_open(get_table);
 			break;
 		}
 		case TRANSCRIPT_FULL_MODULE_V1: {
 			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
-			if ((open_convertor = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
+			if ((open_convertor = get_sym(handle, "transcript_open_", base_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
 			result = open_convertor(normalized_name, flags, error);
 			break;
@@ -657,6 +675,42 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
 		}
 	}
 	normalized_name[write_idx] = 0;
+}
+
+/** Get the minimum of two @c size_t values. */
+static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
+	return a < b ? a : b;
+}
+
+/** Read an option from a name into a buffer. */
+bool transcript_get_option(const char *name, char *option_buffer, size_t option_buffer_max, const char *option_name) {
+	const char *comma;
+	size_t len;
+
+	if (option_name == NULL) {
+		if ((comma = strchr(name, ',')) == NULL) {
+			strncpy(option_buffer, name, option_buffer_max - 1);
+			option_buffer[option_buffer_max - 1] = 0;
+		} else {
+			len = min(option_buffer_max - 1, comma - name);
+			strncpy(option_buffer, name, len);
+			option_buffer[len] = 0;
+		}
+		return true;
+	} else {
+		len = strlen(option_name);
+		comma = name;
+		while ((comma = strchr(comma, ',')) != NULL) {
+			comma++;
+			if (strcmp(comma, option_name) == 0) {
+				if (comma[len] == '=')
+					return transcript_get_option(comma + len + 1, option_buffer, option_buffer_max, NULL);
+				option_buffer[0] = 0;
+				return true;
+			}
+		}
+		return false;
+	}
 }
 
 /** @internal

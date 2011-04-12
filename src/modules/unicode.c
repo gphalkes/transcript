@@ -37,19 +37,19 @@ typedef struct {
    here. */
 static const name_to_utftype map[] = {
 	{ "utf8", _TRANSCRIPT_UTF8_LOOSE },
-	{ "utf8,bom", _TRANSCRIPT_UTF8_BOM },
+	{ "utf8bom", _TRANSCRIPT_UTF8_BOM },
 	{ "utf16", TRANSCRIPT_UTF16 },
 	{ "utf16be", TRANSCRIPT_UTF16BE },
 	{ "utf16le", TRANSCRIPT_UTF16LE },
-	{ "utf16,nobom", _TRANSCRIPT_UTF16_NOBOM },
-	{ "utf16be,bom", _TRANSCRIPT_UTF16BE_BOM },
-	{ "utf16le,bom", _TRANSCRIPT_UTF16LE_BOM },
+	{ "utf16nobom", _TRANSCRIPT_UTF16_NOBOM },
+	{ "utf16bebom", _TRANSCRIPT_UTF16BE_BOM },
+	{ "utf16lebom", _TRANSCRIPT_UTF16LE_BOM },
 	{ "utf32", TRANSCRIPT_UTF32 },
 	{ "utf32be", TRANSCRIPT_UTF32BE },
 	{ "utf32le", TRANSCRIPT_UTF32LE },
-	{ "utf32,nobom", _TRANSCRIPT_UTF32_NOBOM },
-	{ "utf32be,bom", _TRANSCRIPT_UTF32BE_BOM },
-	{ "utf32le,bom", _TRANSCRIPT_UTF32LE_BOM },
+	{ "utf32nobom", _TRANSCRIPT_UTF32_NOBOM },
+	{ "utf32bebom", _TRANSCRIPT_UTF32BE_BOM },
+	{ "utf32lebom", _TRANSCRIPT_UTF32LE_BOM },
 	{ "cesu8", _TRANSCRIPT_CESU8 },
 	{ "gb18030", _TRANSCRIPT_GB18030 },
 	/* Disabled for now { "scsu", _TRANSCRIPT_SCSU }, */
@@ -263,12 +263,20 @@ static void load_state(convertor_state_t *handle, void *state) {
     @param error The location to store an error.
 */
 TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int flags, transcript_error_t *error) {
+	char name_option[32];
 	convertor_state_t *retval;
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	/* FIXME: for now assume that we are loaded as unicode,<convertor name> */
-	if ((ptr = lfind(name + 8, map, &array_size, sizeof(name_to_utftype), (int (*)(const void *, const void *)) strcmp)) == NULL) {
+	if (!transcript_get_option(name, name_option, sizeof(name_option), "name")) {
+		if (error != NULL)
+			*error = TRANSCRIPT_BAD_ARG;
+		return NULL;
+	}
+
+	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) strcmp)) == NULL)
+	{
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_ERROR;
 		return NULL;
@@ -341,13 +349,20 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 }
 
 TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
+	char name_option[32];
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
-	/* FIXME: for now assume that we are loaded as unicode,<convertor name> */
-	if ((ptr = lfind(name + 8, map, &array_size, sizeof(name_to_utftype), (int (*)(const void *, const void *)) strcmp)) == NULL)
+
+	if (!transcript_get_option(name, name_option, sizeof(name_option), "name"))
 		return false;
+
+	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) strcmp)) == NULL)
+		return false;
+
 	if (ptr->utf_type == _TRANSCRIPT_GB18030)
 		return transcript_probe_convertor("_gb180303");
+
 	return true;
 }
 

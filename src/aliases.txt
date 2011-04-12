@@ -28,14 +28,13 @@
 # and UTF-32 encodings will switch endianess when encountering a BOM. By
 # default they use the big endian encoding.
 
-# To force output of a BOM, use the bom option.
-
 unicode,name=utf8 UTF-8* IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
 	IBM-17592 ibm-17593 Windows-65001 cp1208
 # Use UCS-2 as an alias for UTF-16, although it is actually UTF-16BE. However,
 # because people simply use UCS-2 and UTF-16 interchangebly, it is better to
 # do it this way.
 unicode,name=utf16 UTF-16* ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
+unicode,name=utf16nobom UTF-16,nobom*
 unicode,name=utf16be UTF-16BE* x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
 	IBM-13488 IBM-13489 ibm-17584 IBM-17585 IBM-21680 IBM-21681 IBM-25776
 	IBM-25777 IBM-29872 ibm-29873 IBM-61955 IBM-61956 Windows-1201 cp1200
@@ -44,6 +43,7 @@ unicode,name=utf16le UTF-16LE* x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-120
 	IBM-13490 ibm-13491 IBM-17586 IBM-17587 IBM-21682 IBM-21683 IBM-25778
 	IBM-25779 ibm-29874 IBM-29875 UTF16_LittleEndian Windows-1200
 unicode,name=utf32 UTF-32* ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
+unicode,name=utf32nobom UTF-32,nobom*
 unicode,name=utf32be UTF-32BE* UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
 unicode,name=utf32le UTF-32LE* UTF32_LittleEndian IBM-1234 IBM-1235
 
@@ -53,8 +53,8 @@ unicode,name=utf32le UTF-32LE* UTF32_LittleEndian IBM-1234 IBM-1235
 # UTF32_PlatformEndian
 # UTF32_OppositeEndian
 
-unicode,name=utf16be,bom UTF-16BE,bom *UnicodeBig
-unicode,name=utf16le,bom UTF-16LE,bom *UnicodeLittle x-UTF-16LE-BOM
+unicode,name=utf16bebom UTF-16BE,bom *UnicodeBig
+unicode,name=utf16lebom UTF-16LE,bom *UnicodeLittle x-UTF-16LE-BOM
 
 unicode,name=utf7 UTF-7* Windows-65000
 
