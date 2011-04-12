@@ -534,27 +534,27 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 
 void Ucm::write_interface(FILE *output, const char *normalized_name, int variant_nr) {
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
-	fprintf(output, "TRANSCRIPT_EXPORT void transcript_get_table_%s(convertor_tables_v1_t *conv) {\n", normalized_name);
-	fprintf(output, "\tconv->convertor = &convertor;\n");
+	fprintf(output, "TRANSCRIPT_EXPORT const convertor_tables_v1_t *transcript_get_table_%s(void) {\n", normalized_name);
+	fprintf(output, "\tstatic const convertor_tables_v1_t _convertor = {\n");
+	fprintf(output, "\t&convertor, ");
 	if (variant_nr < 0)
-		fprintf(output, "\tconv->variant = NULL;\n");
+		fprintf(output, "NULL,\n");
 	else
-		fprintf(output, "\tconv->variant = variants + %d;\n", variant_nr);
+		fprintf(output, "variants + %d,\n", variant_nr);
 
 	if (variant_nr < 0 || variants[variant_nr]->multi_mappings.size() == 0) {
 		if (multi_mappings.empty()) {
-			fprintf(output, "\tconv->codepage_sorted_multi_mappings = NULL;\n");
-			fprintf(output, "\tconv->codepoint_sorted_multi_mappings = NULL;\n");
+			fprintf(output, "\tNULL, NULL, ");
 		} else {
-			fprintf(output, "\tconv->codepage_sorted_multi_mappings = codepage_sorted_multi_mappings;\n");
-			fprintf(output, "\tconv->codepoint_sorted_multi_mappings = codepoint_sorted_multi_mappings;\n");
+			fprintf(output, "\tcodepage_sorted_multi_mappings, codepoint_sorted_multi_mappings, ");
 		}
 	} else {
-		fprintf(output, "\tconv->codepage_sorted_multi_mappings = variant%d_codepage_sorted_multi_mappings;\n", variant_nr);
-		fprintf(output, "\tconv->codepoint_sorted_multi_mappings = variant%d_codepoint_sorted_multi_mappings;\n", variant_nr);
+		fprintf(output, "\tvariant%d_codepage_sorted_multi_mappings,\n", variant_nr);
+		fprintf(output, "\tvariant%d_codepoint_sorted_multi_mappings, ", variant_nr);
 	}
-	fprintf(output, "\tconv->nr_multi_mappings = %d;\n}\n\n", (int) multi_mappings.size() +
+	fprintf(output, "\t%d\n};\n", (int) multi_mappings.size() +
 		(variant_nr < 0 ? 0 : (int) variants[variant_nr]->multi_mappings.size()));
+	fprintf(output, "\treturn &_convertor;\n}\n\n");
 }
 
 void Ucm::write_table(FILE *output) {

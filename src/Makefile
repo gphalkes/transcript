@@ -47,6 +47,7 @@ CFLAGS += -DHAS_NL_LANGINFO
 CFLAGS += -DHAS_STRDUP
 #~ CFLAGS += -DUSE_GETTEXT -DLOCALEDIR=\"locales\"
 #~ CFLAGS += -std=c89
+CC := clang
 
 test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 
