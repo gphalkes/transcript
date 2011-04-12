@@ -256,6 +256,11 @@ static void load_state(convertor_state_t *handle, void *state) {
 	memcpy(&handle->state, state, sizeof(state_t));
 }
 
+/** Compare function for lfind. */
+static int compare(const char *key, const name_to_utftype *ptr) {
+	return strcmp(key, ptr->name);
+}
+
 /** @internal
     @brief Create a convertor handle for a Unicode convertor
     @param name The name of the convertor.
@@ -274,8 +279,8 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 		return NULL;
 	}
 
-	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
-			(int (*)(const void *, const void *)) strcmp)) == NULL)
+	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) compare)) == NULL)
 	{
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_ERROR;
@@ -357,8 +362,8 @@ TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
 	if (!transcript_get_option(name, name_option, sizeof(name_option), "name"))
 		return false;
 
-	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
-			(int (*)(const void *, const void *)) strcmp)) == NULL)
+	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) compare)) == NULL)
 		return false;
 
 	if (ptr->utf_type == _TRANSCRIPT_GB18030)

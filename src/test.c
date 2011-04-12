@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 	transcript_error_t (*convert)(transcript_t *, const char **, const char *, char **, const char *, int) = transcript_from_unicode;
 	int utf_type = TRANSCRIPT_UTF8;
 	int option_dump = 0;
-	int flags = 0;
+	int flags = TRANSCRIPT_FILE_START;
 
 	static struct { const char *name; int type; } utf_list[] = {
 		{ "UTF-8", TRANSCRIPT_UTF8 },
@@ -123,6 +123,7 @@ int main(int argc, char *argv[]) {
 		if (option_dump || (dir == TO && utf_type == TRANSCRIPT_UTF8))
 			printf("%.*s", (int) (outbuf_ptr - outbuf), outbuf);
 		memmove(inbuf, inbuf_ptr, fill);
+		flags &= TRANSCRIPT_FILE_START;
 	}
 	if (!option_dump && dir == TO && utf_type == TRANSCRIPT_UTF8)
 		putchar('\n');

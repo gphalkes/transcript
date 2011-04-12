@@ -341,40 +341,40 @@ void transcript_load_state(transcript_t *handle, void *state) {
 const char *transcript_strerror(transcript_error_t error) {
 	switch (error) {
 		case TRANSCRIPT_SUCCESS:
-			return _("success");
+			return _("Success");
 		case TRANSCRIPT_FALLBACK:
-			return _("only a fallback mapping is available");
+			return _("Only a fallback mapping is available");
 		case TRANSCRIPT_UNASSIGNED:
-			return _("character can not be mapped");
+			return _("Character can not be mapped");
 		case TRANSCRIPT_ILLEGAL:
-			return _("illegal sequence in input buffer");
+			return _("Illegal sequence in input buffer");
 		case TRANSCRIPT_ILLEGAL_END:
-			return _("illegal sequence at end of input buffer");
+			return _("Illegal sequence at end of input buffer");
 		default:
 		case TRANSCRIPT_INTERNAL_ERROR:
-			return _("internal error");
+			return _("Internal error");
 		case TRANSCRIPT_PRIVATE_USE:
-			return _("character maps to a private use codepoint");
+			return _("Character maps to a private use codepoint");
 		case TRANSCRIPT_NO_SPACE:
-			return _("no space left in output buffer");
+			return _("No space left in output buffer");
 		case TRANSCRIPT_INCOMPLETE:
-			return _("incomplete character at end of input buffer");
+			return _("Incomplete character at end of input buffer");
 		case TRANSCRIPT_ERRNO:
 			return strerror(errno);
 		case TRANSCRIPT_BAD_ARG:
-			return _("bad argument");
+			return _("Bad argument");
 		case TRANSCRIPT_OUT_OF_MEMORY:
-			return _("out of memory");
+			return _("Out of memory");
 		case TRANSCRIPT_INVALID_FORMAT:
-			return _("invalid map-file format");
+			return _("Invalid map-file format");
 		case TRANSCRIPT_TRUNCATED_MAP:
-			return _("map file is truncated");
+			return _("Map file is truncated");
 		case TRANSCRIPT_WRONG_VERSION:
-			return _("map file is of an unsupported version");
+			return _("Map file is of an unsupported version");
 		case TRANSCRIPT_INTERNAL_TABLE:
-			return _("map file is for internal use only");
+			return _("Map file is for internal use only");
 		case TRANSCRIPT_DLOPEN_FAILURE:
-			return _("dynamic linker returned an error");
+			return _("Dynamic linker returned an error");
 	}
 }
 
@@ -539,8 +539,13 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 
 	transcript_get_option(real_name, base_name, NORMALIZE_NAME_MAX, NULL);
 
-	if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, error)) == NULL)
+	if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, error)) == NULL) {
+		FILE *test_handle;
+		transcript_error_t local_error;
+		if ((test_handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, &local_error)) == NULL)
+			ERROR(local_error);
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
+	}
 
 	transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
 
@@ -723,7 +728,12 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
 	bool last_was_digit = false;
 
 	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
-		if (!_transcript_isalnum(*name) && *name != ',') {
+		if (*name == ',') {
+			for (; *name != 0 && write_idx < normalized_name_max - 1; name++)
+				normalized_name[write_idx++] = _transcript_tolower(*name);
+			break;
+		}
+		if (!_transcript_isalnum(*name)) {
 			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *name == '0')
@@ -760,7 +770,7 @@ bool transcript_get_option(const char *name, char *option_buffer, size_t option_
 		comma = name;
 		while ((comma = strchr(comma, ',')) != NULL) {
 			comma++;
-			if (strcmp(comma, option_name) == 0) {
+			if (strncmp(comma, option_name, len) == 0) {
 				if (comma[len] == '=')
 					return transcript_get_option(comma + len + 1, option_buffer, option_buffer_max, NULL);
 				option_buffer[0] = 0;

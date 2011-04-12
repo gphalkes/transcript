@@ -820,6 +820,11 @@ static bool do_load(load_table_func load, convertor_state_t *handle, int type, t
 	return true;
 }
 
+/** Compare function for lfind. */
+static int compare(const char *key, const name_to_iso2022type *ptr) {
+	return strcmp(key, ptr->name);
+}
+
 /** @internal
     @brief Open an ISO-2022 convertor.
 */
@@ -835,8 +840,8 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 		return NULL;
 	}
 
-	if ((ptr = lfind(name_option + 5, map, &array_size, sizeof(map[0]),
-			(int (*)(const void *, const void *)) strcmp)) == NULL)
+	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) compare)) == NULL)
 	{
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_ERROR;
@@ -889,11 +894,16 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 }
 
 TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
+	char name_option[32];
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 	transcript_error_t error;
 
-	if ((ptr = lfind(name + 8, map, &array_size, sizeof(map[0]), (int (*)(const void *, const void *)) strcmp)) == NULL)
+	if (!transcript_get_option(name, name_option, sizeof(name_option), "name"))
+		return false;
+
+	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+			(int (*)(const void *, const void *)) compare)) == NULL)
 		return false;
 
 	return do_load(probe, NULL, ptr->iso2022_type, &error);
