@@ -6,21 +6,18 @@ HIGH PRIORITY
   me.
 - provide a Makefile for the ibm ucm files, which bunches similar convertors
   into a single cct
-- use pthread-stubs compile in dist Makefile [glibc provides the required
-  stubs, but should compile with `pkg-config --cflags pthread-stubs`]
 - provide pkg-config stuf for our own library
-- the now "built-in" convertors should be made modules as well, and the open
-  interface needs to pass a pointer to the internal generic open function to
-  allow loading of tables.
-- the Unicode convertor needs to check whether the requested conversion is
-  actually a Unicode conversion with invalid flags.
-- move convertor loading functions to a separate file
 - read all aliases.txt files in all dirs, and provide a name for allowing
   system wide overrides (/etc/transcript/aliases.txt?)
-- provide a block flag to disallow certain convertors
+- a convertor with options may never be a display name. The options have some
+  interesting interactions with other parts of the code.
+  - looking op the real convertor
+  - comparing equality of convertors
+  this needs to be checked and maybe some rules need to be defined
 - the new library stuf has made the save state size determination more difficult
   Perhaps a new state_destroy method should be provide, such that if needed
   the state can be allocated on the heap.
+
 
 MEDIUM PRIORITY
 ===============
@@ -44,7 +41,7 @@ MEDIUM PRIORITY
   which fallbacks there are. Then we can do a binary search on that and return
   that value. Those are the overrides only, because for the general ones we
   don't include anything.
-- iso-2022-*, lmb, scsu, [bocu-1 PATENTED]
+- iso-2022-*, lmb, scsu, [bocu-1 PATENTED], iscii
 - the aliases file is in ASCII, but the system on which we are running may not
   be! This means the aliases file should be converted to the current execution
   charset before use.

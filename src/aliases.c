@@ -218,31 +218,6 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
 	return NULL;
 }
 
-/** @internal @brief List of names for the built-in convertors. */
-static const char *builtin_names[] = {
-	"UTF-8",
-	"UTF-16",
-	"UTF-16LE",
-	"UTF-16BE",
-	"UTF-32",
-	"UTF-32LE",
-	"UTF-32BE",
-	"UTF-8,BOM",
-	"CESU-8",
-	"GB-18030",
-	"UTF-7",
-	"SCSU",
-	"ISO-8859-1",
-	"ISO-2022-JP",
-	"ISO-2022-JP1",
-	"ISO-2022-JP2",
-	"ISO-2022-JP3",
-	"ISO-2022-JP-2004",
-	"ISO-2022-KR",
-	"ISO-2022-CN",
-	"ISO-2022-CN-EXT"
-};
-
 /** @internal
     @brief Initialize the list of available convertor names.
 
@@ -274,12 +249,7 @@ static void init_availability(void) {
 	for (i = 0; i < (size_t) display_names_used; i++)
 		display_names[i].available = transcript_probe_convertor_nolock(display_names[i].name);
 
-
-	/* Add the built-in convertors, in as far as they are not already defined through the aliases file. */
-	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
-		if (_transcript_get_name_desc(builtin_names[i], 1) == NULL)
-			add_display_name(builtin_names[i], transcript_probe_convertor_nolock(builtin_names[i]));
-	}
+	/* FIXME: perhaps we should add the default links for the full-type convertors here. */
 
 	/* Add all the file names we can find in the DB dir, if they are not already present. */
 	if ((dir = opendir(DB_DIRECTORY)) != NULL) {

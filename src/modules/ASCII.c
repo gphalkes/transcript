@@ -15,11 +15,6 @@
 /* This convertor implements the ISO-8859-1 and ASCII codepages. */
 #include <string.h>
 #include <transcript/moduledefs.h>
-/*
-#include "transcript_internal.h"
-#include "utf.h"
-#include "generic_fallbacks.h"
-*/
 
 /** @struct convertor_state_t
     @brief Struct holding the state for the ISO-8859-1/ASCII convertor.
@@ -162,11 +157,6 @@ static void *open_ascii(const char *name, int flags, transcript_error_t *error) 
 	return retval;
 }
 
-/*
-TRANSCRIPT_EXPORT int transcript_size_iso88591(void) {
-	return 0;
-}
-*/
 TRANSCRIPT_ALIAS_OPEN(open_ascii, ascii)
 TRANSCRIPT_ALIAS_OPEN(open_ascii, iso88591)
 TRANSCRIPT_EXPORT int transcript_get_iface_ascii(void) { return TRANSCRIPT_FULL_MODULE_V1; }

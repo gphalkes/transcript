@@ -10,7 +10,8 @@
 # name of the convertor exactly though.
 
 # Convertor names must start in column 1. Lines can be continued by indenting
-# the second and later lines with any amount of white-space.
+# the second and later lines with any amount of white-space. Convertors may
+# have options, specified after a comma. These options are not normalized.
 
 # Unicode encodings:
 # ==================
@@ -54,8 +55,8 @@ unicode,name=utf32le *UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 # UTF32_PlatformEndian
 # UTF32_OppositeEndian
 
-unicode,name=utf16bebom UTF-16BE,bom *UnicodeBig
-unicode,name=utf16lebom UTF-16LE,bom *UnicodeLittle x-UTF-16LE-BOM
+unicode,name=utf16bebom UTF-16BE-bom *UnicodeBig
+unicode,name=utf16lebom UTF-16LE-bom *UnicodeLittle x-UTF-16LE-BOM
 
 unicode,name=utf7 *UTF-7 Windows-65000
 
@@ -240,17 +241,17 @@ ibm-1129_P100-1997 *IBM-1129
 ibm-1131_P100-1997 *IBM-1131 cp1131
 ibm-1133_P100-1997 *IBM-1133
 
+#FIXME: check the commented aliases
+iso-2022,name=jp *ISO-2022-JP csISO2022JP
+iso-2022,name=jp1 *ISO-2022-JP-1 # JIS_Encoding csJISEncoding IBM-5054 JIS
+iso-2022,name=jp2 *ISO-2022-JP-2 csISO2022JP2
+iso-2022,name=jp3 *ISO-2022-JP-3 # JIS7
+iso-2022,name=jp2004 *ISO-2022-JP-2004 # JIS8
+iso-2022,name=kr *ISO-2022-KR csISO2022KR
+#FIXME: IBM-25546 is supposedly a variant of ISO-2022-KR
+iso-2022,name=cn *ISO-2022-CN csISO2022CN
+iso-2022,name=cnext *ISO-2022-CN-EXT
 #FIXME: what to do with these, i.e. what are these different versions?
-# Note: these should be iso2022,name=jp
-#~ ISO_2022,locale=ja,version=0 ISO-2022-JP csISO2022JP
-#~ ISO_2022,locale=ja,version=1 ISO-2022-JP-1 JIS_Encoding csJISEncoding IBM-5054 JIS
-#~ ISO_2022,locale=ja,version=2 ISO-2022-JP-2 csISO2022JP2
-#~ ISO_2022,locale=ja,version=3 JIS7
-#~ ISO_2022,locale=ja,version=4 JIS8
-#~ ISO_2022,locale=ko,version=0 ISO-2022-KR csISO2022KR
-#~ ISO_2022,locale=ko,version=1 IBM-25546
-#~ ISO_2022,locale=zh,version=0 ISO-2022-CN csISO2022CN
-#~ ISO_2022,locale=zh,version=1 ISO-2022-CN-EXT
 #~ HZ HZ-GB-2312
 #~ ISCII,version=0 x-iscii-de Windows-57002 iscii-dev IBM-4902
 #~ ISCII,version=1 x-iscii-be Windows-57003 iscii-bng Windows-57006 x-iscii-as

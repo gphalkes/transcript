@@ -15,17 +15,14 @@
 /** @file */
 
 #include <errno.h>
-#include <ctype.h>
 #include <string.h>
-#include <search.h>
 #include <limits.h>
 #include <locale.h>
 #include <stdarg.h>
 #ifdef HAS_NL_LANGINFO
 #include <langinfo.h>
 #endif
-#include <ltdl.h>
-
+#include "ltdl.h"
 
 #include "transcript_internal.h"
 #include "utf.h"
@@ -37,8 +34,6 @@
 #else
 #define _(x) x
 #endif
-
-#define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 
 /** @addtogroup transcript */
 /** @{ */
@@ -58,10 +53,8 @@ void (*_transcript_acquire_lock)(void *);
 void (*_transcript_release_lock)(void *);
 void *_transcript_lock;
 
-static const char **search_path;
+const char **_transcript_search_path;
 static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
-
-static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error);
 
 /*================ API functions ===============*/
 /** Set the locking callbacks for libtranscript.
@@ -375,6 +368,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("Map file is for internal use only");
 		case TRANSCRIPT_DLOPEN_FAILURE:
 			return _("Dynamic linker returned an error");
+		case TRANSCRIPT_CONVERTOR_DISABLED:
+			return _("Convertor has been disabled");
 	}
 }
 
@@ -429,241 +424,6 @@ long transcript_get_version(void) {
 }
 
 /*================ Internal functions ===============*/
-/** Load a suffixed symbol from a plugin. */
-static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
-	char buffer[NORMALIZE_NAME_MAX + 32];
-	strcpy(buffer, sym);
-	strcat(buffer, convertor_name);
-	return lt_dlsym(handle, buffer);
-}
-
-/** Try to open (i.e. get a file handle) a convertor.
-
-    If the option probe=load has been set in the convertor options, then instead
-    of trying to open with fopen, it will actually be dlopened and the function
-    transcript_probe_<name> will be called.
-*/
-static bool probe_convertor(const char *name, const char *normalized_name) {
-	const char *load_option;
-	char base_name[NORMALIZE_NAME_MAX];
-
-	transcript_get_option(name, base_name, NORMALIZE_NAME_MAX, NULL);
-
-	if ((load_option = strstr(normalized_name, ",probe=load")) != NULL && (load_option[11] == 0 || load_option[11] == ',')) {
-		bool (*probe)(const char *);
-		lt_dlhandle handle;
-		int result = 0;
-
-		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, NULL)) == NULL)
-			return 0;
-
-		transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
-		if ((probe = get_sym(handle, "transcript_probe_", base_name)) != NULL)
-			result = probe(normalized_name);
-
-		lt_dlclose(handle);
-		return result;
-	} else {
-		FILE *handle = NULL;
-		/* For most convertors it is sufficient to know that the file is readable. */
-		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, NULL)) != NULL)
-			fclose(handle);
-		return handle != NULL;
-	}
-}
-
-/** @internal
-    @brief Perform the action described at ::transcript_probe_convertor.
-
-    This function does not call ::_transcript_init, which ::transcript_probe_convertor
-    does. However, ::_transcript_init only needs to be called once, so if we
-    know it has already been called, we don't need to check again. Therefore,
-    in the library itself we use this stripped down version.
-*/
-int transcript_probe_convertor_nolock(const char *name) {
-	transcript_name_desc_t *convertor;
-	char normalized_name[NORMALIZE_NAME_MAX];
-
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
-
-	/* FIXME: shouldn't we try to open the convertor without going through the aliases
-	   table if we can't find it through the aliases table? */
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
-		return probe_convertor(convertor->real_name, convertor->name);
-	return probe_convertor(name, normalized_name);
-}
-
-/** @internal
-    @brief Open a convertor.
-
-    This function is called by ::transcript_open_convertor, after locking the
-    internal mutex. This function is provided such that convertors can open
-    other convertors without causing a deadlock.
-*/
-transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
-	transcript_name_desc_t *convertor;
-	char normalized_name[NORMALIZE_NAME_MAX];
-
-	if (utf_type > TRANSCRIPT_UTF32LE || utf_type <= 0) {
-		if (error != NULL)
-			*error = TRANSCRIPT_BAD_ARG;
-		return NULL;
-	}
-
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
-
-	/* FIXME: shouldn't we try to open the convertor without going through the aliases
-	   table if we can't find it through the aliases table? */
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
-		return _transcript_fill_utf(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
-	return _transcript_fill_utf(open_convertor(normalized_name, name, flags, error), utf_type);
-}
-
-/** @internal
-    @brief Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct.
-*/
-transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_type) {
-	if (handle == NULL)
-		return NULL;
-	handle->get_unicode = _transcript_get_get_unicode(utf_type);
-	handle->put_unicode = _transcript_get_put_unicode(utf_type);
-	return handle;
-}
-
-/** Open a convertor plugin. */
-static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
-	lt_dlhandle handle = NULL;
-	int (*get_iface)(void);
-	transcript_t *result = NULL;
-	char base_name[NORMALIZE_NAME_MAX];
-
-	transcript_get_option(real_name, base_name, NORMALIZE_NAME_MAX, NULL);
-
-	if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, error)) == NULL) {
-		FILE *test_handle;
-		transcript_error_t local_error;
-		if ((test_handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, &local_error)) == NULL)
-			ERROR(local_error);
-		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
-	}
-
-	transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
-
-	if ((get_iface = get_sym(handle, "transcript_get_iface_", base_name)) == NULL)
-		ERROR(TRANSCRIPT_INVALID_FORMAT);
-
-	switch (get_iface()) {
-		case TRANSCRIPT_STATE_TABLE_V1: {
-			const convertor_tables_v1_t *(*get_table)(void);
-			if ((get_table = get_sym(handle, "transcript_get_table_", base_name)) == NULL)
-				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = _transcript_open_cct_convertor(get_table(), flags, error)) != NULL) {
-				result->library_handle = handle;
-				return result;
-			}
-			break;
-		}
-		case TRANSCRIPT_FULL_MODULE_V1: {
-			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
-			if ((open_convertor = get_sym(handle, "transcript_open_", base_name)) == NULL)
-				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = open_convertor(normalized_name, flags, error)) != NULL) {
-				result->library_handle = handle;
-				return result;
-			}
-			break;
-		}
-		default:
-			ERROR(TRANSCRIPT_INVALID_FORMAT);
-	}
-
-end_error:
-	if (handle != NULL)
-		lt_dlclose(handle);
-	return result;
-}
-
-/** Reentrant version of strtok
-	@param string The string to tokenise.
-	@param separators The list of token separators.
-	@param state A user allocated character pointer.
-
-	This function emulates the functionality of the Un*x function strtok_r.
-	Note that this function destroys the contents of @a string.
-*/
-static char *ts_strtok(char *string, const char *separators, char **state) {
-	char *retval;
-	if (string != NULL)
-		*state = string;
-
-	/* Skip to the first character that is not in 'separators' */
-	while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
-	retval = *state;
-	if (*retval == 0)
-		return NULL;
-	/* Skip to the first character that IS in 'separators' */
-	while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
-	if (**state != 0) {
-		/* Overwrite it with 0 */
-		**state = 0;
-		/* Advance the state pointer so we know where to start next time */
-		(*state)++;
-	}
-	return retval;
-}
-
-/** Try to open a file from a database directory.
-    @param name The base name of the file to open.
-    @param ext The extension of the file to open.
-    @param dir The directory to look in.
-    @param error The location to store a possible error.
-    @return A @c FILE pointer on success, or @c NULL on failure.
-*/
-static FILE *db_open(const char *name, const char *ext, const char *dir, open_func_t open_func, transcript_error_t *error) {
-	char *file_name = NULL;
-	void *result = NULL;
-	size_t len;
-
-	len = strlen(dir) + strlen(name) + 2 + strlen(ext) + 1;
-	if ((file_name = malloc(len)) == NULL)
-		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
-
-	strcpy(file_name, dir);
-	strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
-	strcat(file_name, name);
-	strcat(file_name, ".");
-	strcat(file_name, ext);
-
-	if ((result = open_func(file_name, "r")) == NULL)
-		ERROR(TRANSCRIPT_ERRNO);
-
-end_error:
-	free(file_name);
-	return result;
-}
-
-/** @internal
-    @brief Open a file from the database directory.
-    @param name The base name of the file to open.
-    @param ext The extension of the file to open.
-    @param error The location to store a possible error.
-    @return A @c FILE pointer on success, or @c NULL on failure.
-
-    This function first looks in the diretory named in the TRANSCRIPT_PATH
-    environment variable (if set), and then in the compiled in database
-    directory.
-*/
-void *_transcript_db_open(const char *name, const char *ext, open_func_t open_func, transcript_error_t *error) {
-	const char **next_dir;
-	FILE *result;
-
-	for (next_dir = search_path; *next_dir != NULL; next_dir++) {
-		if ((result = db_open(name, ext, *next_dir, open_func, error)) != NULL)
-			return result;
-	}
-	return NULL;
-}
-
 #ifndef HAS_STRDUP
 /** @internal
     @brief Copy a string.
@@ -771,10 +531,16 @@ bool transcript_get_option(const char *name, char *option_buffer, size_t option_
 		while ((comma = strchr(comma, ',')) != NULL) {
 			comma++;
 			if (strncmp(comma, option_name, len) == 0) {
-				if (comma[len] == '=')
+				if (comma[len] == '=') {
+					if (option_buffer == NULL)
+						return true;
 					return transcript_get_option(comma + len + 1, option_buffer, option_buffer_max, NULL);
-				option_buffer[0] = 0;
-				return true;
+				} else if (comma[len] == ',' || comma[len] == 0) {
+					if (option_buffer == NULL)
+						return true;
+					option_buffer[0] = 0;
+					return true;
+				}
 			}
 		}
 		return false;
@@ -826,21 +592,50 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 	return TRANSCRIPT_UNASSIGNED;
 }
 
+/** Reentrant version of strtok
+	@param string The string to tokenise.
+	@param separators The list of token separators.
+	@param state A user allocated character pointer.
+
+	This function emulates the functionality of the Un*x function strtok_r.
+	Note that this function destroys the contents of @a string.
+*/
+static char *ts_strtok(char *string, const char *separators, char **state) {
+	char *retval;
+	if (string != NULL)
+		*state = string;
+
+	/* Skip to the first character that is not in 'separators' */
+	while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
+	retval = *state;
+	if (*retval == 0)
+		return NULL;
+	/* Skip to the first character that IS in 'separators' */
+	while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
+	if (**state != 0) {
+		/* Overwrite it with 0 */
+		**state = 0;
+		/* Advance the state pointer so we know where to start next time */
+		(*state)++;
+	}
+	return retval;
+}
+
 /** Append a directory to the search path. */
 static void add_search_dir(const char *dir) {
 	static int path_idx, path_size;
 
 	if (path_idx >= path_size) {
 		const char **tmp;
-		if ((tmp = realloc(search_path, sizeof(search_path[0]) * (path_size + 8 + 1))) == NULL)
+		if ((tmp = realloc(_transcript_search_path, sizeof(_transcript_search_path[0]) * (path_size + 8 + 1))) == NULL)
 			return;
-		search_path = tmp;
+		_transcript_search_path = tmp;
 		path_size += 8;
 	}
-	search_path[path_idx++] = dir;
+	_transcript_search_path[path_idx++] = dir;
 	/* Note that we always allocate one extra element for this purpose, which is
 	   not accounted for in path_size. */
-	search_path[path_idx] = NULL;
+	_transcript_search_path[path_idx] = NULL;
 }
 
 /** @internal
