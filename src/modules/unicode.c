@@ -295,7 +295,7 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
-	retval->common.close = (close_func_t) close_convertor;
+	retval->common.close = NULL;
 	retval->common.save = (save_func_t) save_state;
 	retval->common.load = (load_func_t) load_state;
 
@@ -326,6 +326,7 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 				free(retval);
 				return NULL;
 			}
+			retval->common.close = (close_func_t) close_convertor;
 			retval->gb18030_cct->get_unicode = _transcript_get_get_unicode(_TRANSCRIPT_UTF32_NO_CHECK);
 			retval->to_get = _transcript_get_gb18030;
 			retval->from_put = _transcript_put_gb18030;
@@ -368,5 +369,5 @@ TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
 
 /** close implementation for Unicode convertors. */
 static void close_convertor(convertor_state_t *handle) {
-	free(handle);
+	transcript_close_convertor(handle->gb18030_cct);
 }

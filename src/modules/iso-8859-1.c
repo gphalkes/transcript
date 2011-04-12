@@ -29,8 +29,6 @@ typedef struct {
 	unsigned int charmax;
 } convertor_state_t;
 
-static void close_convertor(transcript_t*handle);
-
 /** convert_to implementation for ISO-8859-1/ASCII convertors. */
 static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
@@ -157,7 +155,7 @@ TRANSCRIPT_EXPORT void *transcript_open_iso88591(const char *name, int flags, in
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) reset_nop;
 	retval->common.flags = flags;
-	retval->common.close = (close_func_t) close_convertor;
+	retval->common.close = NULL;
 	retval->common.save = (save_func_t) save_load_nop;
 	retval->common.load = (load_func_t) save_load_nop;
 	retval->charmax = strcmp(name, "ascii") == 0 ? 0x7f : 0xff;
@@ -169,8 +167,3 @@ TRANSCRIPT_EXPORT int transcript_size_iso88591(void) {
 	return 0;
 }
 */
-
-/** close implementation for ISO-8859-1/ASCII convertors. */
-static void close_convertor(transcript_t*handle) {
-	free(handle);
-}

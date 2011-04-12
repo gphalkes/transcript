@@ -80,5 +80,6 @@ TRANSCRIPT_LOCAL int _transcript_tolower(int c);
 TRANSCRIPT_LOCAL void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 
 TRANSCRIPT_LOCAL void _transcript_init_aliases_from_file(void);
+TRANSCRIPT_LOCAL void *_transcript_open_cct_convertor(const convertor_tables_v1_t *tables, int flags, transcript_error_t *error);
 
 #endif

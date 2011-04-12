@@ -11,8 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c \
-	cct_convertor_io.c aliases.c generic_fallbacks.c
+SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c aliases.c generic_fallbacks.c
 LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
@@ -54,8 +53,9 @@ test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 $(OBJECTS): generic_fallbacks.c
 
 generic_fallbacks.c generic_fallbacks.h: ../src.util/generic_fallbacks.txt
-	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF -H'#include "transcript.h"' \
-		-e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $<
+	$(if $(VERBOSE),, @echo [GEN] $* ;) ../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p \
+		-r0x10000 -DFFFF -H'#include "transcript.h"' -e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $< \
+		$(if $(VERBOSE),,2>/dev/null)
 
 clean::
 	rm generic_fallbacks.[ch] 2>/dev/null

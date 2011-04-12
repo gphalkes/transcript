@@ -87,8 +87,8 @@ typedef struct {
 	const uint16_t *codepage_mappings;
 	const uint8_t *unicode_mappings;
 
-	const flags_v1_t to_unicode_flags;
-	const flags_v1_t from_unicode_flags;
+	const flags_v1_t codepage_flags;
+	const flags_v1_t unicode_flags;
 
 	const uint8_t subchar[MAX_CHAR_BYTES_V1];
 

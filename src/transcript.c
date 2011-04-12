@@ -31,8 +31,6 @@
 #include "utf.h"
 #include "generic_fallbacks.h"
 
-#include "convertors.h"
-
 #ifdef USE_GETTEXT
 #include <libintl.h>
 #define _(x) dgettext("libtranscript", x)
@@ -143,10 +141,12 @@ transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_t
 */
 void transcript_close_convertor(transcript_t *handle) {
 	if (handle != NULL) {
-		handle->close(handle);
+		if (handle->close != NULL)
+			handle->close(handle);
 		ACQUIRE_LOCK();
 		lt_dlclose(handle->library_handle);
 		RELEASE_LOCK();
+		free(handle);
 	}
 }
 
@@ -547,10 +547,13 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 
 	switch (get_iface()) {
 		case TRANSCRIPT_STATE_TABLE_V1: {
-			void (*get_table)(convertor_tables_v1_t *);
+			const convertor_tables_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", base_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			//result = cct_convertor_open(get_table);
+			if ((result = _transcript_open_cct_convertor(get_table(), flags, error)) != NULL) {
+				result->library_handle = handle;
+				return result;
+			}
 			break;
 		}
 		case TRANSCRIPT_FULL_MODULE_V1: {
