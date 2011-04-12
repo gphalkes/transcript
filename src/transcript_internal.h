@@ -61,6 +61,8 @@ typedef struct transcript_name_desc_t {
 	int flags;
 } transcript_name_desc_t;
 
+typedef void *(*open_func_t)(const char *, const char *);
+
 TRANSCRIPT_LOCAL transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_type);
 
 TRANSCRIPT_LOCAL void _transcript_log(const char *fmt, ...);
@@ -68,7 +70,7 @@ TRANSCRIPT_LOCAL void _transcript_log(const char *fmt, ...);
 TRANSCRIPT_LOCAL transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_normalization);
 
 TRANSCRIPT_LOCAL void _transcript_init(void);
-TRANSCRIPT_LOCAL FILE *_transcript_db_open(const char *name, const char *ext, transcript_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_db_open(const char *name, const char *ext, open_func_t open_func, transcript_error_t *error);
 
 TRANSCRIPT_LOCAL int _transcript_isalnum(int c);
 TRANSCRIPT_LOCAL int _transcript_isdigit(int c);

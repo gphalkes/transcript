@@ -14,12 +14,6 @@ HIGH PRIORITY
   allow loading of tables.
 - the Unicode convertor needs to check whether the requested conversion is
   actually a Unicode conversion with invalid flags.
-- need to add a TRANSCRIPT_INVALID_FLAG error, for which we should check in all
-  convertors
-- add probe=load flag for convertors to indicate that to probe if the convertor
-  is available, it should be loaded and checked that way.
-- searching for plugins should be done "by hand", because the client program
-  may be using libltdl itself and may change the search path
 - move convertor loading functions to a separate file
 - read all aliases.txt files in all dirs, and provide a name for allowing
   system wide overrides (/etc/transcript/aliases.txt?)
@@ -30,11 +24,7 @@ HIGH PRIORITY
 - the new library stuf has made the save state size determination more difficult
   Perhaps a new state_destroy method should be provide, such that if needed
   the state can be allocated on the heap.
-- need to fix (as in fixate) the extension, such that for probing we can suffice
-  with opening the name. Otherwise, we need to know the extension for dynamic
-  objects on each platform.
-- should options be normalized as well, or should normalization stop as soon as
-  we see a comma?
+- add a blocked flag and do not load any convertors with it set
 
 MEDIUM PRIORITY
 ===============
@@ -62,6 +52,8 @@ MEDIUM PRIORITY
 - the aliases file is in ASCII, but the system on which we are running may not
   be! This means the aliases file should be converted to the current execution
   charset before use.
+- should options be normalized as well, or should normalization stop as soon as
+  we see a comma?
 
 LOW PRIORITY
 ============

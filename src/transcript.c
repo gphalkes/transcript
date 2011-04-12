@@ -60,6 +60,9 @@ void (*_transcript_acquire_lock)(void *);
 void (*_transcript_release_lock)(void *);
 void *_transcript_lock;
 
+static const char **search_path;
+static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
+
 static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error);
 
 /*================ API functions ===============*/
@@ -424,6 +427,49 @@ long transcript_get_version(void) {
 }
 
 /*================ Internal functions ===============*/
+/** Load a suffixed symbol from a plugin. */
+static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
+	char buffer[NORMALIZE_NAME_MAX + 32];
+	strcpy(buffer, sym);
+	strcat(buffer, convertor_name);
+	return lt_dlsym(handle, buffer);
+}
+
+/** Try to open (i.e. get a file handle) a convertor.
+
+    If the option probe=load has been set in the convertor options, then instead
+    of trying to open with fopen, it will actually be dlopened and the function
+    transcript_probe_<name> will be called.
+*/
+static bool probe_convertor(const char *name, const char *normalized_name) {
+	const char *load_option;
+	char base_name[NORMALIZE_NAME_MAX];
+
+	transcript_get_option(name, base_name, NORMALIZE_NAME_MAX, NULL);
+
+	if ((load_option = strstr(normalized_name, ",probe=load")) != NULL && (load_option[11] == 0 || load_option[11] == ',')) {
+		bool (*probe)(const char *);
+		lt_dlhandle handle;
+		int result = 0;
+
+		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, NULL)) == NULL)
+			return 0;
+
+		transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
+		if ((probe = get_sym(handle, "transcript_probe_", base_name)) != NULL)
+			result = probe(normalized_name);
+
+		lt_dlclose(handle);
+		return result;
+	} else {
+		FILE *handle = NULL;
+		/* For most convertors it is sufficient to know that the file is readable. */
+		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, NULL)) != NULL)
+			fclose(handle);
+		return handle != NULL;
+	}
+}
+
 /** @internal
     @brief Perform the action described at ::transcript_probe_convertor.
 
@@ -435,30 +481,14 @@ long transcript_get_version(void) {
 int transcript_probe_convertor_nolock(const char *name) {
 	transcript_name_desc_t *convertor;
 	char normalized_name[NORMALIZE_NAME_MAX];
-	const char *load_option;
-	FILE *handle;
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
-	if ((load_option = strstr(normalized_name, ",probe=load")) != NULL && (load_option[11] == 0 || load_option[11] == ',')) {
-		/* FIXME: lt_dlopen the name, and try if a transcript_probe_<name> is available. If so return its result. */
-		return 0;
-	}
 
-	/* For most convertors it is sufficient to know that the file is readable. */
 	/* FIXME: shouldn't we try to open the convertor without going through the aliases
 	   table if we can't find it through the aliases table? */
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-		transcript_get_option(convertor->real_name, normalized_name, NORMALIZE_NAME_MAX, NULL);
-		handle = _transcript_db_open(normalized_name, ".tct", NULL);
-	} else {
-		transcript_get_option(name, normalized_name, NORMALIZE_NAME_MAX, NULL);
-		handle = _transcript_db_open(normalized_name, ".tct", NULL);
-	}
-
-	if (handle != NULL)
-		fclose(handle);
-
-	return handle != NULL;
+	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL)
+		return probe_convertor(convertor->real_name, convertor->name);
+	return probe_convertor(name, normalized_name);
 }
 
 /** @internal
@@ -498,14 +528,6 @@ transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_ty
 	return handle;
 }
 
-/** Load a suffixed symbol from a plugin. */
-static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
-	char buffer[160];
-	strcpy(buffer, sym);
-	strcat(buffer, convertor_name);
-	return lt_dlsym(handle, buffer);
-}
-
 /** Open a convertor plugin. */
 static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
 	lt_dlhandle handle = NULL;
@@ -515,7 +537,7 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 
 	transcript_get_option(real_name, base_name, NORMALIZE_NAME_MAX, NULL);
 
-	if ((handle = lt_dlopenext(base_name)) == NULL)
+	if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, error)) == NULL)
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
 
 	transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
@@ -587,26 +609,27 @@ static char *ts_strtok(char *string, const char *separators, char **state) {
     @param error The location to store a possible error.
     @return A @c FILE pointer on success, or @c NULL on failure.
 */
-static FILE *try_db_open(const char *name, const char *ext, const char *dir, transcript_error_t *error) {
+static FILE *db_open(const char *name, const char *ext, const char *dir, open_func_t open_func, transcript_error_t *error) {
 	char *file_name = NULL;
-	FILE *file = NULL;
+	void *result = NULL;
 	size_t len;
 
-	len = strlen(dir) + strlen(name) + 2 + strlen(ext);
+	len = strlen(dir) + strlen(name) + 2 + strlen(ext) + 1;
 	if ((file_name = malloc(len)) == NULL)
 		ERROR(TRANSCRIPT_OUT_OF_MEMORY);
 
 	strcpy(file_name, dir);
 	strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
 	strcat(file_name, name);
+	strcat(file_name, ".");
 	strcat(file_name, ext);
 
-	if ((file = fopen(file_name, "r")) == NULL)
+	if ((result = open_func(file_name, "r")) == NULL)
 		ERROR(TRANSCRIPT_ERRNO);
 
 end_error:
 	free(file_name);
-	return file;
+	return result;
 }
 
 /** @internal
@@ -620,27 +643,14 @@ end_error:
     environment variable (if set), and then in the compiled in database
     directory.
 */
-FILE *_transcript_db_open(const char *name, const char *ext, transcript_error_t *error) {
-	const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
-	const char *const_search_path;
-	char *search_path, *next_dir, *state;
+void *_transcript_db_open(const char *name, const char *ext, open_func_t open_func, transcript_error_t *error) {
+	const char **next_dir;
 	FILE *result;
 
-	if ((const_search_path = lt_dlgetsearchpath()) == NULL)
-		return NULL;
-
-	if ((search_path = _transcript_strdup(const_search_path)) == NULL) {
-		/* If we can't allocate enough memory to copy this string, we're doomed anyway. So just quit now. */
-		return NULL;
-	}
-
-	for (next_dir = ts_strtok(search_path, path_sep, &state); next_dir != NULL; next_dir = ts_strtok(NULL, path_sep, &state)) {
-		if ((result = try_db_open(name, ext, next_dir, error)) != NULL) {
-			free(search_path);
+	for (next_dir = search_path; next_dir != NULL; next_dir++) {
+		if ((result = db_open(name, ext, *next_dir, open_func, error)) != NULL)
 			return result;
-		}
 	}
-	free(search_path);
 	return NULL;
 }
 
@@ -801,6 +811,23 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 	return TRANSCRIPT_UNASSIGNED;
 }
 
+/** Append a directory to the search path. */
+static void add_search_dir(const char *dir) {
+	static int path_idx, path_size;
+
+	if (path_idx >= path_size) {
+		const char **tmp;
+		if ((tmp = realloc(search_path, sizeof(search_path[0]) * (path_size + 8 + 1))) == NULL)
+			return;
+		search_path = tmp;
+		path_size += 8;
+	}
+	search_path[path_idx++] = dir;
+	/* Note that we always allocate one extra element for this purpose, which is
+	   not accounted for in path_size. */
+	search_path[path_idx] = NULL;
+}
+
 /** @internal
     @brief Initialize the parts of the library that can not be handled in a
          thread-safe manner.
@@ -824,8 +851,7 @@ void _transcript_init(void) {
 	if (!initialized) {
 		ACQUIRE_LOCK();
 		if (!initialized) {
-			const char *transcript_path;
-			char *user_path;
+			char *transcript_path, *search_path_element, *state;
 			/* Initialize aliases defined in the aliases.txt file. This does not
 			   check availability, nor does it build the complete set of display
 			   names. That will be done when that list is requested. */
@@ -833,26 +859,27 @@ void _transcript_init(void) {
 			bindtextdomain("libtranscript", LOCALEDIR);
 			#endif
 			init_char_info();
-
-			/* Initialize the search path for libraries. */
 			lt_dlinit();
+
 			if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
-				lt_dlsetsearchpath(transcript_path);
-			} else {
-				if ((transcript_path = getenv("HOME")) != NULL) {
-					if ((user_path = malloc(strlen(transcript_path) + 1 + 10 + 1)) == NULL) {
-						lt_dlsetsearchpath(DB_DIRECTORY);
-					} else {
-						strcpy(user_path, transcript_path);
-						strcpy(user_path, "/"); /* Windows also recognises / as directory separator internally. */
-						strcpy(user_path, ".transcript");
-						lt_dlsetsearchpath(user_path);
-						free(user_path);
-						lt_dladdsearchdir(DB_DIRECTORY);
-					}
-				} else {
-					lt_dlsetsearchpath(DB_DIRECTORY);
+				if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
+					for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+							search_path_element != NULL; ts_strtok(NULL, path_sep, &state))
+						add_search_dir(search_path_element);
 				}
+			}
+			if ((transcript_path = getenv("HOME")) != NULL) {
+				if ((search_path_element = malloc(strlen(transcript_path) + 1 + 10 + 1)) != NULL) {
+					strcpy(search_path_element, transcript_path);
+					strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
+					strcat(search_path_element, ".transcript");
+					add_search_dir(search_path_element);
+				}
+			}
+			if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
+				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+						search_path_element != NULL; ts_strtok(NULL, path_sep, &state))
+					add_search_dir(search_path_element);
 			}
 			_transcript_init_aliases_from_file();
 		}
