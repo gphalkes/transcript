@@ -914,3 +914,5 @@ static void close_convertor(convertor_state_t *handle) {
 	}
 	free(handle);
 }
+
+TRANSCRIPT_EXPORT int transcript_get_iface_iso2022(void) { return TRANSCRIPT_FULL_MODULE_V1; }

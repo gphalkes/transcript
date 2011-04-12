@@ -371,3 +371,5 @@ TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
 static void close_convertor(convertor_state_t *handle) {
 	transcript_close_convertor(handle->gb18030_cct);
 }
+
+TRANSCRIPT_EXPORT int transcript_get_iface_unicode(void) { return TRANSCRIPT_FULL_MODULE_V1; }

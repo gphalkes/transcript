@@ -167,3 +167,4 @@ TRANSCRIPT_EXPORT int transcript_size_iso88591(void) {
 	return 0;
 }
 */
+TRANSCRIPT_EXPORT int transcript_get_iface_iso88591(void) { return TRANSCRIPT_FULL_MODULE_V1; }
