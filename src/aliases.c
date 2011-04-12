@@ -342,7 +342,7 @@ void _transcript_init_aliases_from_file(void) {
 	} state = LINE_START;
 
 
-	if ((aliases = _transcript_db_open("aliases", ".txt", NULL)) == NULL) {
+	if ((aliases = _transcript_db_open("aliases", "txt", (open_func_t) fopen, NULL)) == NULL) {
 		_transcript_log("Error opening aliases.txt: %s\n", strerror(errno));
 		return;
 	}

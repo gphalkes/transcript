@@ -70,7 +70,7 @@ convertor_t *_transcript_load_cct_convertor(const char *name, transcript_error_t
 		}
 	}
 
-	if ((file = _transcript_db_open(name, ".cct", error)) == NULL)
+	if ((file = _transcript_db_open(name, "cct", (open_func_t) fopen, error)) == NULL)
 		goto end_error;
 
 	READ(4, magic);

@@ -17,16 +17,18 @@ LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
+MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .tct
+
 MODULES := iso-8859-1 unicode iso-2022
 
 # If SOURCES is not defined for a module, assume that module*.c are the sources
 $(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard modules/$(MODULE)*.c)))
 # Modules need to be linked with special flags
-$(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la += -module -avoid-version -L.libs -ltranscript))
+$(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la += $(MODULE_FLAGS)))
 
 TABLES := $(patsubst %.c, %, $(wildcard tables/*.c))
 $(foreach TABLE, $(TABLES), $(eval SOURCES.$(TABLE).la := $(TABLE).c))
-$(foreach TABLE, $(TABLES), $(eval LDFLAGS.$(TABLE).la += -module -avoid-version -L.libs -ltranscript))
+$(foreach TABLE, $(TABLES), $(eval LDFLAGS.$(TABLE).la += $(MODULE_FLAGS)))
 
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs
@@ -39,7 +41,7 @@ LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/transcript\" -O2
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/modules/.libs:$(PWD)/tables/.libs\" -O2
 CFLAGS += -DUSE_ENDIAN
 CFLAGS += -DHAS_INLINE
 CFLAGS += -DHAS_NL_LANGINFO
