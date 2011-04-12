@@ -39,8 +39,8 @@ struct transcript_t {
 	close_func_t close;
 	save_func_t save;
 	load_func_t load;
+	void *library_handle;
 	int flags;
-	int utf_type;
 };
 
 /* FIXME: rename! */

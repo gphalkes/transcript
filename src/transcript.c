@@ -139,8 +139,12 @@ transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_t
     be @c NULL.
 */
 void transcript_close_convertor(transcript_t *handle) {
-	if (handle != NULL)
+	if (handle != NULL) {
 		handle->close(handle);
+		ACQUIRE_LOCK();
+		lt_dlclose(handle->library_handle);
+		RELEASE_LOCK();
+	}
 }
 
 /** Check if two names describe the same convertor.
@@ -531,7 +535,10 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
 			if ((open_convertor = get_sym(handle, "transcript_open_", base_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			result = open_convertor(normalized_name, flags, error);
+			if ((result = open_convertor(normalized_name, flags, error)) != NULL) {
+				result->library_handle = handle;
+				return result;
+			}
 			break;
 		}
 		default:
