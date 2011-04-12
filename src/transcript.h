@@ -21,27 +21,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 
-#if defined _WIN32 || defined __CYGWIN__
-	#define TRANSCRIPT_EXPORT __declspec(dllexport)
-	#define TRANSCRIPT_IMPORT __declspec(dllimport)
-	#define TRANSCRIPT_LOCAL
-#else
-	#if __GNUC__ >= 4
-		#define TRANSCRIPT_EXPORT __attribute__((visibility("default")))
-		#define TRANSCRIPT_IMPORT __attribute__((visibility("default")))
-		#define TRANSCRIPT_LOCAL __attribute__((visibility("hidden")))
-	#else
-		#define TRANSCRIPT_EXPORT
-		#define TRANSCRIPT_IMPORT
-		#define TRANSCRIPT_LOCAL
-	#endif
-#endif
-
-#ifdef TRANSCRIPT_BUILD_DSO
-	#define TRANSCRIPT_API TRANSCRIPT_EXPORT
-#else
-	#define TRANSCRIPT_API TRANSCRIPT_IMPORT
-#endif
+#include "api.h"
 
 /** @defgroup transcript Native transcript interface. */
 /** @addtogroup transcript */
@@ -65,7 +45,7 @@ extern "C" {
 /** @struct transcript_t
     An opaque structure describing a convertor and its state.
 */
-typedef struct transcript_common_t transcript_t;
+typedef struct transcript_t transcript_t;
 
 /** Flags for convertors and conversions. */
 enum transcript_flags_t {

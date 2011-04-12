@@ -28,7 +28,7 @@ typedef struct {
 } state_t;
 
 struct convertor_state_t {
-	transcript_common_t common;
+	transcript_t common;
 	put_unicode_func_t from_unicode_put;
 	get_unicode_func_t to_unicode_get;
 

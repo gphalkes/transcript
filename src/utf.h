@@ -11,10 +11,12 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef UTF_H
-#define UTF_H
+#ifndef TRANSCRIPT_UTF_H
+#define TRANSCRIPT_UTF_H
 
-#include "transcript_internal.h"
+#include "api.h"
+#include "bool.h"
+#include "handle.h"
 
 #define TRANSCRIPT_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define TRANSCRIPT_UTF_INCOMPLETE UINT32_C(0xfffffffe)

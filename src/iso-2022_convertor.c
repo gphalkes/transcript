@@ -100,7 +100,7 @@ typedef void (*reset_state_func_t)(convertor_state_t *handle);
 /** @struct convertor_state_t
     Structure holding the data and the state of a CCT convertor. */
 struct convertor_state_t {
-	transcript_common_t common;
+	transcript_t common;
 	cct_handle_t *g_initial[4]; /**< Initial sets of the convertor (for resetting purposes). */
 	cct_handle_t *g_sets[4]; /**< Linked lists of possible tables. */
 	cct_handle_t *ascii; /**< The ASCII convertor. */

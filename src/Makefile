@@ -18,13 +18,14 @@ SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.
 LDFLAGS.libtranscript.la := -pthread -lltdl
 CFLAGS.cct_convertor := -pthread
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
+LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
-MODULES := iso-8859-1_convertor
+MODULES := iso-8859-1
 
-SOURCES.modules/iso-8859-1_convertor.la := modules/iso-8859-1_convertor.c
-
-#$(foreach MODULE, $(MODULES), $(eval $(foreach SOURCE, $(SOURCES.modules/$(MODULE).la), $(eval CFLAGS.$(SOURCE:.c=) := -shared))))
-$(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la := -module -avoid-version -L.libs -ltranscript))
+# If SOURCES is not defined for a module, assume that module*.c are the sources
+$(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard modules/$(MODULE)*.c)))
+# Modules need to be linked with special flags
+$(foreach MODULE, $(MODULES), $(eval LDFLAGS.modules/$(MODULE).la += -module -avoid-version -L.libs -ltranscript))
 
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs
@@ -51,7 +52,18 @@ test: | libtranscript.la
 $(OBJECTS): generic_fallbacks.c
 
 generic_fallbacks.c generic_fallbacks.h: ../src.util/generic_fallbacks.txt
-	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF transcript_generic_fallbacks < $<
+	../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p -r0x10000 -DFFFF -H'#include "transcript.h"' \
+		-e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $<
 
 clean::
-	rm generic_fallbacks.[ch]
+	rm generic_fallbacks.[ch] 2>/dev/null
+	rm -rf modules/.libs 2>/dev/null
+
+links:
+	[ -d transcript ] || mkdir transcript
+	[ -L transcript/moduledefs.h ] || ln -s ../moduledefs.h transcript
+	[ -L transcript/api.h ] || ln -s ../api.h transcript
+	[ -L transcript/bool.h ] || ln -s ../bool.h transcript
+	[ -L transcript/handle.h ] || ln -s ../handle.h transcript
+
+.PHONY: links

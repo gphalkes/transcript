@@ -16,6 +16,17 @@ HIGH PRIORITY
   actually a Unicode conversion with invalid flags.
 - need to add a TRANSCRIPT_INVALID_FLAG error, for which we should check in all
   convertors
+- add probe=load flag for convertors to indicate that to probe if the convertor
+  is available, it should be loaded and checked that way.
+- searching for plugins should be done "by hand", because the client program
+  may be using libltdl itself and may change the search path
+- move convertor loading functions to a separate file
+- read all aliases.txt files in all dirs, and provide a name for allowing
+  system wide overrides (/etc/transcript/aliases.txt?)
+- provide a block flag to disallow certain convertors
+- flag handling should be done differently, because now certain flags will be
+  handled by the library. Perhaps passing the flags separately would be a good
+  idea.
 
 MEDIUM PRIORITY
 ===============

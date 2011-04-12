@@ -33,7 +33,7 @@ static_assert(sizeof(save_state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 /** @struct convertor_state_t
     Structure holding the pointers to the data and the state of a CCT convertor. */
 typedef struct {
-	transcript_common_t common;
+	transcript_t common;
 	convertor_t *convertor;
 	variant_t *variant;
 	multi_mapping_t **codepage_sorted_multi_mappings;

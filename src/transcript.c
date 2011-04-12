@@ -660,6 +660,13 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
 }
 
 /** @internal
+    @brief Get a generic fallback.
+*/
+uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
+	return get_generic_fallback(codepoint);
+}
+
+/** @internal
     @brief Handle an unassigned codepoint in a from-Unicode conversion.
 
     This function does a lookup in the generic fall-back table. If no generic
@@ -667,7 +674,7 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
     Otherwise, it handles conversion of the generic fall-back as if it were
     specified in the convertor table.
 */
-transcript_error_t _transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
+transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags)
 {
 	get_unicode_func_t saved_get_unicode_func;
