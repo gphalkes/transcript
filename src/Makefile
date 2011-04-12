@@ -13,8 +13,7 @@
 
 SOURCES.libtranscript.la := transcript.c utf.c transcript_iconv.c cct_convertor.c \
 	cct_convertor_io.c aliases.c generic_fallbacks.c
-LDFLAGS.libtranscript.la := -pthread -lltdl
-CFLAGS.cct_convertor := -pthread
+LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
@@ -46,10 +45,9 @@ CFLAGS += -DHAS_INLINE
 CFLAGS += -DHAS_NL_LANGINFO
 CFLAGS += -DHAS_STRDUP
 #~ CFLAGS += -DUSE_GETTEXT -DLOCALEDIR=\"locales\"
-#~ CFLAGS += -DWITHOUT_PTHREAD
 #~ CFLAGS += -std=c89
 
-test $(patsubst %, modules/%.la, $(MODULES)): | libtranscript.la
+test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 
 $(OBJECTS): generic_fallbacks.c
 

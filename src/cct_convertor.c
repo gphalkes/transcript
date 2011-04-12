@@ -45,10 +45,6 @@ typedef struct {
 static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
 static void close_convertor(convertor_state_t *handle);
 
-#ifndef WITHOUT_PTHREAD
-static pthread_mutex_t cct_list_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
-
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
 	if ((result = handle->common.put_unicode(codepoint, outbuf, outbuflimit)) != TRANSCRIPT_SUCCESS) \
@@ -656,10 +652,10 @@ void *_transcript_open_cct_convertor_internal(const char *name, int flags, trans
 	convertor_t *ptr;
 
 	/* Loading the convertor should be done one at a time. All locking is done in this file. */
-	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex););
+	ACQUIRE_LOCK();
 
 	if ((ptr = _transcript_load_cct_convertor(name, error, &variant)) == NULL) {
-		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
+		RELEASE_LOCK();
 		return NULL;
 	}
 
@@ -667,7 +663,7 @@ void *_transcript_open_cct_convertor_internal(const char *name, int flags, trans
 		_transcript_unload_cct_convertor(ptr);
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_TABLE;
-		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
+		RELEASE_LOCK();
 		return NULL;
 	}
 
@@ -675,10 +671,10 @@ void *_transcript_open_cct_convertor_internal(const char *name, int flags, trans
 		_transcript_unload_cct_convertor(ptr);
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
-		PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
+		RELEASE_LOCK();
 		return NULL;
 	}
-	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
+	RELEASE_LOCK();
 
 	retval->convertor = ptr;
 	retval->state.from = 0;
@@ -718,8 +714,8 @@ void *_transcript_open_cct_convertor(const char *name, int flags, transcript_err
 
 /** close implementation for CCT convertors. */
 static void close_convertor(convertor_state_t *handle) {
-	PTHREAD_ONLY(pthread_mutex_lock(&cct_list_mutex));
+	ACQUIRE_LOCK();
 	_transcript_unload_cct_convertor(handle->convertor);
-	PTHREAD_ONLY(pthread_mutex_unlock(&cct_list_mutex));
+	RELEASE_LOCK();
 	free(handle);
 }

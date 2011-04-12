@@ -624,9 +624,9 @@ static bool real_load(convertor_state_t *handle, cct_descriptor_t *desc, int g, 
 		return TRANSCRIPT_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = _transcript_open_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
+		ext_handle = transcript_open_convertor_nolock(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
 	else
-		ext_handle = _transcript_open_convertor(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
+		ext_handle = transcript_open_convertor_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
 		return false;
@@ -687,9 +687,9 @@ static bool probe(convertor_state_t *handle, cct_descriptor_t *desc, int g, tran
 	(void) flags;
 
 	if (desc->name == NULL)
-		return transcript_probe_convertor(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591");
+		return transcript_probe_convertor_nolock(flags & CCT_FLAG_ASCII ? "ascii" : "iso88591");
 	else
-		return transcript_probe_convertor(desc->name);
+		return transcript_probe_convertor_nolock(desc->name);
 }
 
 /** Convenience macro which tries to load a convertor and exits the function if it is not available. */

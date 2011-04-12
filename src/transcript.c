@@ -18,9 +18,6 @@
 #include <ctype.h>
 #include <string.h>
 #include <search.h>
-#ifndef WITHOUT_PTHREAD
-#include <pthread.h>
-#endif
 #include <limits.h>
 #include <locale.h>
 #include <stdarg.h>
@@ -59,17 +56,59 @@
 /** @internal */
 #define IS_IDCHR_EXTRA (1<<4)
 static char char_info[CHAR_MAX];
+void (*_transcript_acquire_lock)(void *);
+void (*_transcript_release_lock)(void *);
+void *_transcript_lock;
 
 static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error);
 
 /*================ API functions ===============*/
+/** Set the locking callbacks for libtranscript.
+    @param acquire The function to call to acquire the lock.
+    @param release The function to call to release the lock.
+    @param lock The data to pass to @a acquire and @a release.
+
+    This function should be called before calling any other function in the
+    library, if the library is used in more than one thread, or if the
+    dynamic linker is invoked in another thread then the functions in this
+    library.
+
+    For an environment where locking is performed using the pthread library,
+    the following code provides an example of how to set the callbacks.
+
+    @code
+    #include <pthread.h>
+    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+    static void acquire_lock(void *data) { (void) data; pthread_mutex_lock(&lock); }
+    static void release_lock(void *data) { (void) data; pthread_mutex_unlock(&lock); }
+
+    transcript_set_lock_callbacks(acquire_lock, release_lock, NULL);
+    @endcode
+*/
+void transcript_set_lock_callbacks(void (*acquire)(void *), void (*release)(void *), void *lock) {
+	if (acquire == NULL || release == NULL) {
+		_transcript_acquire_lock = NULL;
+		_transcript_release_lock = NULL;
+		_transcript_lock = NULL;
+	} else {
+		_transcript_acquire_lock = acquire;
+		_transcript_release_lock = release;
+		_transcript_lock = lock;
+	}
+}
+
 /** Check if a named convertor is available.
     @param name The name of the convertor to check.
     @return 1 if the convertor is avaible, 0 otherwise.
 */
 int transcript_probe_convertor(const char *name) {
+	int result;
+
 	_transcript_init();
-	return _transcript_probe_convertor(name);
+	ACQUIRE_LOCK();
+	result = transcript_probe_convertor_nolock(name);
+	RELEASE_LOCK();
+	return result;
 }
 
 /** Open a convertor.
@@ -84,15 +123,12 @@ int transcript_probe_convertor(const char *name) {
     the normalized name are considered.
 */
 transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
-	#ifndef WITHOUT_PTHREAD
-	static pthread_mutex_t open_mutex = PTHREAD_MUTEX_INITIALIZER;
-	#endif
 	transcript_t *result;
 
 	_transcript_init();
-	PTHREAD_ONLY(pthread_mutex_lock(&open_mutex););
-	result = _transcript_open_convertor(name, utf_type, flags, error);
-	PTHREAD_ONLY(pthread_mutex_unlock(&open_mutex););
+	ACQUIRE_LOCK();
+	result = transcript_open_convertor_nolock(name, utf_type, flags, error);
+	RELEASE_LOCK();
 	return result;
 }
 
@@ -392,7 +428,7 @@ long transcript_get_version(void) {
     know it has already been called, we don't need to check again. Therefore,
     in the library itself we use this stripped down version.
 */
-int _transcript_probe_convertor(const char *name) {
+int transcript_probe_convertor_nolock(const char *name) {
 	transcript_name_desc_t *convertor;
 	char normalized_name[NORMALIZE_NAME_MAX];
 	const char *load_option;
@@ -428,7 +464,7 @@ int _transcript_probe_convertor(const char *name) {
     internal mutex. This function is provided such that convertors can open
     other convertors without causing a deadlock.
 */
-transcript_t *_transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
+transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	transcript_name_desc_t *convertor;
 	char normalized_name[NORMALIZE_NAME_MAX];
 
@@ -768,9 +804,6 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 */
 void _transcript_init(void) {
 	static bool initialized = false;
-#ifndef WITHOUT_PTHREAD
-	static pthread_mutex_t init_mutex = PTHREAD_MUTEX_INITIALIZER;
-#endif
 
 	/* We check the initialized variable first without locking the mutex. We can
 	   safely do this, because once it has been set, it will never be reset. So
@@ -782,7 +815,7 @@ void _transcript_init(void) {
 	   sacrificing thread-safety.
 	*/
 	if (!initialized) {
-		PTHREAD_ONLY(pthread_mutex_lock(&init_mutex));
+		ACQUIRE_LOCK();
 		if (!initialized) {
 			const char *transcript_path;
 			char *user_path;
@@ -817,7 +850,7 @@ void _transcript_init(void) {
 			_transcript_init_aliases_from_file();
 		}
 		initialized = true;
-		PTHREAD_ONLY(pthread_mutex_unlock(&init_mutex));
+		RELEASE_LOCK();
 	}
 }
 

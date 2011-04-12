@@ -35,11 +35,12 @@
 TRANSCRIPT_LOCAL char *_transcript_strdup(const char *str);
 #endif
 
-#ifdef WITHOUT_PTHREAD
-#define PTHREAD_ONLY(_x)
-#else
-#define PTHREAD_ONLY(_x) do { _x; } while(0)
-#endif
+#define ACQUIRE_LOCK() do { if (_transcript_acquire_lock != NULL) _transcript_acquire_lock(_transcript_lock); } while (0)
+#define RELEASE_LOCK() do { if (_transcript_release_lock != NULL) _transcript_release_lock(_transcript_lock); } while (0)
+
+TRANSCRIPT_LOCAL extern void (*_transcript_acquire_lock)(void *);
+TRANSCRIPT_LOCAL extern void (*_transcript_release_lock)(void *);
+TRANSCRIPT_LOCAL extern void *_transcript_lock;
 
 struct _transcript_iconv_t {
 	transcript_t *from, *to;
@@ -68,7 +69,6 @@ TRANSCRIPT_LOCAL transcript_name_desc_t *_transcript_get_name_desc(const char *n
 
 TRANSCRIPT_LOCAL void _transcript_init(void);
 TRANSCRIPT_LOCAL FILE *_transcript_db_open(const char *name, const char *ext, transcript_error_t *error);
-TRANSCRIPT_LOCAL int _transcript_probe_convertor(const char *name);
 
 TRANSCRIPT_LOCAL int _transcript_isalnum(int c);
 TRANSCRIPT_LOCAL int _transcript_isdigit(int c);

@@ -253,9 +253,6 @@ static const char *builtin_names[] = {
 */
 static void init_availability(void) {
 	static bool availability_initialized = false;
-#ifndef WITHOUT_PTHREAD
-	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-#endif
 
 	DIR *dir;
 	struct dirent *entry;
@@ -264,25 +261,24 @@ static void init_availability(void) {
 	if (availability_initialized)
 		return;
 
-#ifndef WITHOUT_PTHREAD
 	/* The initial check is to ensure that in the most common case, we skip the
 	   locking of the mutex. This is possible because we only set the value to
 	   true, never to false. Now we do the properly mutex protected check. */
-	pthread_mutex_lock(&lock);
+	ACQUIRE_LOCK();
 	if (availability_initialized) {
-		pthread_mutex_unlock(&lock);
+		RELEASE_LOCK();
 		return;
 	}
-#endif
+
 	/* Probe all the convertors listed as aliases from the file. */
 	for (i = 0; i < (size_t) display_names_used; i++)
-		display_names[i].available = _transcript_probe_convertor(display_names[i].name);
+		display_names[i].available = transcript_probe_convertor_nolock(display_names[i].name);
 
 
 	/* Add the built-in convertors, in as far as they are not already defined through the aliases file. */
 	for (i = 0; i < sizeof(builtin_names) / sizeof(builtin_names[0]); i++) {
 		if (_transcript_get_name_desc(builtin_names[i], 1) == NULL)
-			add_display_name(builtin_names[i], _transcript_probe_convertor(builtin_names[i]));
+			add_display_name(builtin_names[i], transcript_probe_convertor_nolock(builtin_names[i]));
 	}
 
 	/* Add all the file names we can find in the DB dir, if they are not already present. */
@@ -297,13 +293,13 @@ static void init_availability(void) {
 				continue;
 			entry->d_name[entry_name_len - 4] = 0;
 			if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
-				add_display_name(entry->d_name, _transcript_probe_convertor(entry->d_name));
+				add_display_name(entry->d_name, transcript_probe_convertor_nolock(entry->d_name));
 		}
 		closedir(dir);
 	}
 
 	availability_initialized = true;
-	PTHREAD_ONLY(pthread_mutex_unlock(&lock));
+	RELEASE_LOCK();
 }
 
 /** Retrieve the list of display names known to this instantiation of the library.

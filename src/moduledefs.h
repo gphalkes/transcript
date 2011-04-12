@@ -112,6 +112,7 @@ TRANSCRIPT_API uint32_t transcript_get_generic_fallback(uint32_t codepoint);
 TRANSCRIPT_API transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags);
 TRANSCRIPT_API bool transcript_get_option(const char *name, char *option_buffer, size_t option_buffer_max, const char *option_name);
+TRANSCRIPT_API int transcript_probe_convertor_nolock(const char *name);
 
 #define HANDLE_UNASSIGNED(_code) \
 	switch (transcript_handle_unassigned((transcript_t *) handle, codepoint, outbuf, outbuflimit, flags)) { \
