@@ -133,7 +133,7 @@ static void save_load_nop(transcript_t*handle, void *state) {
 /** @internal
     @brief Open an ISO-8859-1/ASCII convertor.
 */
-TRANSCRIPT_EXPORT void *transcript_open_iso88591(const char *name, int flags, int *error) {
+static void *open_ascii(const char *name, int flags, transcript_error_t *error) {
 	convertor_state_t *retval;
 
 	if (strcmp(name, "iso88591") != 0 && strcmp(name, "ascii") != 0) {
@@ -167,4 +167,7 @@ TRANSCRIPT_EXPORT int transcript_size_iso88591(void) {
 	return 0;
 }
 */
+TRANSCRIPT_ALIAS_OPEN(open_ascii, ascii)
+TRANSCRIPT_ALIAS_OPEN(open_ascii, iso88591)
+TRANSCRIPT_EXPORT int transcript_get_iface_ascii(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 TRANSCRIPT_EXPORT int transcript_get_iface_iso88591(void) { return TRANSCRIPT_FULL_MODULE_V1; }

@@ -17,6 +17,14 @@ void fatal(const char *fmt, ...) {
 	abort();
 }
 
+void print_usage(void) {
+	printf("Usage: test [OPTIONS] <CONVERTOR NAME>\n");
+	printf("  -d<to|from>      Conversion direction (default=from)\n");
+	printf("  -u<type>         Unicode type: UTF-?\n");
+	printf("  -D               Dump raw output\n");
+	printf("  -f               Allow fallbacks\n");
+	printf("  -l               List convertors\n");
+}
 
 void show_names(void) {
 	int count, i;
@@ -51,7 +59,7 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", TRANSCRIPT_UTF32BE },
 		{ "UTF-32LE", TRANSCRIPT_UTF32LE }};
 
-	while ((c = getopt(argc, argv, "d:u:Dlf")) != EOF) {
+	while ((c = getopt(argc, argv, "d:u:Dlfh")) != EOF) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
@@ -82,6 +90,9 @@ int main(int argc, char *argv[]) {
 				break;
 			case 'l':
 				show_names();
+				exit(EXIT_SUCCESS);
+			case 'h':
+				print_usage();
 				exit(EXIT_SUCCESS);
 			default:
 				fatal("Error processing options\n");

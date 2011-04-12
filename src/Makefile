@@ -18,7 +18,7 @@ LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
 MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .tct
 
-MODULES := iso-8859-1 unicode iso-2022
+MODULES := ASCII unicode iso-2022
 
 # If SOURCES is not defined for a module, assume that module*.c are the sources
 $(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard modules/$(MODULE)*.c)))
@@ -35,19 +35,20 @@ LDLIBS.test := -ltranscript
 
 TARGETS := test
 LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
+EXTRATARGET := iso8859-1
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/modules/.libs:$(PWD)/tables/.libs\" -O2
+CFLAGS += -DDB_DIRECTORY=\"$(PWD)/modules/.libs:$(PWD)/tables/.libs:$(PWD)\" #-O2
 CFLAGS += -DUSE_ENDIAN
 CFLAGS += -DHAS_INLINE
 CFLAGS += -DHAS_NL_LANGINFO
 CFLAGS += -DHAS_STRDUP
 #~ CFLAGS += -DUSE_GETTEXT -DLOCALEDIR=\"locales\"
 #~ CFLAGS += -std=c89
-#~ CC := clang
+CC := clang
 
 test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 
@@ -70,4 +71,7 @@ links:
 	[ -L transcript/handle.h ] || ln -s ../handle.h transcript
 	[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
-.PHONY: links
+iso8859-1: | modules/ASCII.la
+	@[ -L modules/.libs/ISO-8859-1.tct ] || ln -s ASCII.tct modules/.libs/ISO-8859-1.tct
+
+.PHONY: links iso8859-1

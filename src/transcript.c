@@ -373,6 +373,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("map file is of an unsupported version");
 		case TRANSCRIPT_INTERNAL_TABLE:
 			return _("map file is for internal use only");
+		case TRANSCRIPT_DLOPEN_FAILURE:
+			return _("dynamic linker returned an error");
 	}
 }
 
@@ -650,7 +652,7 @@ void *_transcript_db_open(const char *name, const char *ext, open_func_t open_fu
 	const char **next_dir;
 	FILE *result;
 
-	for (next_dir = search_path; next_dir != NULL; next_dir++) {
+	for (next_dir = search_path; *next_dir != NULL; next_dir++) {
 		if ((result = db_open(name, ext, *next_dir, open_func, error)) != NULL)
 			return result;
 	}
@@ -881,7 +883,7 @@ void _transcript_init(void) {
 			}
 			if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
 				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-						search_path_element != NULL; ts_strtok(NULL, path_sep, &state))
+						search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
 					add_search_dir(search_path_element);
 			}
 			_transcript_init_aliases_from_file();

@@ -130,10 +130,10 @@ TRANSCRIPT_API int transcript_probe_convertor_nolock(const char *name);
 	}
 
 #define TRANSCRIPT_ALIAS_OPEN(_func, _name) \
-	TRANSPORT_EXPORT transcript_t *transcript_open_#_name(const char *name, int flags, transcript_error_t *error) { \
+	TRANSCRIPT_EXPORT transcript_t *transcript_open_##_name(const char *name, int flags, transcript_error_t *error) { \
 		return _func(name, flags, error); }
 #define TRANSCRIPT_ALIAS_PROBE(_func, _name) \
-	TRANSPORT_EXPORT bool transcript_probe_#_name(const char *name) { return _func(name); }
+	TRANSCRIPT_EXPORT bool transcript_probe_##_name(const char *name) { return _func(name); }
 
 #define TRANSCRIPT_ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
 
