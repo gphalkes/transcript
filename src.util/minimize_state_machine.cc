@@ -255,11 +255,14 @@ static int calculate_state_cost(full_state_t *state, Ucm::StateMachineInfo *info
 	int i;
 	double cost;
 
-	cost = 256 + 8; //FIXME: chose: either calculate in memory costs, or on disk cost, but not something inbetween!!!
+	/* This one is not entirely exact, because we don't know the size of a
+	   compiled pointer. However, the biggest cost is in the map and the
+	   entries, so it doesn't really matter. */
+	cost = 256 + 8;
 
 	for (i = 0; i < 256; i++) {
 		if (last_action != state->entries[i].action)
-			cost += 12;
+			cost += 8;
 		switch (state->entries[i].action) {
 			case ACTION_ILLEGAL:
 			case ACTION_SHIFT:

@@ -9,6 +9,8 @@ HIGH PRIORITY
 - provide pkg-config stuf for our own library
 - read all aliases.txt files in all dirs, and provide a name for allowing
   system wide overrides (/etc/transcript/aliases.txt?)
+  One way to do it is to make a function to pass to _transcript_db_open instead
+  of fopen.
 - a convertor with options may never be a display name. The options have some
   interesting interactions with other parts of the code.
   - looking op the real convertor

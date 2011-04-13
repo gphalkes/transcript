@@ -485,3 +485,21 @@ void Ucm::variants_done(void) {
 	variant.simple_mappings.clear();
 	variant.multi_mappings.clear();
 }
+
+void Ucm::check_base_mul_ranges(vector<State *> &states) {
+	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
+		if ((*state_iter)->base > 0xffff)
+			fatal("%s: Calculated state table too large\n", name);
+		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
+				entry_iter != (*state_iter)->entries.end(); entry_iter++)
+		{
+			if (entry_iter->base > 0xffff || entry_iter->mul > 0xffff)
+				fatal("%s: Calculated state table too large\n", name);
+		}
+	}
+}
+
+void Ucm::check_base_mul_ranges(void) {
+	check_base_mul_ranges(codepage_states);
+	check_base_mul_ranges(unicode_states);
+}

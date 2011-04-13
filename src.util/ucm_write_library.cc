@@ -64,8 +64,8 @@ void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &tot
 		{
 			if (total_entries != 0)
 				fprintf(output, ",\n");
-			fprintf(output, "\t{ UINT32_C(0x%08x), UINT32_C(0x%08x), 0x%02x, 0x%02x, 0x%02x }",
-				entry_iter->base, entry_iter->mul, entry_iter->low, entry_iter->next_state, entry_iter->action);
+			fprintf(output, "\t{ UINT16_C(0x%08x), UINT16_C(0x%08x), 0x%02x, 0x%02x, 0x%02x }",
+				entry_iter->base, entry_iter->mul, entry_iter->low, entry_iter->next_state, entry_iter->action & ~ACTION_FLAG_PAIR);
 			total_entries++;
 		}
 	}
@@ -78,7 +78,7 @@ void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) 
 	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		if (state_iter != states.begin())
 			fprintf(output, ",\n");
-		fprintf(output, "\t{ entries + %d, UINT32_C(0x%08x), {\n", (*state_iter)->entries_start, (*state_iter)->base);
+		fprintf(output, "\t{ entries + %d, UINT16_C(0x%08x), {\n", (*state_iter)->entries_start, (*state_iter)->base);
 		entry_iter = (*state_iter)->entries.begin();
 		for (int i = 0, entry_nr = 0; i < 256; i++) {
 			if ((i & 0xf) == 0) {
@@ -421,7 +421,6 @@ static const char *merge_and_write_flags(FILE *output, uint8_t *data, uint32_t r
 	free(blocks);
 	return result;
 }
-#undef BLOCKSIZE
 
 void Ucm::write_to_unicode_flags(FILE *output) {
 	uint32_t idx;
@@ -429,10 +428,10 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 	uint8_t *save_flags;
 	vector<Mapping *>::iterator mapping_iter;
 
-	if ((save_flags = (uint8_t *) malloc(codepage_range + 7)) == NULL)
+	if ((save_flags = (uint8_t *) malloc(codepage_range + BLOCKSIZE - 1)) == NULL)
 		OOM();
 
-	memset(save_flags, 0, codepage_range + 7);
+	memset(save_flags, 0, codepage_range + BLOCKSIZE - 1);
 
 	for (mapping_iter = simple_mappings.begin(); mapping_iter != simple_mappings.end(); mapping_iter++) {
 		if ((*mapping_iter)->precision == 1 || (*mapping_iter)->precision == 2)
@@ -482,10 +481,10 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 	uint8_t *save_flags;
 	vector<Mapping *>::iterator mapping_iter;
 
-	if ((save_flags = (uint8_t *) malloc(unicode_range + 7)) == NULL)
+	if ((save_flags = (uint8_t *) malloc(unicode_range + BLOCKSIZE - 1)) == NULL)
 		OOM();
 
-	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + 7);
+	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + BLOCKSIZE - 1);
 
 	for (mapping_iter = simple_mappings.begin(); mapping_iter != simple_mappings.end(); mapping_iter++) {
 		if ((*mapping_iter)->precision == 3)
@@ -531,6 +530,7 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 		used_from_unicode_flags, from_unicode_flags, "from"));
 	free(save_flags);
 }
+#undef BLOCKSIZE
 
 void Ucm::write_interface(FILE *output, const char *normalized_name, int variant_nr) {
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);

@@ -480,6 +480,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	ucm->find_shift_sequences();
+	ucm->check_base_mul_ranges();
 
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);

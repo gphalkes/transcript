@@ -69,13 +69,13 @@ typedef struct {
 } flags_v1_t;
 
 typedef struct {
-	const uint32_t base, mul;
+	const uint16_t base, mul;
 	const uint8_t low, next_state, action;
 } entry_v1_t;
 
 typedef struct {
 	const entry_v1_t *entries;
-	const uint32_t base;
+	const uint16_t base;
 	const uint8_t map[256];
 } state_v1_t;
 

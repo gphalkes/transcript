@@ -237,6 +237,7 @@ class Ucm : public UcmBase {
 		void find_used_flags(vector<Mapping *> &mappings, int *length_counts);
 		void remove_generic_fallbacks_internal(UcmBase *check, Variant *variant);
 		void remove_private_use_fallbacks_internal(UcmBase *check);
+		void check_base_mul_ranges(vector<State *> &states);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			public:
@@ -282,6 +283,7 @@ class Ucm : public UcmBase {
 		void fixup_variants(void);
 		void merge_variants(Ucm *other);
 		void variants_done(void);
+		void check_base_mul_ranges(void);
 
 		void dump(void);
 };
