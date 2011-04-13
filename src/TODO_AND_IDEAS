@@ -16,10 +16,16 @@ HIGH PRIORITY
   - looking op the real convertor
   - comparing equality of convertors
   this needs to be checked and maybe some rules need to be defined
+
+  - options must define different behaviour for the convertor
+  - disabling a convertor can _not_ be done through options! Using the name
+	disable as a convertor disables the convertor named after it
+  - a similar problem exists with probe=load. This also does not change the
+    behaviour of the convertor
+
 - the new library stuf has made the save state size determination more difficult
   Perhaps a new state_destroy method should be provide, such that if needed
   the state can be allocated on the heap.
-
 
 MEDIUM PRIORITY
 ===============
@@ -49,6 +55,10 @@ MEDIUM PRIORITY
   charset before use.
 - should options be normalized as well, or should normalization stop as soon as
   we see a comma?
+- we could add some data structure to the convertors/tables which allows
+  recreating the links, or creation of a links file. The name of this has to
+  be based on the file's name, because that's the only way it can be found
+  (unless we want to risk name clashes).
 
 LOW PRIORITY
 ============

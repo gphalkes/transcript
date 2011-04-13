@@ -674,7 +674,7 @@ void _transcript_init(void) {
 			if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
 				if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
 					for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-							search_path_element != NULL; ts_strtok(NULL, path_sep, &state))
+							search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
 						add_search_dir(search_path_element);
 				}
 			}

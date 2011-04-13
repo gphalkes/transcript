@@ -141,7 +141,7 @@ static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *
 	if (low == variant->nr_mappings)
 		return;
 	mapping = variant->simple_mappings + variant->simple_mappings[low].sort_idx;
-	if (mapping->codepage_bytes != value ||
+	if (memcmp(mapping->codepage_bytes, value, 4) != 0 ||
 			(mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) != length ||
 			(mapping->from_unicode_flags & FROM_UNICODE_FALLBACK))
 		return;

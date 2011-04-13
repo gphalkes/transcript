@@ -36,9 +36,9 @@ enum {
 
 typedef struct {
 	const uint8_t bytes[MAX_CHAR_BYTES_V1];
-	const uint8_t len;
 	const uint8_t from_state;
 	const uint8_t to_state;
+	const uint8_t len;
 } shift_state_v1_t;
 
 typedef struct {
