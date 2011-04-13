@@ -30,7 +30,8 @@ bool option_abort = true;
 #else
 #define NO_ABORT_OPTION
 #endif
-const char *option_output_name = NULL;
+const char *option_output_name;
+const char *option_convertor_name;
 char *output_name;
 extern FILE *yyin;
 
@@ -100,7 +101,8 @@ static void print_usage(void) {
 		"  -h                  Display this help message\n"
 		"  -i                  The ucm file is an internal use table\n"
 		"  -o <output>         Specify the output file name\n"
-		"  -v                  Increase verbosity\n");
+		"  -v                  Increase verbosity\n"
+	    "  -n<name>            Set convertor name to <name>\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -380,7 +382,7 @@ int main(int argc, char *argv[]) {
 
 	init_char_info();
 
-	while ((c = getopt(argc, argv, "hio:vD" NO_ABORT_OPTION)) != -1) {
+	while ((c = getopt(argc, argv, "hio:vDn:" NO_ABORT_OPTION)) != -1) {
 		switch (c) {
 			case 'h':
 				print_usage();
@@ -396,6 +398,9 @@ int main(int argc, char *argv[]) {
 			case 'D':
 				option_dump = true;
 				break;
+			case 'n':
+				option_convertor_name = optarg;
+				break;
 #ifdef DEBUG
 			case 'a':
 				option_abort = false;
@@ -407,10 +412,14 @@ int main(int argc, char *argv[]) {
 	}
 
 
-	if (argc - optind == 0)
+	if (argc - optind == 0) {
 		print_usage();
-	else if (argc - optind > 1 && option_output_name == NULL)
-		fatal("-o is required when using multiple input files\n");
+	} else if (argc - optind > 1) {
+		if (option_output_name == NULL)
+			fatal("-o is required when using multiple input files\n");
+		else if (option_convertor_name != NULL)
+			fatal("-n is only allowed with a single input file\n");
+	}
 
 	for (; optind != argc; optind++) {
 		if ((yyin = fopen(argv[optind], "r")) == NULL)

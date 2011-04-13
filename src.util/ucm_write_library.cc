@@ -536,7 +536,7 @@ void Ucm::write_interface(FILE *output, const char *normalized_name, int variant
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
 	fprintf(output, "TRANSCRIPT_EXPORT const convertor_tables_v1_t *transcript_get_table_%s(void) {\n", normalized_name);
 	fprintf(output, "\tstatic const convertor_tables_v1_t _convertor = {\n");
-	fprintf(output, "\t&convertor, ");
+	fprintf(output, "\t\t&convertor, ");
 	if (variant_nr < 0)
 		fprintf(output, "NULL,\n");
 	else
@@ -544,15 +544,15 @@ void Ucm::write_interface(FILE *output, const char *normalized_name, int variant
 
 	if (variant_nr < 0 || variants[variant_nr]->multi_mappings.size() == 0) {
 		if (multi_mappings.empty()) {
-			fprintf(output, "\tNULL, NULL, ");
+			fprintf(output, "\t\tNULL, NULL, ");
 		} else {
-			fprintf(output, "\tcodepage_sorted_multi_mappings, codepoint_sorted_multi_mappings, ");
+			fprintf(output, "\t\tcodepage_sorted_multi_mappings, codepoint_sorted_multi_mappings, ");
 		}
 	} else {
-		fprintf(output, "\tvariant%d_codepage_sorted_multi_mappings,\n", variant_nr);
-		fprintf(output, "\tvariant%d_codepoint_sorted_multi_mappings, ", variant_nr);
+		fprintf(output, "\t\tvariant%d_codepage_sorted_multi_mappings,\n", variant_nr);
+		fprintf(output, "\t\tvariant%d_codepoint_sorted_multi_mappings, ", variant_nr);
 	}
-	fprintf(output, "\t%d\n};\n", (int) multi_mappings.size() +
+	fprintf(output, "%d\n\t};\n", (int) multi_mappings.size() +
 		(variant_nr < 0 ? 0 : (int) variants[variant_nr]->multi_mappings.size()));
 	fprintf(output, "\treturn &_convertor;\n}\n\n");
 }

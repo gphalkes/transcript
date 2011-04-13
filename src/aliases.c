@@ -300,6 +300,7 @@ void _transcript_init_aliases_from_file(void) {
 	size_t idx = 0;
 	char id[MAX_ID + 1];
 	int c, line_number = 1;
+	bool comma_seen = false;
 
 	enum {
 		LINE_START,
@@ -353,7 +354,8 @@ void _transcript_init_aliases_from_file(void) {
 				idx = 1;
 				break;
 			case ID_FIRST:
-				if (c == ',' || c == '=') {
+				if (c == ',' || (comma_seen && c == '=')) {
+					comma_seen = true;
 					if (idx < MAX_ID)
 						id[idx++] = c;
 					break;
@@ -374,13 +376,19 @@ void _transcript_init_aliases_from_file(void) {
 						/* Start with the new convertor. */
 						convertor_found = add_convertor_name(id);
 					} else {
-						add_convertor_alias(id);
+						if (strcmp(id, ":disable") == 0)
+							convertors_tail->flags |= NAME_DESC_FLAG_DISABLED;
+						else if (strcmp(id, ":probe_load") == 0)
+							convertors_tail->flags |= NAME_DESC_FLAG_PROBE_LOAD;
+						else
+							add_convertor_alias(id);
 					}
 					state = c == '#' ? COMMENT : AFTER_ID;
 				} else {
 					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 					state = SKIP_REST;
 				}
+				comma_seen = false;
 				break;
 			case AFTER_ID:
 				if (_transcript_isspace(c))

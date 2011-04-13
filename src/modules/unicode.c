@@ -327,7 +327,7 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 	}
 	switch (retval->utf_type) {
 		case _TRANSCRIPT_GB18030:
-			if ((retval->gb18030_cct = transcript_open_convertor_nolock("_gb18030", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
+			if ((retval->gb18030_cct = transcript_open_convertor_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
 				free(retval);
 				return NULL;
 			}
@@ -367,7 +367,7 @@ TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
 		return false;
 
 	if (ptr->utf_type == _TRANSCRIPT_GB18030)
-		return transcript_probe_convertor_nolock("_gb180303");
+		return transcript_probe_convertor_nolock("gb18030table");
 
 	return true;
 }

@@ -11,7 +11,16 @@
 
 # Convertor names must start in column 1. Lines can be continued by indenting
 # the second and later lines with any amount of white-space. Convertors may
-# have options, specified after a comma. These options are not normalized.
+# have options, specified after a comma. In the options, the character = is
+# also a valid character.
+
+# Some convertors need special handling. For this purpose, there are several
+# special tags that may be used in the list of aliases. These are:
+# :disable        Disables this convertor. Note that this also prohibits any
+#                 other convertor with any of the names specified.
+# :probe_load     The convertor must be loaded and the probe routine of the
+#                 convertor must be called to establish its presence. Normal
+#                 operation merely checks the presence of the .tct file.
 
 # Unicode encodings:
 # ==================
@@ -65,7 +74,7 @@ unicode,name=scsu *SCSU IBM-1212 IBM-1213
 #unicode,name=bocu1 *BOCU-1 csBOCU-1 IBM-1214 IBM-1215
 unicode,name=cesu8 *CESU-8 IBM-9400
 
-unicode,name=gb18030,probe=load *GB18030 IBM-1392 Windows-54936
+unicode,name=gb18030 :probe_load *GB18030 IBM-1392 Windows-54936
 
 #FIXME: what is this doing here?
 #IMAP-mailbox-name

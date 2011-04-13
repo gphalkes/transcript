@@ -112,8 +112,8 @@ void UcmBase::add_mapping(Mapping *mapping) {
 	}
 }
 
-Ucm::Ucm(const char *_name) : variant(this, _name), name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0),
-		from_unicode_flags(0), to_unicode_flags(0)
+Ucm::Ucm(const char *_name) : variant(this, option_convertor_name == NULL ? _name : option_convertor_name),
+		name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0), to_unicode_flags(0)
 {
 	for (int i = 0; i < LAST_TAG; i++)
 		tag_values[i] = NULL;

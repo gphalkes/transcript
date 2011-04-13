@@ -296,6 +296,7 @@ extern "C" void fatal(const char *fmt, ...);
 #define OOM() fatal("Out of memory\n")
 #define ASSERT(x) do { if (!(x)) PANIC(); } while (0)
 
+extern const char *option_convertor_name;
 extern bool option_verbose, option_internal_table;
 
 Ucm::tag_t string_to_tag(const char *str);

@@ -34,13 +34,13 @@ static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_
     of trying to open with fopen, it will actually be dlopened and the function
     transcript_probe_<name> will be called.
 */
-static bool probe_convertor(const char *name, const char *normalized_name) {
-	const char *load_option;
+static bool probe_convertor(const char *name, const char *normalized_name, bool probe_load) {
 	char base_name[NORMALIZE_NAME_MAX];
 
+	/* Strip any options. */
 	transcript_get_option(name, base_name, NORMALIZE_NAME_MAX, NULL);
 
-	if ((load_option = strstr(normalized_name, ",probe=load")) != NULL && (load_option[11] == 0 || load_option[11] == ',')) {
+	if (probe_load) {
 		bool (*probe)(const char *);
 		lt_dlhandle handle;
 		int result = 0;
@@ -78,11 +78,11 @@ int transcript_probe_convertor_nolock(const char *name) {
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-		if (transcript_get_option(convertor->real_name, NULL, 0, "disable"))
+		if (convertor->flags & NAME_DESC_FLAG_DISABLED)
 			return false;
-		return probe_convertor(convertor->real_name, convertor->name);
+		return probe_convertor(convertor->real_name, convertor->name, !!(convertor->flags & NAME_DESC_FLAG_PROBE_LOAD));
 	}
-	return probe_convertor(name, normalized_name);
+	return probe_convertor(name, normalized_name, false);
 }
 
 /** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct. */
@@ -168,7 +168,7 @@ transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-		if (transcript_get_option(convertor->real_name, NULL, 0, "disable")) {
+		if (convertor->flags & NAME_DESC_FLAG_DISABLED) {
 			if (error != NULL)
 				*error = TRANSCRIPT_CONVERTOR_DISABLED;
 			return NULL;

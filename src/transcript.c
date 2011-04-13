@@ -485,19 +485,18 @@ int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c
 */
 void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
 	size_t write_idx = 0;
-	bool last_was_digit = false;
+	bool last_was_digit = false, comma_seen = false;
 
 	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
-		if (*name == ',') {
-			for (; *name != 0 && write_idx < normalized_name_max - 1; name++)
-				normalized_name[write_idx++] = _transcript_tolower(*name);
-			break;
-		}
-		if (!_transcript_isalnum(*name)) {
+		/* Skip any character that is not alphanumeric, or a comma, or (after the
+		   first comma) an equals sign. */
+		if (!_transcript_isalnum(*name) && *name != ',' && !(comma_seen && *name == '=')) {
 			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *name == '0')
 				continue;
+			if (*name == ',')
+				comma_seen = true;
 			normalized_name[write_idx++] = _transcript_tolower(*name);
 			last_was_digit = _transcript_isdigit(*name);
 		}

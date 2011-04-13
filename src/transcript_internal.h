@@ -52,6 +52,8 @@ typedef struct transcript_alias_name_t {
 } transcript_alias_name_t;
 
 #define NAME_DESC_FLAG_HAS_DISPNAME (1<<0)
+#define NAME_DESC_FLAG_DISABLED (1<<1)
+#define NAME_DESC_FLAG_PROBE_LOAD (1<<2)
 
 typedef struct transcript_name_desc_t {
 	char *real_name;
