@@ -30,6 +30,9 @@ TABLES := $(patsubst %.c, %, $(wildcard tables/*.c))
 $(foreach TABLE, $(TABLES), $(eval SOURCES.$(TABLE).la := $(TABLE).c))
 $(foreach TABLE, $(TABLES), $(eval LDFLAGS.$(TABLE).la += $(MODULE_FLAGS)))
 
+MODULESOURCES := $(foreach MODULE, $(MODULES), $(SOURCES.modules/$(MODULE).la))
+TABLESOURCES := $(foreach TABLE, $(TABLES), $(SOURCES.$(TABLE).la))
+
 SOURCES.test := test.c
 LDFLAGS.test := -L.libs
 LDLIBS.test := -ltranscript
@@ -64,13 +67,17 @@ clean::
 	rm generic_fallbacks.[ch] 2>/dev/null
 	rm -rf modules/.libs 2>/dev/null
 
+$(patsubst %.c, .objects/%.lo, $(MODULESOURCES)): | links
+$(patsubst %.c, .objects/%.lo, $(TABLESOURCES)): | links
+
 links:
-	[ -d transcript ] || mkdir transcript
-	[ -L transcript/moduledefs.h ] || ln -s ../moduledefs.h transcript
-	[ -L transcript/api.h ] || ln -s ../api.h transcript
-	[ -L transcript/bool.h ] || ln -s ../bool.h transcript
-	[ -L transcript/handle.h ] || ln -s ../handle.h transcript
-	[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
+	$(if $(VERBOSE), @echo [SH] making links ;,)
+	@[ -d transcript ] || mkdir transcript
+	@[ -L transcript/moduledefs.h ] || ln -s ../moduledefs.h transcript
+	@[ -L transcript/api.h ] || ln -s ../api.h transcript
+	@[ -L transcript/bool.h ] || ln -s ../bool.h transcript
+	@[ -L transcript/handle.h ] || ln -s ../handle.h transcript
+	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
 iso8859-1: | modules/ASCII.la
 	@[ -L modules/.libs/ISO-8859-1.tct ] || ln -s ASCII.tct modules/.libs/ISO-8859-1.tct
