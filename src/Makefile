@@ -39,7 +39,7 @@ LDLIBS.test := -ltranscript
 
 TARGETS := test
 LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
-EXTRATARGET := iso8859-1
+EXTRATARGETS := convertor-links
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
@@ -78,7 +78,11 @@ links:
 	@[ -L transcript/handle.h ] || ln -s ../handle.h transcript
 	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
-iso8859-1: | modules/ASCII.la
-	@[ -L modules/.libs/ISO-8859-1.tct ] || ln -s ASCII.tct modules/.libs/ISO-8859-1.tct
+convertor-links: | linktct $(LTTARGETS)
+	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linktct *.tct
+	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linktct *.tct
 
-.PHONY: links iso8859-1
+linktct:
+	@$(MAKE) -q -C ../src.util linktct || $(MAKE) --no-print-directory -C ../src.util linktct
+
+.PHONY: links convertor-links linktct

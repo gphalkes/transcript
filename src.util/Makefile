@@ -37,7 +37,7 @@ generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 ucm2cct: | library
 
 library:
-	$(MAKE) -C ../src libtranscript.la
+	@$(MAKE) -q -C ../src libtranscript.la || $(MAKE) -C ../src libtranscript.la
 
 clean::
 	rm generic_fallbacks.[ch]
