@@ -68,8 +68,8 @@ void Ucm::validate_states(void) {
 		}
 	}
 
-	mb_cur_max = atoi(tag_values[MB_MAX]);
-	mb_cur_min = atoi(tag_values[MB_MIN]);
+	mb_cur_max = atoi(tag_values[MB_MAX].str);
+	mb_cur_min = atoi(tag_values[MB_MIN].str);
 
 	if (mb_cur_max > 4 || mb_cur_max < 1)
 		fatal("%s: <mb_cur_max> is out of range\n", name);
@@ -90,9 +90,13 @@ void Ucm::validate_states(void) {
 	}
 
 	vector<uint8_t> bytes;
-	#warning FIXME: line number is not correct at this point, so the error messages generated from the functions below will be confusing.
 
-	parse_byte_sequence(tag_values[SUBCHAR], bytes);
+	/* Set line_number such that correct line numbers are displayed in error messages. */
+	line_number = tag_values[SUBCHAR].line_number;
+	parse_byte_sequence(tag_values[SUBCHAR].str, bytes);
+	/* In check_codepage_bytes the line number is always shown -1 because normally
+	   it is called after a line has been completely parsed. */
+	line_number++;
 	check_codepage_bytes(bytes);
 }
 
@@ -382,19 +386,19 @@ not_compat:
 void Ucm::check_compatibility(Ucm *other) {
 	if (uconv_class != other->uconv_class)
 		fatal("%s: Convertor in %s has different uconv_class\n", name, other->name);
-	if (strcmp(tag_values[MB_MAX], other->tag_values[MB_MAX]) != 0)
+	if (strcmp(tag_values[MB_MAX].str, other->tag_values[MB_MAX].str) != 0)
 		fatal("%s: Convertor in %s has different mb_cur_max\n", name, other->name);
-	if (strcmp(tag_values[MB_MIN], other->tag_values[MB_MIN]) != 0)
+	if (strcmp(tag_values[MB_MIN].str, other->tag_values[MB_MIN].str) != 0)
 		fatal("%s: Convertor in %s has different mb_cur_min\n", name, other->name);
 	if ((flags & ~INTERNAL_TABLE) != (other->flags & ~INTERNAL_TABLE))
 		fatal("%s: Convertor in %s is incompatible\n", name, other->name);
-	if (strcmp(tag_values[SUBCHAR], other->tag_values[SUBCHAR]) != 0)
+	if (strcmp(tag_values[SUBCHAR].str, other->tag_values[SUBCHAR].str) != 0)
 		fatal("%s: Convertor in %s has different subchar\n", name, other->name);
-	if (tag_values[SUBCHAR1] == NULL) {
-		if (other->tag_values[SUBCHAR1] != NULL)
+	if (tag_values[SUBCHAR1].str == NULL) {
+		if (other->tag_values[SUBCHAR1].str != NULL)
 			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
 	} else {
-		if (other->tag_values[SUBCHAR1] == NULL || strcmp(tag_values[SUBCHAR1], other->tag_values[SUBCHAR1]) != 0)
+		if (other->tag_values[SUBCHAR1].str == NULL || strcmp(tag_values[SUBCHAR1].str, other->tag_values[SUBCHAR1].str) != 0)
 			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
 	}
 

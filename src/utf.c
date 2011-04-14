@@ -292,8 +292,10 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 		case _TRANSCRIPT_UTF8_BOM:
 			return put_utf8;
 		case TRANSCRIPT_UTF16:
+		case _TRANSCRIPT_UTF16_NOBOM:
 			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
 		case TRANSCRIPT_UTF32:
+		case _TRANSCRIPT_UTF32_NOBOM:
 			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
 
 		case TRANSCRIPT_UTF16BE:
@@ -324,8 +326,10 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 		case TRANSCRIPT_UTF8:
 			return get_utf8strict;
 		case TRANSCRIPT_UTF16:
+		case _TRANSCRIPT_UTF16_NOBOM:
 			return swaps_a(1) == 1 ? get_utf16_a : get_utf16_b;
 		case TRANSCRIPT_UTF32:
+		case _TRANSCRIPT_UTF32_NOBOM:
 			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
 
 		case _TRANSCRIPT_UTF8_LOOSE:

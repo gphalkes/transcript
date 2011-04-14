@@ -34,7 +34,7 @@
 # are not available in that version.
 
 # The UTF-16 and UTF-32 encodings will write a BOM, unless directed not to by
-# the nobom option. All UTF-16 and UTF-32 encodings will read a BOM. The UTF-16
+# the nobom name. All UTF-16 and UTF-32 encodings will read a BOM. The UTF-16
 # and UTF-32 encodings will switch endianess when encountering a BOM. By
 # default they use the big endian encoding.
 
@@ -45,7 +45,7 @@ unicode,name=utf8bom *UTF-8-bom
 # because people simply use UCS-2 and UTF-16 interchangebly, it is better to
 # do it this way.
 unicode,name=utf16 *UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
-unicode,name=utf16nobom *UTF-16-nobom
+unicode,name=utf16nobom *UTF-16-NoBOM
 unicode,name=utf16be *UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
 	IBM-13488 IBM-13489 ibm-17584 IBM-17585 IBM-21680 IBM-21681 IBM-25776
 	IBM-25777 IBM-29872 ibm-29873 IBM-61955 IBM-61956 Windows-1201 cp1200
@@ -54,18 +54,18 @@ unicode,name=utf16le *UTF-16LE x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-120
 	IBM-13490 ibm-13491 IBM-17586 IBM-17587 IBM-21682 IBM-21683 IBM-25778
 	IBM-25779 ibm-29874 IBM-29875 UTF16_LittleEndian Windows-1200
 unicode,name=utf32 *UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
-unicode,name=utf32nobom *UTF-32-nobom
+unicode,name=utf32nobom *UTF-32-NoBOM
 unicode,name=utf32be *UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
 unicode,name=utf32le *UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 
-#FIXME: do we want to include these?
-# UTF16_PlatformEndian
-# UTF16_OppositeEndian
-# UTF32_PlatformEndian
-# UTF32_OppositeEndian
+unicode,name=utf16bebom *UTF-16BE-BOM *UnicodeBig
+unicode,name=utf16lebom *UTF-16LE-BOM *UnicodeLittle x-UTF-16LE-BOM
+unicode,name=utf32bebom *UTF-32BE-BOM
+unicode,name=utf32lebom *UTF-32LE-BOM
 
-unicode,name=utf16bebom UTF-16BE-bom *UnicodeBig
-unicode,name=utf16lebom UTF-16LE-bom *UnicodeLittle x-UTF-16LE-BOM
+# FIXME: add platform endian variants, default is without BOM
+#unicode,name=utf16pe *UTF-16PE UTF-16_PlatformEndian
+#unicode,name=utf32pe *UTF-32PE UTF-32_PlatformEndian
 
 unicode,name=utf7 *UTF-7 Windows-65000
 
@@ -250,14 +250,17 @@ ibm-1129_P100-1997 *IBM-1129
 ibm-1131_P100-1997 *IBM-1131 cp1131
 ibm-1133_P100-1997 *IBM-1133
 
-#FIXME: check the commented aliases
+# TODO: JIS_Encoding csJISEncoding JIS JIS7 JIS8. Although ICU says these are
+# aliases for some of the ISO-2022-JP* encodings, this is actually not true. The
+# JIS_Encoding does use the ISO-2022 scheme. However, the JIS_Encoding has more
+# character sets.
 iso-2022,name=jp *ISO-2022-JP csISO2022JP
-iso-2022,name=jp1 *ISO-2022-JP-1 # JIS_Encoding csJISEncoding IBM-5054 JIS
+iso-2022,name=jp1 *ISO-2022-JP-1 IBM-5054
 iso-2022,name=jp2 *ISO-2022-JP-2 csISO2022JP2
-iso-2022,name=jp3 *ISO-2022-JP-3 # JIS7
-iso-2022,name=jp2004 *ISO-2022-JP-2004 # JIS8
+iso-2022,name=jp3 *ISO-2022-JP-3
+iso-2022,name=jp2004 *ISO-2022-JP-2004
 iso-2022,name=kr *ISO-2022-KR csISO2022KR
-#FIXME: IBM-25546 is supposedly a variant of ISO-2022-KR
+# TODO: IBM-25546 is supposedly a variant of ISO-2022-KR
 iso-2022,name=cn *ISO-2022-CN csISO2022CN
 iso-2022,name=cnext *ISO-2022-CN-EXT
 #FIXME: what to do with these, i.e. what are these different versions?

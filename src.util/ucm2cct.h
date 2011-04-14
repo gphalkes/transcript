@@ -204,7 +204,12 @@ class Ucm : public UcmBase {
 		};
 
 	private:
-		char *tag_values[LAST_TAG];
+		struct tag_value_t {
+			char *str;
+			int line_number;
+		};
+
+		tag_value_t tag_values[LAST_TAG];
 		int single_bytes;
 		int uconv_class;
 

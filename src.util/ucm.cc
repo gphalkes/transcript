@@ -116,18 +116,19 @@ Ucm::Ucm(const char *_name) : variant(this, option_convertor_name == NULL ? _nam
 		name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0), to_unicode_flags(0)
 {
 	for (int i = 0; i < LAST_TAG; i++)
-		tag_values[i] = NULL;
+		tag_values[i].str = NULL;
 }
 
 void Ucm::set_tag_value(tag_t tag, const char *value) {
 	if (tag == IGNORED)
 		return;
-	if ((tag_values[tag] = strdup(value)) == NULL)
+	if ((tag_values[tag].str = strdup(value)) == NULL)
 		OOM();
+	tag_values[tag].line_number = line_number;
 }
 
 const char *Ucm::get_tag_value(tag_t tag) {
-	return tag_values[tag];
+	return tag_values[tag].str;
 }
 
 void Ucm::new_codepage_state(int _flags) {
@@ -159,33 +160,33 @@ bool Ucm::check_map(int state, int byte, action_t action, int next_state) {
 
 #define ENTRY(low, high, next_state, action) Entry(low, high, next_state, action, 0, 0)
 void Ucm::process_header(void) {
-	if (tag_values[UCONV_CLASS] == NULL)
+	if (tag_values[UCONV_CLASS].str == NULL)
 		fatal("%s: <uconv_class> unspecified\n", name);
 
-	if (strcmp(tag_values[UCONV_CLASS], "SBCS") == 0)
+	if (strcmp(tag_values[UCONV_CLASS].str, "SBCS") == 0)
 		uconv_class = CLASS_SBCS;
-	else if (strcmp(tag_values[UCONV_CLASS], "DBCS") == 0)
+	else if (strcmp(tag_values[UCONV_CLASS].str, "DBCS") == 0)
 		uconv_class = CLASS_DBCS;
-	else if (strcmp(tag_values[UCONV_CLASS], "MBCS") == 0)
+	else if (strcmp(tag_values[UCONV_CLASS].str, "MBCS") == 0)
 		uconv_class = CLASS_MBCS;
-	else if (strcmp(tag_values[UCONV_CLASS], "EBCDIC_STATEFUL") == 0)
+	else if (strcmp(tag_values[UCONV_CLASS].str, "EBCDIC_STATEFUL") == 0)
 		uconv_class = CLASS_EBCDIC_STATEFUL;
 	else
 		fatal("%s: <uconv_class> specifies an unknown class\n", name);
 
-	if (tag_values[MB_MAX] == NULL)
+	if (tag_values[MB_MAX].str == NULL)
 		fatal("%s: <mb_cur_max> unspecified\n", name);
-	if (tag_values[MB_MIN] == NULL)
+	if (tag_values[MB_MIN].str == NULL)
 		fatal("%s: <mb_cur_min> unspecified\n", name);
-	if (tag_values[SUBCHAR] == NULL)
+	if (tag_values[SUBCHAR].str == NULL)
 		fatal("%s: <subchar> unspecified\n", name);
 
-	if (tag_values[_INTERNAL] != NULL) {
+	if (tag_values[_INTERNAL].str != NULL) {
 		flags |= INTERNAL_TABLE;
 		variant.flags |= INTERNAL_TABLE;
 	}
 
-	if (tag_values[SUBCHAR1] != NULL)
+	if (tag_values[SUBCHAR1].str != NULL)
 		flags |= SUBCHAR1_VALID;
 
 	if (codepage_states.size() == 0)
@@ -417,14 +418,14 @@ void Ucm::ensure_ascii_controls(void) {
 	vector<Mapping *>::iterator iter;
 	int mb_min, mb_max, seen = 0;
 
-	if (tag_values[CHARSET_FAMILY] != NULL && strcmp(tag_values[CHARSET_FAMILY], "ASCII") != 0)
+	if (tag_values[CHARSET_FAMILY].str != NULL && strcmp(tag_values[CHARSET_FAMILY].str, "ASCII") != 0)
 		return;
 
-	if (tag_values[SUBCHAR] != NULL && strcmp(tag_values[SUBCHAR], "\\x7F") != 0)
+	if (tag_values[SUBCHAR].str != NULL && strcmp(tag_values[SUBCHAR].str, "\\x7F") != 0)
 		return;
 
-	mb_max = atoi(tag_values[MB_MAX]);
-	mb_min = atoi(tag_values[MB_MIN]);
+	mb_max = atoi(tag_values[MB_MAX].str);
+	mb_min = atoi(tag_values[MB_MIN].str);
 
 	if (mb_min != 1 || mb_max != 1) {
 		fprintf(stderr, "Check this page!\n");
@@ -603,22 +604,22 @@ void Ucm::add_variant(Variant *_variant) {
 }
 
 void Ucm::dump(void) {
-	if (tag_values[CODE_SET_NAME] != NULL)
-		printf("<code_set_name>\t\"%s\"\n", tag_values[CODE_SET_NAME]);
-	if (tag_values[UCONV_CLASS] != NULL)
-		printf("<uconv_class>\t\"%s\"\n", tag_values[UCONV_CLASS]);
-	if (tag_values[SUBCHAR] != NULL)
-		printf("<subchar>\t\"%s\"\n", tag_values[SUBCHAR]);
-	if (tag_values[SUBCHAR1] != NULL)
-		printf("<subchar1>\t\"%s\"\n", tag_values[SUBCHAR1]);
-	if (tag_values[MB_MAX] != NULL)
-		printf("<mb_cur_max>\t\"%s\"\n", tag_values[MB_MAX]);
-	if (tag_values[MB_MIN] != NULL)
-		printf("<mb_cur_min>\t\"%s\"\n", tag_values[MB_MIN]);
-	if (tag_values[CHARSET_FAMILY] != NULL)
-		printf("<charset_family>\t\"%s\"\n", tag_values[CHARSET_FAMILY]);
-	if (tag_values[_INTERNAL] != NULL && variants.size() < 2)
-		printf("<cct:internal>\t\"%s\"\n", tag_values[_INTERNAL]);
+	if (tag_values[CODE_SET_NAME].str != NULL)
+		printf("<code_set_name>\t\"%s\"\n", tag_values[CODE_SET_NAME].str);
+	if (tag_values[UCONV_CLASS].str != NULL)
+		printf("<uconv_class>\t\"%s\"\n", tag_values[UCONV_CLASS].str);
+	if (tag_values[SUBCHAR].str != NULL)
+		printf("<subchar>\t\"%s\"\n", tag_values[SUBCHAR].str);
+	if (tag_values[SUBCHAR1].str != NULL)
+		printf("<subchar1>\t\"%s\"\n", tag_values[SUBCHAR1].str);
+	if (tag_values[MB_MAX].str != NULL)
+		printf("<mb_cur_max>\t\"%s\"\n", tag_values[MB_MAX].str);
+	if (tag_values[MB_MIN].str != NULL)
+		printf("<mb_cur_min>\t\"%s\"\n", tag_values[MB_MIN].str);
+	if (tag_values[CHARSET_FAMILY].str != NULL)
+		printf("<charset_family>\t\"%s\"\n", tag_values[CHARSET_FAMILY].str);
+	if (tag_values[_INTERNAL].str != NULL && variants.size() < 2)
+		printf("<cct:internal>\t\"%s\"\n", tag_values[_INTERNAL].str);
 
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
 	sort(multi_mappings.begin(), multi_mappings.end(), compare_codepoints);

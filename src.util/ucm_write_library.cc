@@ -645,7 +645,7 @@ void Ucm::write_table(FILE *output) {
 	fprintf(output, "\t%s,\n", from_unicode_flags_initializer == NULL ? "{ NULL }" : from_unicode_flags_initializer);
 	fprintf(output, "\t{ ");
 	vector<uint8_t> subchar;
-	parse_byte_sequence(tag_values[Ucm::SUBCHAR], subchar);
+	parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
 	for (i = 0; i < subchar.size(); i++) {
 		if (i != 0)
 			fprintf(output, ", ");
@@ -653,7 +653,7 @@ void Ucm::write_table(FILE *output) {
 	}
 	fprintf(output, " },\n");
 	fprintf(output, "\t0x%04x, 0x%02x, 0x%02x, 0x%02x, 0x%02x\n", flags, (int) subchar.size(),
-		(int) (tag_values[Ucm::SUBCHAR1] != NULL ? strtol(tag_values[Ucm::SUBCHAR1] + 2, NULL, 16) : 0),
+		(int) (tag_values[Ucm::SUBCHAR1].str != NULL ? strtol(tag_values[Ucm::SUBCHAR1].str + 2, NULL, 16) : 0),
 		(int) shift_sequences.size(), single_bytes);
 	fprintf(output, "};\n\n");
 
