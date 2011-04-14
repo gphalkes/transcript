@@ -290,6 +290,7 @@ class Ucm : public UcmBase {
 		void variants_done(void);
 		void check_base_mul_ranges(void);
 		void write_namelist_entries(FILE *output);
+		bool is_simple_table(void);
 
 		void dump(void);
 };

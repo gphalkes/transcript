@@ -507,3 +507,29 @@ void Ucm::check_base_mul_ranges(void) {
 	check_base_mul_ranges(codepage_states);
 	check_base_mul_ranges(unicode_states);
 }
+
+bool Ucm::is_simple_table(void) {
+	/* Restrictions for simple tables:
+	   - may have no variants
+	   - must map only to BMP
+	   - may not include multi-mappings
+	   - 0 byte must map only to U0000 [ allows checking for absence without checking flags ]
+	   - state machine must be 0-ff or missing completely
+	*/
+
+	if (uconv_class != CLASS_SBCS || !multi_mappings.empty() || !variants.empty() ||
+			codepage_states.size() != 1 ||
+			codepage_states.front()->entries.size() != 1 ||
+			codepage_states.front()->entries.front().low != 0 ||
+			codepage_states.front()->entries.front().high != 255 ||
+			codepage_states.front()->entries.front().action != ACTION_FINAL)
+		return false;
+
+	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->codepoints[0] > 0xffff)
+			return false;
+		if ((*iter)->codepage_bytes[0] == 0 && (*iter)->codepoints[0] != 0)
+			return false;
+	}
+	return true;
+}

@@ -360,12 +360,17 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 			ucm->merge_variants(*iter);
 		}
 	}
-	ucms.clear();
 	ucm->calculate_item_costs();
 
 	if (option_dump) {
 		ucm->dump();
 		exit(EXIT_SUCCESS);
+	}
+
+	if (ucms.size() == 1 && ucm->is_simple_table()) {
+		completed_ucms.push_back(ucm);
+		ucms.clear();
+		return;
 	}
 
 	ucm->minimize_state_machines();
@@ -387,6 +392,7 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	ucm->find_shift_sequences();
 	ucm->check_base_mul_ranges();
 	completed_ucms.push_back(ucm);
+	ucms.clear();
 }
 
 PARSE_FUNCTION(parse_options)

@@ -11,21 +11,10 @@ HIGH PRIORITY
   system wide overrides (/etc/transcript/aliases.txt?)
   One way to do it is to make a function to pass to _transcript_db_open instead
   of fopen.
-- a convertor with options may never be a display name. The options have some
-  interesting interactions with other parts of the code.
-  - looking op the real convertor
-  - comparing equality of convertors
-  this needs to be checked and maybe some rules need to be defined
-
-  - options must define different behaviour for the convertor
-  - disabling a convertor can _not_ be done through options! Using the name
-	disable as a convertor disables the convertor named after it
-  - a similar problem exists with probe=load. This also does not change the
-    behaviour of the convertor
-
 - the new library stuf has made the save state size determination more difficult
   Perhaps a new state_destroy method should be provide, such that if needed
   the state can be allocated on the heap.
+- SBCS convertor for simpler tables
 
 MEDIUM PRIORITY
 ===============
@@ -53,12 +42,6 @@ MEDIUM PRIORITY
 - the aliases file is in ASCII, but the system on which we are running may not
   be! This means the aliases file should be converted to the current execution
   charset before use.
-- should options be normalized as well, or should normalization stop as soon as
-  we see a comma?
-- we could add some data structure to the convertors/tables which allows
-  recreating the links, or creation of a links file. The name of this has to
-  be based on the file's name, because that's the only way it can be found
-  (unless we want to risk name clashes).
 
 LOW PRIORITY
 ============

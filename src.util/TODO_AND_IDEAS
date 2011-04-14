@@ -1,25 +1,30 @@
 - for shared library format we should consider the following:
-  - make a function get_convertor_type, which will indicate what the interface
-    will be
   - for SBC, we should use a two-level trie, with 5 bit steps for the Unicode
     to codepage conversion. This gives a small file and good look-up speed.
 	Using a fixed parameter trie is makes the implementation faster and we can
-	more easily encorporate it in the ucm2cct code. Finally, we should only do
-	this for codepages which map to the BMP (which is all of them, but we should
-	check). We should also exclude the whole multi-mapping stuf. There is only
-	one SBC codepage which uses that (i.e. mac-os-21-10.5.ucm), which is not
-	even distributed with the standard library anyway. Of course we need to
-	check before generating.
-  - for larger codepages, we should use the scheme we have now, but include the
-    full states. This will allow best memory sharing, at the expense of some
-	disk space.
-  - to get the tables, use a function which can be different for the different
-	supported table types (at least the return value should be different).
+	more easily encorporate it in the ucm2cct code.
+	Restrictions on SBCS for the new scheme:
+	- must map only to BMP
+	- may not include multi-mappings
+	- 0 byte must map only to U0000 [ allows checking for absence without checking flags ]
+
+	Only need to store the fallback mapping flag. Private use can be checked
+	simply by checking the codepoints (which is easier for the BMP than general).
+
+	We should check how often it happens that no private use characters are used
+	and no fallback flags are needed. In those cases we can have a simpler
+	conversion routine.
+
+	!! do we have to restrict it to no variants? Would it really save much
+	having variants?
+
+	We can use the location in the mapping trie to store the flags as well!
+
   - for small tables, we may want to create bundles. For example, we may want
 	to bundle all the ISO-8859 convertors in a single library. This way, we
 	spread the overhead (~6KB).
-  - the open/get_table interface needs to be parameterized on the name of the
-	convertor, to allow variants and bundled convertors to be told apart.
+
+
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now.
 
