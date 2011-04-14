@@ -636,3 +636,12 @@ void Ucm::dump(void) {
 		(*iter)->dump();
 	}
 }
+
+void Ucm::write_namelist_entries(FILE *output) {
+	if (variants.empty()) {
+		fprintf(output, "\t\"%s\"\n", variant.id);
+	} else {
+		for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+			fprintf(output, "\t\"%s\"\n", (*variant_iter)->id);
+	}
+}

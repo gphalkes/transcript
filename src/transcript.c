@@ -678,7 +678,7 @@ void _transcript_init(void) {
 				}
 			}
 			if ((transcript_path = getenv("HOME")) != NULL) {
-				if ((search_path_element = malloc(strlen(transcript_path) + 1 + 10 + 1)) != NULL) {
+				if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
 					strcpy(search_path_element, transcript_path);
 					strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
 					strcat(search_path_element, ".transcript");

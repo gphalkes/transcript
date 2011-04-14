@@ -289,6 +289,7 @@ class Ucm : public UcmBase {
 		void merge_variants(Ucm *other);
 		void variants_done(void);
 		void check_base_mul_ranges(void);
+		void write_namelist_entries(FILE *output);
 
 		void dump(void);
 };
@@ -319,5 +320,4 @@ bool compare_codepage_bytes(Mapping *a, Mapping *b);
 bool compare_codepoints(Mapping *a, Mapping *b);
 
 char *safe_strdup(const char *str);
-void normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 #endif

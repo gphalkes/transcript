@@ -15,6 +15,7 @@ SOURCES.ucm2cct := ucm2cct.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize
 	ucmparser.gg ucmlexer.l generic_fallbacks.c
 DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
+LDFLAGS.ucm2cct := -L../src/.libs -ltranscript
 
 CXXTARGETS := ucm2cct
 #================================================#
@@ -28,5 +29,12 @@ generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 	$(if $(VERBOSE),, @echo [GEN] $* ;) ../../statrie/src/statrie -fgeneric_fallbacks \
 		-nget_generic_fallback -b16 -p -r0x10000 -DFFFF transcript_generic_fallbacks < $<
 
+ucm2cct: | library
+
+library:
+	$(MAKE) -C ../src libtranscript.la
+
 clean::
 	rm generic_fallbacks.[ch]
+
+.PHONY: library
