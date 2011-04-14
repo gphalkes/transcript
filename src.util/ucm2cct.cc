@@ -16,24 +16,23 @@
 #include <cstdarg>
 #include <cerrno>
 #include <cstring>
-#include <unistd.h>
 #include <arpa/inet.h>
 #include <climits>
 
 #include "ucm2cct.h"
 #include "ucmparser.h"
+#include "optionMacros.h"
 
-bool option_verbose = false, option_internal_table = false;
+bool option_verbose, option_internal_table, option_dump;
 #ifdef DEBUG
-#define NO_ABORT_OPTION "a"
 bool option_abort = true;
-#else
-#define NO_ABORT_OPTION
 #endif
 const char *option_output_name;
 const char *option_convertor_name;
 char *output_name;
 extern FILE *yyin;
+
+static vector<Ucm *> completed_ucms;
 
 #define IS_ALNUM (1<<0)
 #define IS_DIGIT (1<<1)
@@ -96,13 +95,15 @@ void parse_byte_sequence(char *charseq, vector<uint8_t> &store) {
 }
 
 static void print_usage(void) {
-	printf("Usage: ucm2ctt [<options>] <ucm file>+\n"
-		"  -D                  Dump a ucm file representing the input\n"
-		"  -h                  Display this help message\n"
-		"  -i                  The ucm file is an internal use table\n"
-		"  -o <output>         Specify the output file name\n"
-		"  -v                  Increase verbosity\n"
-	    "  -n<name>            Set convertor name to <name>\n");
+	printf("Usage: ucm2ctt [<options>] <ucm file>+\n");
+	printf("  -D,--dump                     Dump a ucm file representing the input\n");
+	printf("  -h,--help                     Display this help message\n");
+	printf("  -i,--internal                 The ucm file is an internal use table\n");
+	printf("  -o<output>, --output=<output> Specify the output file name\n");
+	printf("  -v,--verbose                  Increase verbosity\n");
+	printf("  -n<name>,--name=<name>        Set convertor name to <name>\n");
+	printf("  -c,--concatenate              Concatenate the following convertors.\n");
+	printf("       Use this to write multiple unrelated convertors to a single file.\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -372,71 +373,14 @@ uint8_t create_mask(uint8_t used_flags) {
 	return used_flags | (1 << i);
 }
 
-
-int main(int argc, char *argv[]) {
-	bool option_dump = false;
-	FILE *output;
-	vector<Ucm *> ucms;
+static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	Ucm *ucm;
-	int c;
 
-	init_char_info();
-
-	while ((c = getopt(argc, argv, "hio:vDn:" NO_ABORT_OPTION)) != -1) {
-		switch (c) {
-			case 'h':
-				print_usage();
-			case 'i':
-				option_internal_table = true;
-				break;
-			case 'o':
-				option_output_name = optarg;
-				break;
-			case 'v':
-				option_verbose = true;
-				break;
-			case 'D':
-				option_dump = true;
-				break;
-			case 'n':
-				option_convertor_name = optarg;
-				break;
-#ifdef DEBUG
-			case 'a':
-				option_abort = false;
-				break;
-#endif
-			default:
-				fatal("Error in option parsing\n");
-		}
-	}
-
-
-	if (argc - optind == 0) {
-		print_usage();
-	} else if (argc - optind > 1) {
+	if (ucms.size() > 1) {
 		if (option_output_name == NULL)
-			fatal("-o is required when using multiple input files\n");
-		else if (option_convertor_name != NULL)
-			fatal("-n is only allowed with a single input file\n");
-	}
-
-	for (; optind != argc; optind++) {
-		if ((yyin = fopen(argv[optind], "r")) == NULL)
-			fatal("Could not open '%s': %s\n", argv[optind], strerror(errno));
-		file_name = argv[optind];
-		line_number = 1;
-
-		parse_ucm((void **) &ucm);
-		if (ucm->variants.size() == 1)
-			fatal("%s: Only a single variant defined\n", ucm->name);
-		ucm->check_duplicates();
-		ucm->ensure_ascii_controls();
-		ucm->remove_generic_fallbacks();
-		ucm->remove_private_use_fallbacks();
-
-		ucms.push_back(ucm);
-		fclose(yyin);
+			fatal("--output/-o is required when using multiple input files\n");
+		if (option_convertor_name != NULL)
+			fatal("--name/-n is only allowed with a single input file\n");
 	}
 
 	ucm = ucms.front();
@@ -463,8 +407,8 @@ int main(int argc, char *argv[]) {
 			(*iter)->fixup_variants();
 			ucm->merge_variants(*iter);
 		}
-		ucms.clear();
 	}
+	ucms.clear();
 	ucm->calculate_item_costs();
 
 	if (option_dump) {
@@ -490,6 +434,84 @@ int main(int argc, char *argv[]) {
 
 	ucm->find_shift_sequences();
 	ucm->check_base_mul_ranges();
+	completed_ucms.push_back(ucm);
+}
+
+PARSE_FUNCTION(parse_options)
+	vector<Ucm *> ucms;
+	Ucm *ucm;
+
+	OPTIONS
+		OPTION('h', "help", NO_ARG)
+			print_usage();
+		END_OPTION
+		OPTION('i', "internal", NO_ARG)
+			option_internal_table = true;
+		END_OPTION
+		OPTION('o', "output", REQUIRED_ARG)
+			if (option_output_name != NULL)
+				fatal("Only a single " OPTFMT " option may be specified\n", OPTPRARG);
+			option_output_name = optArg;
+		END_OPTION
+		OPTION('v', "verbose", NO_ARG)
+			option_verbose = true;
+		END_OPTION
+		OPTION('D', "dump", NO_ARG)
+			option_dump = true;
+		END_OPTION
+		OPTION('n', "name", REQUIRED_ARG)
+			option_convertor_name = optArg;
+		END_OPTION
+		OPTION('c', "concatenate", NO_ARG)
+			if (ucms.empty())
+				fatal("No input file specified before " OPTFMT "\n", OPTPRARG);
+			if (option_output_name == NULL)
+				fatal("--output/-o is required with " OPTFMT "\n", OPTPRARG);
+			analyse_ucm_set(ucms);
+			option_internal_table = false;
+			option_convertor_name = NULL;
+		END_OPTION
+#ifdef DEBUG
+		OPTION('a', "abort", NO_ARG)
+			option_abort = true;
+		END_OPTION
+#endif
+		DOUBLE_DASH
+			NO_MORE_OPTIONS;
+		END_OPTION
+
+		fatal("Unknown option " OPTFMT "\n", OPTPRARG);
+	NO_OPTION
+		if ((yyin = fopen(optcurrent, "r")) == NULL)
+			fatal("Could not open '%s': %s\n", optcurrent, strerror(errno));
+		file_name = optcurrent;
+		line_number = 1;
+
+		parse_ucm((void **) &ucm);
+		if (ucm->variants.size() == 1)
+			fatal("%s: Only a single variant defined\n", ucm->name);
+		ucm->check_duplicates();
+		ucm->ensure_ascii_controls();
+		ucm->remove_generic_fallbacks();
+		ucm->remove_private_use_fallbacks();
+
+		ucms.push_back(ucm);
+		fclose(yyin);
+	END_OPTIONS
+	if (ucms.empty()) {
+		if (completed_ucms.empty())
+			print_usage();
+		fatal("No input file specified after --concatenate/-c\n");
+	}
+	analyse_ucm_set(ucms);
+END_FUNCTION
+
+
+int main(int argc, char *argv[]) {
+	FILE *output;
+
+	init_char_info();
+	parse_options(argc, argv);
 
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);
@@ -504,9 +526,11 @@ int main(int argc, char *argv[]) {
 		strcpy(output_name + len - 3, "c");
 	}
 
-	if ((output = fopen(output_name, "w+b")) == NULL)
+	if ((output = fopen(output_name, "w+t")) == NULL)
 		fatal("Could not open output file: %s\n", strerror(errno));
+	for (vector<Ucm *>::iterator iter = completed_ucms.begin(); iter != completed_ucms.end(); iter++)
+		(*iter)->write_table(output);
+	fclose(output);
 
-	ucm->write_table(output);
 	return EXIT_SUCCESS;
 }

@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES.ucm2cct := ucm2cct.cc ucm.cc ucm_write_library.cc ucm_analyse.cc minimize_state_machine.cc variant.cc \
+SOURCES.ucm2cct := ucm2cct.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize_state_machine.cc variant.cc \
 	ucmparser.gg ucmlexer.l generic_fallbacks.c
 DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
