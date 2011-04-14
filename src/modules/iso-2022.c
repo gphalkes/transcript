@@ -66,17 +66,17 @@ typedef struct {
 } name_to_iso2022type;
 
 static const name_to_iso2022type map[] = {
-	{ "jp", ISO2022_JP },
-	{ "jp1", ISO2022_JP1 },
-	{ "jp2", ISO2022_JP2 },
-	{ "jp3", ISO2022_JP3 },
-	{ "jp2004", ISO2022_JP2004 },
-	{ "kr", ISO2022_KR },
-	{ "cn", ISO2022_CN },
-	{ "cnext", ISO2022_CNEXT }
+	{ "iso2022jp", ISO2022_JP },
+	{ "iso2022jp1", ISO2022_JP1 },
+	{ "iso2022jp2", ISO2022_JP2 },
+	{ "iso2022jp3", ISO2022_JP3 },
+	{ "iso2022jp2004", ISO2022_JP2004 },
+	{ "iso2022kr", ISO2022_KR },
+	{ "iso2022cn", ISO2022_CN },
+	{ "iso2022cnext", ISO2022_CNEXT }
 #ifdef DEBUG
 #warning using ISO-2022-TEST
-	, { "test", ISO2022_TEST }
+	, { "iso2022test", ISO2022_TEST }
 #endif
 };
 
@@ -829,18 +829,11 @@ static int compare(const char *key, const name_to_iso2022type *ptr) {
     @brief Open an ISO-2022 convertor.
 */
 TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, transcript_error_t *error) {
-	char name_option[32];
 	convertor_state_t *retval;
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if (!transcript_get_option(name, name_option, sizeof(name_option), "name")) {
-		if (error != NULL)
-			*error = TRANSCRIPT_BAD_ARG;
-		return NULL;
-	}
-
-	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 	{
 		if (error != NULL)
@@ -894,15 +887,11 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 }
 
 TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
-	char name_option[32];
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 	transcript_error_t error;
 
-	if (!transcript_get_option(name, name_option, sizeof(name_option), "name"))
-		return false;
-
-	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 		return false;
 
@@ -926,3 +915,11 @@ static void close_convertor(convertor_state_t *handle) {
 }
 
 TRANSCRIPT_EXPORT int transcript_get_iface_iso2022(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+TRANSCRIPT_EXPORT const char * const *transcript_namelist_iso2022(void) {
+	static const char * const namelist[] = {
+		"ISO-2022-JP", "ISO-2022-JP-1", "ISO-2022-JP-2", "ISO-2022-JP-3",
+		"ISO-2022-JP-2004", "ISO-2022-KR", "ISO-2022-CN", "ISO-2022-CN-EXT",
+		NULL
+	};
+	return namelist;
+}

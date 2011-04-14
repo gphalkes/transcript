@@ -161,3 +161,8 @@ TRANSCRIPT_ALIAS_OPEN(open_ascii, ascii)
 TRANSCRIPT_ALIAS_OPEN(open_ascii, iso88591)
 TRANSCRIPT_EXPORT int transcript_get_iface_ascii(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 TRANSCRIPT_EXPORT int transcript_get_iface_iso88591(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+
+TRANSCRIPT_EXPORT const char * const *transcript_namelist_ascii(void) {
+	static const char * const namelist[] = { "ASCII", "ISO-8859-1", NULL };
+	return namelist;
+}

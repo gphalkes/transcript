@@ -259,7 +259,7 @@ static void init_availability(void) {
 				continue;
 			if (entry->d_name[0] == '_')
 				continue;
-			if (strcmp(entry->d_name + entry_name_len - 4, ".cct") != 0)
+			if (strcmp(entry->d_name + entry_name_len - 4, ".tct") != 0)
 				continue;
 			entry->d_name[entry_name_len - 4] = 0;
 			if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
@@ -354,12 +354,6 @@ void _transcript_init_aliases_from_file(void) {
 				idx = 1;
 				break;
 			case ID_FIRST:
-				if (c == ',' || (comma_seen && c == '=')) {
-					comma_seen = true;
-					if (idx < MAX_ID)
-						id[idx++] = c;
-					break;
-				}
 				/* FALLTHROUGH */
 			case ID_ALIAS:
 				if (_transcript_isidchr(c)) {

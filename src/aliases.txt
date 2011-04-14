@@ -10,9 +10,7 @@
 # name of the convertor exactly though.
 
 # Convertor names must start in column 1. Lines can be continued by indenting
-# the second and later lines with any amount of white-space. Convertors may
-# have options, specified after a comma. In the options, the character = is
-# also a valid character.
+# the second and later lines with any amount of white-space.
 
 # Some convertors need special handling. For this purpose, there are several
 # special tags that may be used in the list of aliases. These are:
@@ -38,43 +36,46 @@
 # and UTF-32 encodings will switch endianess when encountering a BOM. By
 # default they use the big endian encoding.
 
-unicode,name=utf8 *UTF-8 IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
+*UTF-8 IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
 	IBM-17592 ibm-17593 Windows-65001 cp1208
-unicode,name=utf8bom *UTF-8-bom
+UTF-8-BOM
 # Use UCS-2 as an alias for UTF-16, although it is actually UTF-16BE. However,
 # because people simply use UCS-2 and UTF-16 interchangebly, it is better to
 # do it this way.
-unicode,name=utf16 *UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
-unicode,name=utf16nobom *UTF-16-NoBOM
-unicode,name=utf16be *UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
+*UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
+UTF-16-NoBOM
+*UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
 	IBM-13488 IBM-13489 ibm-17584 IBM-17585 IBM-21680 IBM-21681 IBM-25776
 	IBM-25777 IBM-29872 ibm-29873 IBM-61955 IBM-61956 Windows-1201 cp1200
 	cp1201 UTF16_BigEndian
-unicode,name=utf16le *UTF-16LE x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-1203
+*UTF-16LE x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-1203
 	IBM-13490 ibm-13491 IBM-17586 IBM-17587 IBM-21682 IBM-21683 IBM-25778
 	IBM-25779 ibm-29874 IBM-29875 UTF16_LittleEndian Windows-1200
-unicode,name=utf32 *UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
-unicode,name=utf32nobom *UTF-32-NoBOM
-unicode,name=utf32be *UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
-unicode,name=utf32le *UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
+*UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
+UTF-32-NOBOM
+*UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
+*UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 
-unicode,name=utf16bebom *UTF-16BE-BOM *UnicodeBig
-unicode,name=utf16lebom *UTF-16LE-BOM *UnicodeLittle x-UTF-16LE-BOM
-unicode,name=utf32bebom *UTF-32BE-BOM
-unicode,name=utf32lebom *UTF-32LE-BOM
+*UTF-16BE-BOM *UnicodeBig
+*UTF-16LE-BOM *UnicodeLittle x-UTF-16LE-BOM
+UTF-32BE-BOM
+UTF-32LE-BOM
 
-# FIXME: add platform endian variants, default is without BOM
-#unicode,name=utf16pe *UTF-16PE UTF-16_PlatformEndian
-#unicode,name=utf32pe *UTF-32PE UTF-32_PlatformEndian
+# FIXME: add platform endian variants, default is without BOM (if you want platform
+# endian, you want it for communicating with a program that expects it in that ordering).
+#*UTF-16PE UTF-16_PlatformEndian
+#*UTF-32PE UTF-32_PlatformEndian
+#UTF-16PE-BOM
+#UTF-32PE-BOM
 
-unicode,name=utf7 *UTF-7 Windows-65000
+*UTF-7 Windows-65000
 
-unicode,name=scsu *SCSU IBM-1212 IBM-1213
+*SCSU IBM-1212 IBM-1213
 #FIXME: BOCU-1 is patented
-#unicode,name=bocu1 *BOCU-1 csBOCU-1 IBM-1214 IBM-1215
-unicode,name=cesu8 *CESU-8 IBM-9400
+#*BOCU-1 csBOCU-1 IBM-1214 IBM-1215
+*CESU-8 IBM-9400
 
-unicode,name=gb18030 :probe_load *GB18030 IBM-1392 Windows-54936
+*GB18030 :probe_load IBM-1392 Windows-54936
 
 #FIXME: what is this doing here?
 #IMAP-mailbox-name
@@ -254,15 +255,15 @@ ibm-1133_P100-1997 *IBM-1133
 # aliases for some of the ISO-2022-JP* encodings, this is actually not true. The
 # JIS_Encoding does use the ISO-2022 scheme. However, the JIS_Encoding has more
 # character sets.
-iso-2022,name=jp *ISO-2022-JP csISO2022JP
-iso-2022,name=jp1 *ISO-2022-JP-1 IBM-5054
-iso-2022,name=jp2 *ISO-2022-JP-2 csISO2022JP2
-iso-2022,name=jp3 *ISO-2022-JP-3
-iso-2022,name=jp2004 *ISO-2022-JP-2004
-iso-2022,name=kr *ISO-2022-KR csISO2022KR
+*ISO-2022-JP csISO2022JP
+*ISO-2022-JP-1 IBM-5054
+*ISO-2022-JP-2 csISO2022JP2
+ISO-2022-JP-3
+ISO-2022-JP-2004
+*ISO-2022-KR csISO2022KR
 # TODO: IBM-25546 is supposedly a variant of ISO-2022-KR
-iso-2022,name=cn *ISO-2022-CN csISO2022CN
-iso-2022,name=cnext *ISO-2022-CN-EXT
+*ISO-2022-CN csISO2022CN
+ISO-2022-CN-EXT
 #FIXME: what to do with these, i.e. what are these different versions?
 #~ HZ HZ-GB-2312
 #~ ISCII,version=0 x-iscii-de Windows-57002 iscii-dev IBM-4902

@@ -31,10 +31,7 @@ typedef struct {
 	int utf_type;
 } name_to_utftype;
 
-/* Mapping from name to integer constant. Note that we don't actually parse
-   any options, but simply use the mapping to take care of that. This does
-   mean that no other options are possible than the ones that are listed
-   here. */
+/* Mapping from name to integer constant. */
 static const name_to_utftype map[] = {
 	{ "utf8", _TRANSCRIPT_UTF8_LOOSE },
 	{ "utf8bom", _TRANSCRIPT_UTF8_BOM },
@@ -268,18 +265,11 @@ static int compare(const char *key, const name_to_utftype *ptr) {
     @param error The location to store an error.
 */
 TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int flags, transcript_error_t *error) {
-	char name_option[32];
 	convertor_state_t *retval;
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if (!transcript_get_option(name, name_option, sizeof(name_option), "name")) {
-		if (error != NULL)
-			*error = TRANSCRIPT_BAD_ARG;
-		return NULL;
-	}
-
-	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 	{
 		if (error != NULL)
@@ -355,14 +345,10 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 }
 
 TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
-	char name_option[32];
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if (!transcript_get_option(name, name_option, sizeof(name_option), "name"))
-		return false;
-
-	if ((ptr = lfind(name_option, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 		return false;
 
@@ -378,3 +364,12 @@ static void close_convertor(convertor_state_t *handle) {
 }
 
 TRANSCRIPT_EXPORT int transcript_get_iface_unicode(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
+	static const char * const namelist[] = {
+		"UTF-8", "UTF-8-BOM", "UTF-16", "UTF-16-NoBOM", "UTF-16BE", "UTF-16LE"
+		"UTF-32", "UTF-32-NOBOM", "UTF-32BE", "UTF-32LE", "UTF-16BE-BOM",
+		"UTF-16LE-BOM", "UTF-32BE-BOM", "UTF-32LE-BOM", "UTF-7", "SCSU", "CESU-8",
+		"GB18030", NULL
+	};
+	return namelist;
+}

@@ -30,26 +30,20 @@ static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_
 
 /** Try to open (i.e. get a file handle) a convertor.
 
-    If the option probe=load has been set in the convertor options, then instead
+    If the option :probe_load has been set in the convertor, then instead
     of trying to open with fopen, it will actually be dlopened and the function
     transcript_probe_<name> will be called.
 */
 static bool probe_convertor(const char *name, const char *normalized_name, bool probe_load) {
-	char base_name[NORMALIZE_NAME_MAX];
-
-	/* Strip any options. */
-	transcript_get_option(name, base_name, NORMALIZE_NAME_MAX, NULL);
-
 	if (probe_load) {
 		bool (*probe)(const char *);
 		lt_dlhandle handle;
 		int result = 0;
 
-		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, NULL)) == NULL)
+		if ((handle = _transcript_db_open(name, "tct", (open_func_t) lt_dlopen, NULL)) == NULL)
 			return 0;
 
-		transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
-		if ((probe = get_sym(handle, "transcript_probe_", base_name)) != NULL)
+		if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL)
 			result = probe(normalized_name);
 
 		lt_dlclose(handle);
@@ -57,7 +51,7 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 	} else {
 		FILE *handle = NULL;
 		/* For most convertors it is sufficient to know that the file is readable. */
-		if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, NULL)) != NULL)
+		if ((handle = _transcript_db_open(name, "tct", (open_func_t) fopen, NULL)) != NULL)
 			fclose(handle);
 		return handle != NULL;
 	}
@@ -99,28 +93,23 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 	lt_dlhandle handle = NULL;
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
-	char base_name[NORMALIZE_NAME_MAX];
 
-	transcript_get_option(real_name, base_name, NORMALIZE_NAME_MAX, NULL);
-
-	if ((handle = _transcript_db_open(base_name, "tct", (open_func_t) lt_dlopen, error)) == NULL) {
+	if ((handle = _transcript_db_open(real_name, "tct", (open_func_t) lt_dlopen, error)) == NULL) {
 		FILE *test_handle;
 		transcript_error_t local_error;
-		if ((test_handle = _transcript_db_open(base_name, "tct", (open_func_t) fopen, &local_error)) == NULL)
+		if ((test_handle = _transcript_db_open(real_name, "tct", (open_func_t) fopen, &local_error)) == NULL)
 			ERROR(local_error);
 		fclose(test_handle);
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
 	}
 
-	transcript_get_option(normalized_name, base_name, NORMALIZE_NAME_MAX, NULL);
-
-	if ((get_iface = get_sym(handle, "transcript_get_iface_", base_name)) == NULL)
+	if ((get_iface = get_sym(handle, "transcript_get_iface_", normalized_name)) == NULL)
 		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
 	switch (get_iface()) {
 		case TRANSCRIPT_STATE_TABLE_V1: {
 			const convertor_tables_v1_t *(*get_table)(void);
-			if ((get_table = get_sym(handle, "transcript_get_table_", base_name)) == NULL)
+			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
 			if ((result = _transcript_open_cct_convertor(get_table(), flags, error)) != NULL) {
 				result->library_handle = handle;
@@ -130,7 +119,7 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 		}
 		case TRANSCRIPT_FULL_MODULE_V1: {
 			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
-			if ((open_convertor = get_sym(handle, "transcript_open_", base_name)) == NULL)
+			if ((open_convertor = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
 			if ((result = open_convertor(normalized_name, flags, error)) != NULL) {
 				result->library_handle = handle;

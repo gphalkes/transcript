@@ -151,7 +151,7 @@ void transcript_close_convertor(transcript_t *handle) {
 int transcript_equal(const char *name_a, const char *name_b) {
 	transcript_name_desc_t *convertor;
 	char normalized_name_a[NORMALIZE_NAME_MAX], normalized_name_b[NORMALIZE_NAME_MAX];
-/* FIXME: take options into account! */
+
 	_transcript_init();
 	_transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
 	_transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
@@ -378,9 +378,10 @@ const char *transcript_strerror(transcript_error_t error) {
     @param normalized_name A pointer to a buffer to store the normalized name.
     @param normalized_name_max The size of @a normalized_name.
 
-    Any characters in @a name other than the letters 'a'-'z' (either upper or lower
-    case), the numbers '0'-'9' and the punctuation characters '-', '_', '+',
-    '=', ':' and ',' are ignored. The stored result will be nul terminated.
+    Any characters in @a name other than the letters 'a'-'z' (either upper or
+    lower case), and the numbers '0'-'9' are ignored. Furthermore, leading
+    zeros in numbers are ignored as well. The stored result will be nul
+    terminated.
 */
 void transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
 	_transcript_init();
@@ -485,18 +486,15 @@ int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c
 */
 void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
 	size_t write_idx = 0;
-	bool last_was_digit = false, comma_seen = false;
+	bool last_was_digit = false;
 
 	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
-		/* Skip any character that is not alphanumeric, or a comma, or (after the
-		   first comma) an equals sign. */
-		if (!_transcript_isalnum(*name) && *name != ',' && !(comma_seen && *name == '=')) {
+		/* Skip any character that is not alphanumeric. */
+		if (!_transcript_isalnum(*name)) {
 			last_was_digit = false;
 		} else {
 			if (!last_was_digit && *name == '0')
 				continue;
-			if (*name == ',')
-				comma_seen = true;
 			normalized_name[write_idx++] = _transcript_tolower(*name);
 			last_was_digit = _transcript_isdigit(*name);
 		}
@@ -507,43 +505,6 @@ void _transcript_normalize_name(const char *name, char *normalized_name, size_t 
 /** Get the minimum of two @c size_t values. */
 static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
 	return a < b ? a : b;
-}
-
-/** Read an option from a name into a buffer. */
-bool transcript_get_option(const char *name, char *option_buffer, size_t option_buffer_max, const char *option_name) {
-	const char *comma;
-	size_t len;
-
-	if (option_name == NULL) {
-		if ((comma = strchr(name, ',')) == NULL) {
-			strncpy(option_buffer, name, option_buffer_max - 1);
-			option_buffer[option_buffer_max - 1] = 0;
-		} else {
-			len = min(option_buffer_max - 1, comma - name);
-			strncpy(option_buffer, name, len);
-			option_buffer[len] = 0;
-		}
-		return true;
-	} else {
-		len = strlen(option_name);
-		comma = name;
-		while ((comma = strchr(comma, ',')) != NULL) {
-			comma++;
-			if (strncmp(comma, option_name, len) == 0) {
-				if (comma[len] == '=') {
-					if (option_buffer == NULL)
-						return true;
-					return transcript_get_option(comma + len + 1, option_buffer, option_buffer_max, NULL);
-				} else if (comma[len] == ',' || comma[len] == 0) {
-					if (option_buffer == NULL)
-						return true;
-					option_buffer[0] = 0;
-					return true;
-				}
-			}
-		}
-		return false;
-	}
 }
 
 /** @internal

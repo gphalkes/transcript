@@ -1,6 +1,8 @@
 syntax: glob
+src.util/linktct
 src/modules/*.la
 src/modules/.libs
+src/tables/*.c
 src/tables/*.la
 src/tables/.libs
 doc/motivation.html

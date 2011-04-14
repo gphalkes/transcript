@@ -495,10 +495,10 @@ int main(int argc, char *argv[]) {
 	base_name = output_name;
 	while (strpbrk(base_name, DIRSEPS) != NULL)
 		base_name = strpbrk(base_name, DIRSEPS) + 1;
+	// Remove ".c" at the end;
+	base_name[strlen(base_name) - 2] = 0;
 	transcript_normalize_name(base_name, normalized_output_name, sizeof(normalized_output_name));
 
-	// Remove 'c' from .c in output file name
-	normalized_output_name[strlen(normalized_output_name) - 1] = 0;
 	// Remove any comma's from the file name, as they can not be in identifiers
 	if (strchr(normalized_output_name, ',') != NULL)
 		*strchr(normalized_output_name, ',') = 0;
@@ -510,6 +510,6 @@ int main(int argc, char *argv[]) {
 	fprintf(output, "TRANSCRIPT_EXPORT const char * const *transcript_namelist_%s(void) { return namelist; }\n", normalized_output_name);
 
 	fclose(output);
-
+	free(output_name);
 	return EXIT_SUCCESS;
 }

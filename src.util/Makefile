@@ -17,6 +17,11 @@ DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
 LDFLAGS.ucm2cct := -L../src/.libs -ltranscript
 
+SOURCES.linktct := linktct.c
+LDFLAGS.linktct := -L../src/.libs -ltranscript -lltdl
+CFLAGS.linktct := -I../src
+
+TARGETS := linktct
 CXXTARGETS := ucm2cct
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
