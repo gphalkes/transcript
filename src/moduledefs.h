@@ -119,7 +119,9 @@ typedef struct {
 	const uint8_t codepoint_to_byte_idx0[64];
 	const uint16_t byte_to_codepoint[256];
 	const uint16_t byte_to_codepoint_flags[32];
-} sbc_convertor_v1;
+	const uint8_t flags;
+	const uint8_t subchar;
+} sbcs_convertor_v1_t;
 
 TRANSCRIPT_API uint32_t transcript_get_generic_fallback(uint32_t codepoint);
 TRANSCRIPT_API transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,

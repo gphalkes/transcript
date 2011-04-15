@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.libtranscript.la := transcript.c transcript_io.c utf.c transcript_iconv.c \
-	state_table_convertor.c aliases.c generic_fallbacks.c
+	state_table_convertor.c aliases.c generic_fallbacks.c sbcs_table_convertor.c
 LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO

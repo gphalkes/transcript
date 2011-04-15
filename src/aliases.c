@@ -17,9 +17,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <dirent.h>
-#ifndef WITHOUT_PTHREAD
-#include <pthread.h>
-#endif
 #include <errno.h>
 
 /* Make sure that for us the struct members are not constant, so we can modify

@@ -12,10 +12,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <string.h>
-#ifndef WITHOUT_PTHREAD
-#include <pthread.h>
-#endif
-
 #include "transcript_internal.h"
 #include "utf.h"
 #include "static_assert.h"
