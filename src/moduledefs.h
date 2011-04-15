@@ -22,6 +22,10 @@
 #include "handle.h"
 #include "utf.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
 	TRANSCRIPT_FULL_MODULE_V1 = 1, /* Provides all functions itself. */
 	TRANSCRIPT_STATE_TABLE_V1, /* Provides a set of state tables. See state_table_convertor for details. */
@@ -135,5 +139,9 @@ TRANSCRIPT_API int transcript_probe_convertor_nolock(const char *name);
 	TRANSCRIPT_EXPORT bool transcript_probe_##_name(const char *name) { return _func(name); }
 
 #define TRANSCRIPT_ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
+
+#ifdef __cplusplus
+}; /* extern "C" */
+#endif
 
 #endif

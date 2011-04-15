@@ -16,8 +16,8 @@
 #include <cstdlib>
 #include <arpa/inet.h>
 #include <algorithm>
+#include <transcript/moduledefs.h>
 #include "ucm2ltc.h"
-#include "generic_fallbacks.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
 	entries.push_back(Entry(0, 255, 0, ACTION_ILLEGAL, 0, 0));
@@ -348,7 +348,7 @@ void Ucm::remove_generic_fallbacks_internal(UcmBase *check, Variant *current_var
 		uint32_t search_for;
 
 		if ((*iter)->precision != 1 || (*iter)->codepoints.size() > 1 ||
-				(search_for = get_generic_fallback((*iter)->codepoints[0])) == 0xFFFF)
+				(search_for = transcript_get_generic_fallback((*iter)->codepoints[0])) == 0xFFFF)
 		{
 			iter++;
 			continue;

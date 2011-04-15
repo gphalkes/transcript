@@ -42,6 +42,6 @@ enum {
 /* FIXME: rename! */
 TRANSCRIPT_API put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type);
 TRANSCRIPT_API get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char *inbuflimit, bool skip);
 TRANSCRIPT_LOCAL transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf);
 #endif
