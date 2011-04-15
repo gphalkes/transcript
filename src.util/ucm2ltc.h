@@ -235,6 +235,7 @@ class Ucm : public UcmBase {
 		void write_to_unicode_flags(FILE *output);
 		void write_from_unicode_flags(FILE *output);
 		void write_interface(FILE *output, const char *normalized_name, int variant_nr);
+		uint8_t *write_simple_from_unicode(FILE *output);
 
 		void check_state_machine(Ucm *other, int this_state, int other_state);
 		static void subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_mappings,
@@ -291,6 +292,7 @@ class Ucm : public UcmBase {
 		void check_base_mul_ranges(void);
 		void write_namelist_entries(FILE *output);
 		bool is_simple_table(void);
+		void write_simple(FILE *output);
 
 		void dump(void);
 };
@@ -321,4 +323,5 @@ bool compare_codepage_bytes(Mapping *a, Mapping *b);
 bool compare_codepoints(Mapping *a, Mapping *b);
 
 char *safe_strdup(const char *str);
+void *safe_malloc(size_t size);
 #endif

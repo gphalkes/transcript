@@ -54,8 +54,7 @@ void Variant::sort_simple_mappings(void) {
 		simple_mappings[idx]->idx = idx;
 
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
-	if ((indices = (uint16_t *) malloc(sizeof(uint16_t) * simple_mappings.size())) == NULL)
-		OOM();
+	indices = (uint16_t *) safe_malloc(sizeof(uint16_t) * simple_mappings.size());
 
 	for (size_t idx = 0; idx < simple_mappings.size(); idx++)
 		indices[simple_mappings[idx]->idx] = idx;

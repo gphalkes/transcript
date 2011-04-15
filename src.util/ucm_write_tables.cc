@@ -165,13 +165,10 @@ void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
 		return;
 
 	if (variant_nr < 0)
-		sorted_multi_mappings = (Mapping **) malloc(sizeof(Mapping *) * multi_mappings.size());
+		sorted_multi_mappings = (Mapping **) safe_malloc(sizeof(Mapping *) * multi_mappings.size());
 	else
-		sorted_multi_mappings = (Mapping **) malloc(sizeof(Mapping *) *
+		sorted_multi_mappings = (Mapping **) safe_malloc(sizeof(Mapping *) *
 			(multi_mappings.size() + variants[variant_nr]->multi_mappings.size()));
-
-	if (sorted_multi_mappings == NULL)
-		OOM();
 
 	for (mapping_iter = multi_mappings.begin(); mapping_iter != multi_mappings.end(); mapping_iter++)
 		sorted_multi_mappings[idx++] = *mapping_iter;
@@ -233,9 +230,7 @@ void Ucm::write_to_unicode_table(FILE *output) {
 	uint8_t buffer[32];
 	uint32_t idx;
 
-	if ((codepoints = (uint16_t *) malloc(codepage_range * sizeof(uint16_t))) == NULL)
-		OOM();
-
+	codepoints = (uint16_t *) safe_malloc(codepage_range * sizeof(uint16_t));
 	memset(codepoints, 0xff, codepage_range * sizeof(uint16_t));
 
 	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
@@ -262,9 +257,7 @@ void Ucm::write_from_unicode_table(FILE *output) {
 	uint8_t *codepage_bytes;
 	uint32_t idx, codepoint;
 
-	if ((codepage_bytes = (uint8_t *) malloc(unicode_range * single_bytes)) == NULL)
-		OOM();
-
+	codepage_bytes = (uint8_t *) safe_malloc(unicode_range * single_bytes);
 	memset(codepage_bytes, 0x00, unicode_range * single_bytes);
 
 	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
@@ -355,10 +348,8 @@ static const char *merge_and_write_flags(FILE *output, uint8_t *data, uint32_t r
 	}
 
 	nr_of_blocks = (store_idx + BLOCKSIZE - 1) / BLOCKSIZE;
-	if ((indices = (uint16_t *) malloc(nr_of_blocks * 2)) == NULL)
-		OOM();
-	if ((blocks = (uint8_t *) malloc(nr_of_blocks * BLOCKSIZE)) == NULL)
-		OOM();
+	indices = (uint16_t *) safe_malloc(nr_of_blocks * 2);
+	blocks = (uint8_t *) safe_malloc(nr_of_blocks * BLOCKSIZE);
 
 	// Ensure that the last block is filled up with 0 bytes
 	memset(data + store_idx, 0, nr_of_blocks * BLOCKSIZE - store_idx);
@@ -432,9 +423,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 	uint8_t *save_flags;
 	vector<Mapping *>::iterator mapping_iter;
 
-	if ((save_flags = (uint8_t *) malloc(codepage_range + BLOCKSIZE - 1)) == NULL)
-		OOM();
-
+	save_flags = (uint8_t *) safe_malloc(codepage_range + BLOCKSIZE - 1);
 	memset(save_flags, 0, codepage_range + BLOCKSIZE - 1);
 
 	for (mapping_iter = simple_mappings.begin(); mapping_iter != simple_mappings.end(); mapping_iter++) {
@@ -485,9 +474,7 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 	uint8_t *save_flags;
 	vector<Mapping *>::iterator mapping_iter;
 
-	if ((save_flags = (uint8_t *) malloc(unicode_range + BLOCKSIZE - 1)) == NULL)
-		OOM();
-
+	save_flags = (uint8_t *) safe_malloc(unicode_range + BLOCKSIZE - 1);
 	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + BLOCKSIZE - 1);
 
 	for (mapping_iter = simple_mappings.begin(); mapping_iter != simple_mappings.end(); mapping_iter++) {
@@ -565,7 +552,7 @@ void Ucm::write_table(FILE *output) {
 	deque<Variant *>::iterator variant_iter;
 	unsigned int count;
 	size_t i;
-	char normalized_name[80];
+	char normalized_name[160];
 
 	/* Make sure the variables for this convertor are unique */
 	unique++;

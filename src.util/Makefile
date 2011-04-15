@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.ucm2ltc := ucm2ltc.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize_state_machine.cc \
-	variant.cc ucmparser.gg ucmlexer.l
+	variant.cc ucmparser.gg ucmlexer.l ucm_write_simple.cc
 DEPS.ucmparser.gg := ucmlexer.l ucm2ltc.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
 LDFLAGS.ucm2ltc := -L../src/.libs -ltranscript
