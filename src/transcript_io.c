@@ -20,6 +20,9 @@
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 
+/** Wrapper around fopen such that it can be passed to ::_transcript_db_open. */
+static FILE *fopen_wrapper(const char *name) { return fopen(name, "r"); }
+
 /** Load a suffixed symbol from a plugin. */
 static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
 	char buffer[NORMALIZE_NAME_MAX + 32];
@@ -51,7 +54,7 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 	} else {
 		FILE *handle = NULL;
 		/* For most convertors it is sufficient to know that the file is readable. */
-		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) fopen, NULL)) != NULL)
+		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) fopen_wrapper, NULL)) != NULL)
 			fclose(handle);
 		return handle != NULL;
 	}
@@ -97,7 +100,7 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 	if ((handle = _transcript_db_open(real_name, "ltc", (open_func_t) lt_dlopen, error)) == NULL) {
 		FILE *test_handle;
 		transcript_error_t local_error;
-		if ((test_handle = _transcript_db_open(real_name, "ltc", (open_func_t) fopen, &local_error)) == NULL)
+		if ((test_handle = _transcript_db_open(real_name, "ltc", (open_func_t) fopen_wrapper, &local_error)) == NULL)
 			ERROR(local_error);
 		fclose(test_handle);
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
@@ -189,7 +192,7 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
 	strcat(file_name, ".");
 	strcat(file_name, ext);
 
-	if ((result = open_func(file_name, "r")) == NULL)
+	if ((result = open_func(file_name)) == NULL)
 		ERROR(TRANSCRIPT_ERRNO);
 
 end_error:

@@ -294,7 +294,7 @@ const transcript_name_t *transcript_get_names(int *count) {
 /** @internal
     @brief Read the list of convertors and their aliases from the aliases.txt file.
 */
-void _transcript_init_aliases_from_file(void) {
+static void *read_alias_file(const char *name) {
 	FILE *aliases;
 	int convertor_found = 0;
 	size_t idx = 0;
@@ -313,10 +313,11 @@ void _transcript_init_aliases_from_file(void) {
 	} state = LINE_START;
 
 
-	if ((aliases = _transcript_db_open("aliases", "txt", (open_func_t) fopen, NULL)) == NULL) {
-		_transcript_log("Error opening aliases.txt: %s\n", strerror(errno));
-		return;
+	if ((aliases = fopen(name, "r")) == NULL) {
+		_transcript_log("Error opening '%s': %s\n", name, strerror(errno));
+		return NULL;
 	}
+	_transcript_log("Processing alias file %s\n", name);
 
 	while ((c = fgetc(aliases)) != EOF) {
 		if (c == '\n')
@@ -406,7 +407,7 @@ void _transcript_init_aliases_from_file(void) {
 			default:
 				_transcript_log("Program logic error while reading aliases.txt\n");
 				fclose(aliases);
-				return;
+				return NULL;
 		}
 		if (c == '\n')
 			state = LINE_START;
@@ -414,5 +415,12 @@ void _transcript_init_aliases_from_file(void) {
 	/* Finish handling the last convertor. */
 	convertor_done();
 	fclose(aliases);
+	return NULL;
+}
 
+/** @internal
+    @brief Read the list of convertors and their aliases from the aliases.txt file.
+*/
+void _transcript_init_aliases_from_file(void) {
+	_transcript_db_open("aliases", "txt", read_alias_file, NULL);
 }

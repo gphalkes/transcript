@@ -63,7 +63,7 @@ typedef struct transcript_name_desc_t {
 	int flags;
 } transcript_name_desc_t;
 
-typedef void *(*open_func_t)(const char *, const char *);
+typedef void *(*open_func_t)(const char *);
 
 TRANSCRIPT_LOCAL transcript_t *_transcript_fill_utf(transcript_t *handle, transcript_utf_t utf_type);
 
