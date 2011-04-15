@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <arpa/inet.h>
 #include <algorithm>
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 #include "generic_fallbacks.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {
@@ -619,7 +619,7 @@ void Ucm::dump(void) {
 	if (tag_values[CHARSET_FAMILY].str != NULL)
 		printf("<charset_family>\t\"%s\"\n", tag_values[CHARSET_FAMILY].str);
 	if (tag_values[_INTERNAL].str != NULL && variants.size() < 2)
-		printf("<cct:internal>\t\"%s\"\n", tag_values[_INTERNAL].str);
+		printf("<ltc:internal>\t\"%s\"\n", tag_values[_INTERNAL].str);
 
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
 	sort(multi_mappings.begin(), multi_mappings.end(), compare_codepoints);

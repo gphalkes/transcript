@@ -12,7 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* Get and put routines for GB-18030. This uses the internal gb18030.cct tables. */
+/* Get and put routines for GB-18030. This uses the internal gb18030table. */
 
 #include "unicode.h"
 
@@ -53,7 +53,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 	size_t low, mid, high;
 	uint8_t *_outbuf;
 
-	switch (handle->gb18030_cct->convert_from(handle->gb18030_cct, &codepoint_ptr, codepoint_ptr + 4, outbuf,
+	switch (handle->gb18030_table_conv->convert_from(handle->gb18030_table_conv, &codepoint_ptr, codepoint_ptr + 4, outbuf,
 			outbuflimit, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION))
 	{
 		case TRANSCRIPT_SUCCESS:
@@ -114,12 +114,12 @@ uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **in
 	uint32_t codepoint;
 
 	if (skip) {
-		transcript_to_unicode_skip(handle->gb18030_cct, inbuf, inbuflimit);
+		transcript_to_unicode_skip(handle->gb18030_table_conv, inbuf, inbuflimit);
 		return 0;
 	}
 
 	codepoint_ptr = (char *) &codepoint;
-	switch (handle->gb18030_cct->convert_to(handle->gb18030_cct, inbuf, inbuflimit, &codepoint_ptr,
+	switch (handle->gb18030_table_conv->convert_to(handle->gb18030_table_conv, inbuf, inbuflimit, &codepoint_ptr,
 			codepoint_ptr + 4, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_ALLOW_PRIVATE_USE | TRANSCRIPT_NO_1N_CONVERSION))
 	{
 		case TRANSCRIPT_SUCCESS:

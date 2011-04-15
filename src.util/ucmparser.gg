@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 
 extern char *yytext;
 

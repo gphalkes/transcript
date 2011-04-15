@@ -11,18 +11,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES.ucm2cct := ucm2cct.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize_state_machine.cc variant.cc \
-	ucmparser.gg ucmlexer.l generic_fallbacks.c
-DEPS.ucmparser.gg := ucmlexer.l ucm2cct.cc
+SOURCES.ucm2ltc := ucm2ltc.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize_state_machine.cc \
+	variant.cc ucmparser.gg ucmlexer.l generic_fallbacks.c
+DEPS.ucmparser.gg := ucmlexer.l ucm2ltc.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
-LDFLAGS.ucm2cct := -L../src/.libs -ltranscript
+LDFLAGS.ucm2ltc := -L../src/.libs -ltranscript
 
-SOURCES.linktct := linktct.c
-LDFLAGS.linktct := -L../src/.libs -ltranscript -lltdl
-CFLAGS.linktct := -I../src
+SOURCES.linkltc := linkltc.c
+LDFLAGS.linkltc := -L../src/.libs -ltranscript -lltdl
+CFLAGS.linkltc := -I../src
 
-TARGETS := linktct
-CXXTARGETS := ucm2cct
+TARGETS := linkltc
+CXXTARGETS := ucm2ltc
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
@@ -30,11 +30,12 @@ include ../../makesys/rules.mk
 #================================================#
 CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 
-generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
+generic_fallbacks.c generic_fallbacks.h: ../src/generic_fallbacks.txt
 	$(if $(VERBOSE),, @echo [GEN] $* ;) ../../statrie/src/statrie -fgeneric_fallbacks \
 		-nget_generic_fallback -b16 -p -r0x10000 -DFFFF transcript_generic_fallbacks < $<
 
-ucm2cct: | library
+ucm2ltc: | library
+linkltc: | library
 
 library:
 	@$(MAKE) -q -C ../src libtranscript.la || $(MAKE) -C ../src libtranscript.la

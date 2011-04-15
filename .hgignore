@@ -1,5 +1,5 @@
 syntax: glob
-src.util/linktct
+src.util/linkltc
 src/modules/*.la
 src/modules/.libs
 src/tables/*.c
@@ -8,9 +8,8 @@ src/tables/.libs
 doc/motivation.html
 src*/generic_fallbacks.[ch]
 src/test
-src/cct_convertor
 src/libtranscript.la
-src.util/ucm2cct
+src.util/ucm2ltc
 
 src*/.objects
 src*/.deps

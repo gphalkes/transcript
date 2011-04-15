@@ -12,12 +12,12 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.libtranscript.la := transcript.c transcript_io.c utf.c transcript_iconv.c \
-	cct_convertor.c aliases.c generic_fallbacks.c
+	state_table_convertor.c aliases.c generic_fallbacks.c
 LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
-MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .tct
+MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .ltc
 
 MODULES := ASCII unicode iso-2022
 
@@ -58,7 +58,7 @@ test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 
 $(OBJECTS): generic_fallbacks.c
 
-generic_fallbacks.c generic_fallbacks.h: ../src.util/generic_fallbacks.txt
+generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 	$(if $(VERBOSE),, @echo [GEN] $* ;) ../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p \
 		-r0x10000 -DFFFF -H'#include "transcript.h"' -e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $<
 
@@ -78,11 +78,11 @@ links:
 	@[ -L transcript/handle.h ] || ln -s ../handle.h transcript
 	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
-convertor-links: | linktct $(LTTARGETS)
-	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linktct *.tct
-	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linktct *.tct
+convertor-links: | linkltc $(LTTARGETS)
+	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
+	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
 
-linktct:
-	@$(MAKE) -q -C ../src.util linktct || $(MAKE) --no-print-directory -C ../src.util linktct
+linkltc: libtranscript.la
+	@$(MAKE) -q -C ../src.util linkltc || $(MAKE) --no-print-directory -C ../src.util linkltc
 
-.PHONY: links convertor-links linktct
+.PHONY: links convertor-links linkltc

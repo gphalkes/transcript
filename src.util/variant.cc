@@ -14,7 +14,7 @@
 #include <cstring>
 #include <algorithm>
 
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 
 Variant::Variant(Ucm *_base, const char *_id, bool internal) : base(_base) {
 	size_t len;

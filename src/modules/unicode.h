@@ -37,7 +37,7 @@ struct convertor_state_t {
 
 	state_t state;
 
-	transcript_t *gb18030_cct;
+	transcript_t *gb18030_table_conv;
 	int utf_type;
 };
 

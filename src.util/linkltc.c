@@ -64,8 +64,8 @@ static PARSE_FUNCTION(load_files)
 			NO_MORE_OPTIONS;
 		END_OPTION
 	NO_OPTION
-		if (strlen(optcurrent) < 5 || strcmp(optcurrent + strlen(optcurrent) - 4, ".tct") != 0)
-			fprintf(stderr, "File %s does not end in .tct\n", optcurrent);
+		if (strlen(optcurrent) < 5 || strcmp(optcurrent + strlen(optcurrent) - 4, ".ltc") != 0)
+			fprintf(stderr, "File %s does not end in .ltc\n", optcurrent);
 		else
 			make_links(optcurrent);
 	END_OPTIONS
@@ -150,7 +150,7 @@ static void make_links(const char *name) {
 			base_name[tmp - name + 1] = 0;
 		}
 		base_name = strcat_autoalloc(base_name, *namelist);
-		base_name = strcat_autoalloc(base_name, ".tct");
+		base_name = strcat_autoalloc(base_name, ".ltc");
 
 		if (option_verbose)
 			fprintf(stderr, "%s -> %s\n", base_name, filename(name));

@@ -259,7 +259,7 @@ static void init_availability(void) {
 				continue;
 			if (entry->d_name[0] == '_')
 				continue;
-			if (strcmp(entry->d_name + entry_name_len - 4, ".tct") != 0)
+			if (strcmp(entry->d_name + entry_name_len - 4, ".ltc") != 0)
 				continue;
 			entry->d_name[entry_name_len - 4] = 0;
 			if (_transcript_get_name_desc(entry->d_name, 1) == NULL)

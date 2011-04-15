@@ -317,12 +317,12 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 	}
 	switch (retval->utf_type) {
 		case _TRANSCRIPT_GB18030:
-			if ((retval->gb18030_cct = transcript_open_convertor_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
+			if ((retval->gb18030_table_conv = transcript_open_convertor_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
 				free(retval);
 				return NULL;
 			}
 			retval->common.close = (close_func_t) close_convertor;
-			retval->gb18030_cct->get_unicode = _transcript_get_get_unicode(_TRANSCRIPT_UTF32_NO_CHECK);
+			retval->gb18030_table_conv->get_unicode = _transcript_get_get_unicode(_TRANSCRIPT_UTF32_NO_CHECK);
 			retval->to_get = _transcript_get_gb18030;
 			retval->from_put = _transcript_put_gb18030;
 			break;
@@ -360,7 +360,7 @@ TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
 
 /** close implementation for Unicode convertors. */
 static void close_convertor(convertor_state_t *handle) {
-	transcript_close_convertor(handle->gb18030_cct);
+	transcript_close_convertor(handle->gb18030_table_conv);
 }
 
 TRANSCRIPT_EXPORT int transcript_get_iface_unicode(void) { return TRANSCRIPT_FULL_MODULE_V1; }

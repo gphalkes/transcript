@@ -17,7 +17,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <list>
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 
 struct full_state_t;
 

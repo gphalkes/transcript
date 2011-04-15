@@ -70,8 +70,8 @@ enum {
 };
 
 /** @struct save_state_t
-    Structure holding the shift state of a CCT convertor. */
-typedef struct _transcript_cct_state_t {
+    Structure holding the shift state of a state table convertor. */
+typedef struct _transcript_state_table_state_t {
 	uint8_t to, from;
 } save_state_t;
 
@@ -84,7 +84,7 @@ typedef struct {
 } flag_handler_t;
 
 /** @struct convertor_state_t
-    Structure holding the pointers to the data and the state of a CCT convertor. */
+    Structure holding the pointers to the data and the state of a state table convertor. */
 typedef struct {
 	transcript_t common;
 	convertor_tables_v1_t tables;
@@ -109,7 +109,7 @@ static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
 
 /** Find variant conversion for to-Unicode conversion.
 
-    The CCT based convertors can store multiple similar convertors in a single
+    The state table based convertors can store multiple similar convertors in a single
     table. For the different convertors, or variants, look-up tables are provided
     to find the actual conversion. This function perform the look-up.
 */
@@ -153,7 +153,7 @@ static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *
 	*codepoint = mapping->codepoint;
 }
 
-/** convert_to implementation for CCT convertors. */
+/** convert_to implementation for state table convertors. */
 static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -307,7 +307,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** skip_to implementation for CCT convertors. */
+/** skip_to implementation for state table convertors. */
 static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
@@ -340,7 +340,7 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 	return TRANSCRIPT_INCOMPLETE;
 }
 
-/** reset_to implementation for CCT convertors. */
+/** reset_to implementation for state table convertors. */
 static void to_unicode_reset(convertor_state_t *handle) {
 	handle->state.to = 0;
 }
@@ -498,7 +498,7 @@ check_next_mapping: ;
 
 /** Find variant conversion for from-Unicode conversion.
 
-    The CCT based convertors can store multiple similar convertors in a single
+    The state table based convertors can store multiple similar convertors in a single
     table. For the different convertors, or variants, look-up tables are provided
     to find the actual conversion. This function perform the look-up.
 */
@@ -530,7 +530,7 @@ static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t code
 	*bytes = (uint8_t *) &mapping->codepage_bytes;
 }
 
-/** convert_from implementation for CCT convertors. */
+/** convert_from implementation for state table convertors. */
 static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
@@ -670,35 +670,35 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** flush_from implementation for CCT convertors. */
+/** flush_from implementation for state table convertors. */
 static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** reset_from implementation for CCT convertors. */
+/** reset_from implementation for state table convertors. */
 static void from_unicode_reset(convertor_state_t *handle) {
 	handle->state.from = 0;
 }
 
-/** save implementation for CCT convertors. */
-static void save_cct_state(convertor_state_t *handle, save_state_t *save) {
+/** save implementation for state table convertors. */
+static void save_state_table_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(save, &handle->state, sizeof(save_state_t));
 }
 
-/** load implementation for CCT convertors. */
-static void load_cct_state(convertor_state_t *handle, save_state_t *save) {
+/** load implementation for state table convertors. */
+static void load_state_table_state(convertor_state_t *handle, save_state_t *save) {
 	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
 /** @internal
-    @brief Load a CCT table and create a convertor handle from it.
+    @brief Load a state table table and create a convertor handle from it.
     @param name The name of the convertor, which must correspond to a file name.
     @param flags Flags for the convertor.
     @param error The location to store an error.
 */
-void *_transcript_open_cct_convertor(const convertor_tables_v1_t *tables, int flags, transcript_error_t *error) {
+void *_transcript_open_state_table_convertor(const convertor_tables_v1_t *tables, int flags, transcript_error_t *error) {
 	convertor_state_t *retval;
 
 	if (!(flags & TRANSCRIPT_INTERNAL) &&
@@ -727,8 +727,8 @@ void *_transcript_open_cct_convertor(const convertor_tables_v1_t *tables, int fl
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 	retval->common.close = NULL;
-	retval->common.save = (save_func_t) save_cct_state;
-	retval->common.load = (load_func_t) load_cct_state;
+	retval->common.save = (save_func_t) save_state_table_state;
+	retval->common.load = (load_func_t) load_state_table_state;
 
 	init_flag_handler(&retval->codepage_flags, tables->convertor->codepage_flags.flags_type);
 	init_flag_handler(&retval->unicode_flags, tables->convertor->unicode_flags.flags_type);

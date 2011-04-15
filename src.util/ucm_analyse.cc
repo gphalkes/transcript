@@ -15,7 +15,7 @@
 #include <climits>
 #include <algorithm>
 #include <cstring>
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 
 int Ucm::calculate_depth(Entry *entry) {
 	int depth, max_depth = 0;

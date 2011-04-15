@@ -40,7 +40,7 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 		lt_dlhandle handle;
 		int result = 0;
 
-		if ((handle = _transcript_db_open(name, "tct", (open_func_t) lt_dlopen, NULL)) == NULL)
+		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) lt_dlopen, NULL)) == NULL)
 			return 0;
 
 		if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL)
@@ -51,7 +51,7 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 	} else {
 		FILE *handle = NULL;
 		/* For most convertors it is sufficient to know that the file is readable. */
-		if ((handle = _transcript_db_open(name, "tct", (open_func_t) fopen, NULL)) != NULL)
+		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) fopen, NULL)) != NULL)
 			fclose(handle);
 		return handle != NULL;
 	}
@@ -94,10 +94,10 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
 
-	if ((handle = _transcript_db_open(real_name, "tct", (open_func_t) lt_dlopen, error)) == NULL) {
+	if ((handle = _transcript_db_open(real_name, "ltc", (open_func_t) lt_dlopen, error)) == NULL) {
 		FILE *test_handle;
 		transcript_error_t local_error;
-		if ((test_handle = _transcript_db_open(real_name, "tct", (open_func_t) fopen, &local_error)) == NULL)
+		if ((test_handle = _transcript_db_open(real_name, "ltc", (open_func_t) fopen, &local_error)) == NULL)
 			ERROR(local_error);
 		fclose(test_handle);
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
@@ -111,7 +111,7 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 			const convertor_tables_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = _transcript_open_cct_convertor(get_table(), flags, error)) != NULL) {
+			if ((result = _transcript_open_state_table_convertor(get_table(), flags, error)) != NULL) {
 				result->library_handle = handle;
 				return result;
 			}

@@ -18,7 +18,7 @@
 #include <arpa/inet.h>
 #include <transcript.h>
 
-#include "ucm2cct.h"
+#include "ucm2ltc.h"
 
 // FIXME: we should really add the size of the different arrays such that we can check whether the
 // referenced values are really present! Otherwise we open up a security hole (read-only, but still)!
