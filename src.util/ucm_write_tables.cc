@@ -23,6 +23,7 @@
 // FIXME: we should really add the size of the different arrays such that we can check whether the
 // referenced values are really present! Otherwise we open up a security hole (read-only, but still)!
 
+static int unique;
 static char *to_unicode_flags_initializer, *from_unicode_flags_initializer;
 
 static void write_byte_data(FILE *output, uint8_t *data, size_t size, int indent_level) {
@@ -75,11 +76,11 @@ void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &tot
 void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) {
 	vector<Entry>::iterator entry_iter;
 
-	fprintf(output, "static const state_v1_t %s_states[] = {\n", name);
+	fprintf(output, "static const state_v1_t %s_states_%d[] = {\n", name, unique);
 	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		if (state_iter != states.begin())
 			fprintf(output, ",\n");
-		fprintf(output, "\t{ entries + %d, UINT16_C(0x%08x), {\n", (*state_iter)->entries_start, (*state_iter)->base);
+		fprintf(output, "\t{ entries_%d + %d, UINT16_C(0x%08x), {\n", unique, (*state_iter)->entries_start, (*state_iter)->base);
 		entry_iter = (*state_iter)->entries.begin();
 		for (int i = 0, entry_nr = 0; i < 256; i++) {
 			if ((i & 0xf) == 0) {
@@ -155,8 +156,8 @@ void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
 	unsigned int idx = 0, i;
 
 	if (multi_mappings.size() == 0 && variant_nr < 0) {
-		fprintf(output, "static const multi_mapping_v1_t * const codepoint_sorted_multi_mappings[] = { NULL };\n");
-		fprintf(output, "static const multi_mapping_v1_t * const codepage_sorted_multi_mappings[] = { NULL };\n");
+		fprintf(output, "static const multi_mapping_v1_t * const codepoint_sorted_multi_mappings_%d[] = { NULL };\n", unique);
+		fprintf(output, "static const multi_mapping_v1_t * const codepage_sorted_multi_mappings_%d[] = { NULL };\n", unique);
 		return;
 	}
 
@@ -184,9 +185,10 @@ void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
 	qsort(sorted_multi_mappings, idx, sizeof(Mapping *), (compare_fn) compare_multi_mapping_codepoints);
 
 	if (variant_nr < 0)
-		fprintf(output, "static const multi_mapping_v1_t * const codepoint_sorted_multi_mappings[] = {\n");
+		fprintf(output, "static const multi_mapping_v1_t * const codepoint_sorted_multi_mappings_%d[] = {\n", unique);
 	else
-		fprintf(output, "static const multi_mapping_v1_t * const variant%d_codepoint_sorted_multi_mappings[] = {\n", variant_nr);
+		fprintf(output, "static const multi_mapping_v1_t * const variant%d_codepoint_sorted_multi_mappings_%d[] = {\n",
+			variant_nr, unique);
 
 	for (i = 0; i < idx; i++) {
 		if ((i & 0x3) == 0) {
@@ -198,16 +200,17 @@ void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
 		} else {
 			fprintf(output, ", ");
 		}
-		fprintf(output, "multi_mappings + %d", sorted_multi_mappings[i]->idx);
+		fprintf(output, "multi_mappings_%d + %d", unique, sorted_multi_mappings[i]->idx);
 	}
 	fprintf(output, "\n};\n\n");
 
 	qsort(sorted_multi_mappings, idx, sizeof(Mapping *), (compare_fn) compare_multi_mapping_codepage);
 
 	if (variant_nr < 0)
-		fprintf(output, "static const multi_mapping_v1_t * const codepage_sorted_multi_mappings[] = {\n");
+		fprintf(output, "static const multi_mapping_v1_t * const codepage_sorted_multi_mappings_%d[] = {\n", unique);
 	else
-		fprintf(output, "static const multi_mapping_v1_t * const variant%d_codepage_sorted_multi_mappings[] = {\n", variant_nr);
+		fprintf(output, "static const multi_mapping_v1_t * const variant%d_codepage_sorted_multi_mappings_%d[] = {\n",
+			variant_nr, unique);
 
 	for (i = 0; i < idx; i++) {
 		if ((i & 0x3) == 0) {
@@ -219,7 +222,7 @@ void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
 		} else {
 			fprintf(output, ", ");
 		}
-		fprintf(output, "multi_mappings + %d", sorted_multi_mappings[i]->idx);
+		fprintf(output, "multi_mappings_%d + %d", unique, sorted_multi_mappings[i]->idx);
 	}
 	fprintf(output, "\n};\n\n");
 	free(sorted_multi_mappings);
@@ -249,7 +252,7 @@ void Ucm::write_to_unicode_table(FILE *output) {
 		}
 	}
 
-	fprintf(output, "static const uint16_t codepage_mappings[] = {\n");
+	fprintf(output, "static const uint16_t codepage_mappings_%d[] = {\n", unique);
 	write_word_data(output, codepoints, codepage_range, 1);
 	fprintf(output, "\n};\n\n");
 	free(codepoints);
@@ -273,7 +276,7 @@ void Ucm::write_from_unicode_table(FILE *output) {
 		copy((*iter)->codepage_bytes.begin(), (*iter)->codepage_bytes.end(), codepage_bytes + idx * single_bytes);
 	}
 
-	fprintf(output, "static const uint8_t unicode_mappings[] = {\n");
+	fprintf(output, "static const uint8_t unicode_mappings_%d[] = {\n", unique);
 	write_byte_data(output, codepage_bytes, unicode_range * single_bytes, 1);
 	fprintf(output, "\n};\n\n");
 	free(codepage_bytes);
@@ -281,7 +284,7 @@ void Ucm::write_from_unicode_table(FILE *output) {
 
 void Variant::write_simple_mappings(FILE *output, int variant_nr) {
 	sort_simple_mappings();
-	fprintf(output, "static const variant_mapping_v1_t variant%d_mappings[] = {\n", variant_nr);
+	fprintf(output, "static const variant_mapping_v1_t variant%d_mappings_%d[] = {\n", variant_nr, unique);
 	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		if (iter != simple_mappings.begin())
 			fprintf(output, ",\n");
@@ -402,21 +405,21 @@ static const char *merge_and_write_flags(FILE *output, uint8_t *data, uint32_t r
 	}
 
 	if (nr_of_blocks * 2 + saved_blocks * BLOCKSIZE > store_idx) {
-		fprintf(output, "static const uint8_t %s_unicode_flags_bytes[] = {\n", name);
+		fprintf(output, "static const uint8_t %s_unicode_flags_bytes_%d[] = {\n", name, unique);
 		write_byte_data(output, data, store_idx, 1);
 		fprintf(output, "\n};\n\n");
-		snprintf(result, sizeof(result), "{ %s_unicode_flags_bytes, NULL, 0x%02x, 0x%02x }",
-			name, default_flags, flag_code);
+		snprintf(result, sizeof(result), "{ %s_unicode_flags_bytes_%d, NULL, 0x%02x, 0x%02x }",
+			name, unique, default_flags, flag_code);
 	} else {
-		fprintf(output, "static const uint8_t %s_unicode_flags_bytes[] = {\n", name);
+		fprintf(output, "static const uint8_t %s_unicode_flags_bytes_%d[] = {\n", name, unique);
 		write_byte_data(output, blocks, saved_blocks * BLOCKSIZE, 1);
 		fprintf(output, "\n};\n\n");
-		fprintf(output, "static const uint16_t %s_unicode_flags_indices[] = {\n", name);
+		fprintf(output, "static const uint16_t %s_unicode_flags_indices_%d[] = {\n", name, unique);
 		write_word_data(output, indices, nr_of_blocks, 1);
 		fprintf(output, "\n};\n\n");
 
-		snprintf(result, sizeof(result), "{ %s_unicode_flags_bytes, %s_unicode_flags_indices, 0x%02x, 0x%02x }",
-			name, name, default_flags, flag_code | 0x80);
+		snprintf(result, sizeof(result), "{ %s_unicode_flags_bytes_%d, %s_unicode_flags_indices_%d, 0x%02x, 0x%02x }",
+			name, unique, name, unique, default_flags, flag_code | 0x80);
 	}
 	free(indices);
 	free(blocks);
@@ -537,21 +540,21 @@ void Ucm::write_interface(FILE *output, const char *normalized_name, int variant
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
 	fprintf(output, "TRANSCRIPT_EXPORT const convertor_tables_v1_t *transcript_get_table_%s(void) {\n", normalized_name);
 	fprintf(output, "\tstatic const convertor_tables_v1_t _convertor = {\n");
-	fprintf(output, "\t\t&convertor, ");
+	fprintf(output, "\t\t&convertor_%d, ", unique);
 	if (variant_nr < 0)
 		fprintf(output, "NULL,\n");
 	else
-		fprintf(output, "variants + %d,\n", variant_nr);
+		fprintf(output, "variants_%d + %d,\n", unique, variant_nr);
 
 	if (variant_nr < 0 || variants[variant_nr]->multi_mappings.size() == 0) {
 		if (multi_mappings.empty()) {
 			fprintf(output, "\t\tNULL, NULL, ");
 		} else {
-			fprintf(output, "\t\tcodepage_sorted_multi_mappings, codepoint_sorted_multi_mappings, ");
+			fprintf(output, "\t\tcodepage_sorted_multi_mappings_%d, codepoint_sorted_multi_mappings_%d, ", unique, unique);
 		}
 	} else {
-		fprintf(output, "\t\tvariant%d_codepage_sorted_multi_mappings,\n", variant_nr);
-		fprintf(output, "\t\tvariant%d_codepoint_sorted_multi_mappings, ", variant_nr);
+		fprintf(output, "\t\tvariant%d_codepage_sorted_multi_mappings_%d,\n", variant_nr, unique);
+		fprintf(output, "\t\tvariant%d_codepoint_sorted_multi_mappings_%d, ", variant_nr, unique);
 	}
 	fprintf(output, "%d\n\t};\n", (int) multi_mappings.size() +
 		(variant_nr < 0 ? 0 : (int) variants[variant_nr]->multi_mappings.size()));
@@ -564,8 +567,11 @@ void Ucm::write_table(FILE *output) {
 	size_t i;
 	char normalized_name[80];
 
+	/* Make sure the variables for this convertor are unique */
+	unique++;
+
 	/* Write all entries into a single array. */
-	fprintf(output, "static const entry_v1_t entries[] = {\n");
+	fprintf(output, "static const entry_v1_t entries_%d[] = {\n", unique);
 	count = 0;
 	write_entries(output, codepage_states, count);
 	write_entries(output, unicode_states, count);
@@ -577,7 +583,7 @@ void Ucm::write_table(FILE *output) {
 
 	/* Write shift sequences. */
 	if (shift_sequences.size() > 0) {
-		fprintf(output, "static const shift_state_v1_t shift_states[] = {\n");
+		fprintf(output, "static const shift_state_v1_t shift_states_%d[] = {\n", unique);
 		for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
 				shift_iter != shift_sequences.end(); shift_iter++)
 		{
@@ -603,7 +609,7 @@ void Ucm::write_table(FILE *output) {
 		has_multi_mappings |= !(*variant_iter)->multi_mappings.empty();
 
 	if (has_multi_mappings) {
-		fprintf(output, "static const multi_mapping_v1_t multi_mappings[] = {\n");
+		fprintf(output, "static const multi_mapping_v1_t multi_mappings_%d[] = {\n", unique);
 		count = 0;
 		write_multi_mappings(output, multi_mappings, count);
 		for (variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
@@ -620,12 +626,12 @@ void Ucm::write_table(FILE *output) {
 
 	/* Write variants table. */
 	if (!variants.empty()) {
-		fprintf(output, "static const variant_v1_t variants[] = {\n");
+		fprintf(output, "static const variant_v1_t variants_%d[] = {\n", unique);
 		for (variant_iter = variants.begin(), count = 0; variant_iter != variants.end(); variant_iter++, count++) {
 			if (count != 0)
 				fprintf(output, ",\n");
-			fprintf(output, "\t{ variant%d_mappings, 0x%04x, 0x%04x }",
-				count, (int) (*variant_iter)->simple_mappings.size(), (*variant_iter)->flags);
+			fprintf(output, "\t{ variant%d_mappings_%d, 0x%04x, 0x%04x }",
+				count, unique, (int) (*variant_iter)->simple_mappings.size(), (*variant_iter)->flags);
 		}
 		fprintf(output, "\n};\n\n");
 	}
@@ -636,9 +642,13 @@ void Ucm::write_table(FILE *output) {
 	if (used_from_unicode_flags != 0)
 		write_from_unicode_flags(output);
 
-	fprintf(output, "static const convertor_v1_t convertor = {\n");
-	fprintf(output, "\tcodepage_states, unicode_states, %s, codepage_mappings, unicode_mappings,\n",
-		shift_sequences.empty() ? "NULL" : "shift_states");
+	fprintf(output, "static const convertor_v1_t convertor_%d = {\n", unique);
+	fprintf(output, "\tcodepage_states_%d, unicode_states_%d, ", unique, unique);
+	if (shift_sequences.empty())
+		fprintf(output, "NULL, ");
+	else
+		fprintf(output, "shift_states_%d, ", unique);
+	fprintf(output, "codepage_mappings_%d, unicode_mappings_%d,\n", unique, unique);
 	fprintf(output, "\t%s,\n", to_unicode_flags_initializer == NULL ? "{ NULL }" : to_unicode_flags_initializer);
 	fprintf(output, "\t%s,\n", from_unicode_flags_initializer == NULL ? "{ NULL }" : from_unicode_flags_initializer);
 	fprintf(output, "\t{ ");

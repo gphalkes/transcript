@@ -24,6 +24,8 @@
 #include "ucmparser.h"
 #include "optionMacros.h"
 
+#warning FIXME: check names in different UCM sets against each other for clashes
+
 bool option_verbose, option_internal_table, option_dump;
 #ifdef DEBUG
 bool option_abort = true;
