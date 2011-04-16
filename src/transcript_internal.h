@@ -83,6 +83,7 @@ TRANSCRIPT_LOCAL void _transcript_normalize_name(const char *name, char *normali
 
 TRANSCRIPT_LOCAL void _transcript_init_aliases_from_file(void);
 TRANSCRIPT_LOCAL void *_transcript_open_state_table_convertor(const convertor_tables_v1_t *tables, int flags, transcript_error_t *error);
+TRANSCRIPT_LOCAL void *_transcript_open_sbcs_table_convertor(const sbcs_convertor_v1_t *tables, int flags, transcript_error_t *error);
 
 TRANSCRIPT_LOCAL extern const char **_transcript_search_path;
 #endif

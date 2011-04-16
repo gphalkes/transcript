@@ -99,14 +99,24 @@ struct _transcript_iso2022_stc_handle_t {
 /** @struct state_t
     Structure holding the shift state of an ISO-2022 convertor. */
 typedef struct {
-	struct _transcript_iso2022_stc_handle_t *g_to[4]; /**< Shifted-in sets. */
-	struct _transcript_iso2022_stc_handle_t *g_from[4]; /**< Shifted-in sets. */
+	stc_handle_t *g_to[4]; /**< Shifted-in sets. */
+	stc_handle_t *g_from[4]; /**< Shifted-in sets. */
 	uint_fast8_t to, /**< Current character set in use by the to-Unicode conversion. */
 		from; /**< Current character set in use by the from-Unicode conversion. */
 } state_t;
 
+/** @struct save_state_t
+    Structure holding the shift state of an ISO-2022 convertor for save/load purposes. */
+typedef struct {
+	uint8_t g_to[4]; /**< Shifted-in sets. */
+	uint8_t g_from[4]; /**< Shifted-in sets. */
+	uint8_t to, /**< Current character set in use by the to-Unicode conversion. */
+		from; /**< Current character set in use by the from-Unicode conversion. */
+} save_state_t;
+
+
 /* Make sure that the saved state will fit in an allocated block. */
-static_assert(sizeof(state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
+static_assert(sizeof(save_state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
 typedef struct convertor_state_t convertor_state_t;
 typedef void (*reset_state_func_t)(convertor_state_t *handle);
@@ -593,13 +603,43 @@ static void from_unicode_reset(convertor_state_t *handle) {
 }
 
 /** save implementation for ISO-2022 convertors. */
-static void save_iso2022_state(convertor_state_t *handle, state_t *save) {
-	memcpy(save, &handle->state, sizeof(state_t));
+static void save_iso2022_state(convertor_state_t *handle, save_state_t *save) {
+	stc_handle_t *ptr;
+	int i;
+
+	save->to = handle->state.to;
+	save->from = handle->state.from;
+	for (i = 0; i < 4; i++) {
+		save->g_from[i] = 0;
+		ptr = handle->g_sets[i];
+		while (ptr != NULL && ptr != handle->state.g_from[i]) {
+			ptr = ptr->next;
+			save->g_from[i]++;
+		}
+
+		save->g_to[i] = 0;
+		ptr = handle->g_sets[i];
+		while (ptr != NULL && ptr != handle->state.g_to[i]) {
+			ptr = ptr->next;
+			save->g_to[i]++;
+		}
+	}
 }
 
 /** load implementation for ISO-2022 convertors. */
-static void load_iso2022_state(convertor_state_t *handle, state_t *save) {
-	memcpy(&handle->state, save, sizeof(state_t));
+static void load_iso2022_state(convertor_state_t *handle, save_state_t *save) {
+	int i, j;
+	handle->state.to = save->to;
+	handle->state.from = save->from;
+	for (i = 0; i < 4; i++) {
+		handle->state.g_from[i] = handle->g_sets[i];
+		for (j = save->g_from[i]; j != 0 && handle->state.g_from[i] != NULL; j--)
+			handle->state.g_from[i] = handle->state.g_from[i]->next;
+
+		handle->state.g_to[i] = handle->g_sets[i];
+		for (j = save->g_to[i]; j != 0 && handle->state.g_to[i] != NULL; j--)
+			handle->state.g_to[i] = handle->state.g_to[i]->next;
+	}
 }
 
 /** Do-nothing function for reset_state in ::convertor_state_t. */
@@ -878,8 +918,8 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 	retval->common.close = (close_func_t) close_convertor;
-	retval->common.save = (save_func_t) save_iso2022_state;
-	retval->common.load = (load_func_t) load_iso2022_state;
+	retval->common.save = (save_load_func_t) save_iso2022_state;
+	retval->common.load = (save_load_func_t) load_iso2022_state;
 
 	to_unicode_reset(retval);
 	from_unicode_reset(retval);
@@ -911,7 +951,6 @@ static void close_convertor(convertor_state_t *handle) {
 			free(ptr);
 		}
 	}
-	free(handle);
 }
 
 TRANSCRIPT_EXPORT int transcript_get_iface_iso2022(void) { return TRANSCRIPT_FULL_MODULE_V1; }

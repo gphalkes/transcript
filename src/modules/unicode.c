@@ -236,13 +236,6 @@ static void from_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-/** flush_from implementation for Unicode convertors. */
-static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
-	if (handle->utf_type == _TRANSCRIPT_UTF7)
-		return _transcript_from_unicode_flush_utf7(handle, outbuf, outbuflimit);
-	return TRANSCRIPT_SUCCESS;
-}
-
 /** save implementation for Unicode convertors. */
 static void save_state(convertor_state_t *handle, void *state) {
 	memcpy(state, &handle->state, sizeof(state_t));
@@ -284,17 +277,18 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 	}
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->common.flush_from = (flush_func_t) from_unicode_flush;
+	retval->common.flush_from = NULL;
 	retval->common.reset_from = (reset_func_t) from_unicode_reset;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 	retval->common.close = NULL;
-	retval->common.save = (save_func_t) save_state;
-	retval->common.load = (load_func_t) load_state;
+	retval->common.save = NULL;
+	retval->common.load = NULL;
 
 	retval->utf_type = ptr->utf_type;
+
 	switch (retval->utf_type) {
 		case TRANSCRIPT_UTF16:
 		case _TRANSCRIPT_UTF16_NOBOM:
@@ -329,6 +323,9 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 		case _TRANSCRIPT_SCSU:
 			break;
 		case _TRANSCRIPT_UTF7:
+			retval->common.flush_from = _transcript_from_unicode_flush_utf7;
+			retval->common.save = (save_load_func_t) save_state;
+			retval->common.load = (save_load_func_t) load_state;
 			retval->state.utf7_get_mode = UTF7_MODE_DIRECT;
 			retval->state.utf7_put_mode = UTF7_MODE_DIRECT;
 			retval->state.utf7_put_save = 0;

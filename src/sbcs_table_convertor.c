@@ -48,6 +48,8 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 			if (handle->tables.byte_to_codepoint_flags != NULL && !(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
 					(handle->tables.byte_to_codepoint_flags[codepoint >> 3] & (1 << (codepoint & 7))))
 				return TRANSCRIPT_FALLBACK;
+			if (codepoint >= 0xe000 && codepoint < 0xf900 && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE))
+				return TRANSCRIPT_PRIVATE_USE;
 			PUT_UNICODE(codepoint);
 		} else if (flags & TRANSCRIPT_SUBST_UNASSIGNED) {
 			PUT_UNICODE(0xfffd);

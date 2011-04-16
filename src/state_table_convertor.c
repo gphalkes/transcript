@@ -723,8 +723,8 @@ void *_transcript_open_state_table_convertor(const convertor_tables_v1_t *tables
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
 	retval->common.close = NULL;
-	retval->common.save = (save_func_t) save_state_table_state;
-	retval->common.load = (load_func_t) load_state_table_state;
+	retval->common.save = (save_load_func_t) save_state_table_state;
+	retval->common.load = (save_load_func_t) load_state_table_state;
 
 	init_flag_handler(&retval->codepage_flags, tables->convertor->codepage_flags.flags_type);
 	init_flag_handler(&retval->unicode_flags, tables->convertor->unicode_flags.flags_type);

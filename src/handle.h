@@ -20,10 +20,9 @@ typedef transcript_error_t (*flush_func_t)(transcript_t *handle, char **outbuf, 
 typedef transcript_error_t (*skip_func_t)(transcript_t *handle, const char **inbuf, const char *inbuflimit);
 typedef transcript_error_t (*put_unicode_func_t)(uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
 typedef uint_fast32_t (*get_unicode_func_t)(const char **inbuf, const char *inbuflimit, bool skip);
-typedef int (*reset_func_t)(transcript_t *handle);
+typedef void (*reset_func_t)(transcript_t *handle);
 typedef void (*close_func_t)(transcript_t *handle);
-typedef void (*save_func_t)(transcript_t *handle, void *state);
-typedef void (*load_func_t)(transcript_t *handle, void *state);
+typedef void (*save_load_func_t)(transcript_t *handle, void *state);
 
 struct transcript_t {
 	conversion_func_t convert_to;
@@ -37,8 +36,8 @@ struct transcript_t {
 	reset_func_t reset_to;
 	reset_func_t reset_from;
 	close_func_t close;
-	save_func_t save;
-	load_func_t load;
+	save_load_func_t save;
+	save_load_func_t load;
 	void *library_handle;
 	int flags;
 };

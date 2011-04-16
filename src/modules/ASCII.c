@@ -105,26 +105,6 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, cha
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** flush_from implementation for ISO-8859-1/ASCII convertors. */
-static transcript_error_t flush_nop(transcript_t *handle, char **outbuf, const char *outbuflimit) {
-	(void) handle;
-	(void) outbuf;
-	(void) outbuflimit;
-
-	return TRANSCRIPT_SUCCESS;
-}
-
-/** reset_to/reset_from implementation for ISO-8859-1/ASCII convertors. */
-static void reset_nop(transcript_t*handle) {
-	(void) handle;
-}
-
-/** save/load implementation for ISO-8859-1/ASCII convertors. */
-static void save_load_nop(transcript_t*handle, void *state) {
-	(void) handle;
-	(void) state;
-}
-
 /** @internal
     @brief Open an ISO-8859-1/ASCII convertor.
 */
@@ -144,15 +124,15 @@ static void *open_ascii(const char *name, int flags, transcript_error_t *error) 
 	}
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
-	retval->common.flush_from = (flush_func_t) flush_nop;
-	retval->common.reset_from = (reset_func_t) reset_nop;
+	retval->common.flush_from = NULL;
+	retval->common.reset_from = NULL;
 	retval->common.convert_to = (conversion_func_t) to_unicode_conversion;
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
-	retval->common.reset_to = (reset_func_t) reset_nop;
+	retval->common.reset_to = NULL;
 	retval->common.flags = flags;
 	retval->common.close = NULL;
-	retval->common.save = (save_func_t) save_load_nop;
-	retval->common.load = (load_func_t) save_load_nop;
+	retval->common.save = NULL;
+	retval->common.load = NULL;
 	retval->charmax = strcmp(name, "ascii") == 0 ? 0x7f : 0xff;
 	return retval;
 }

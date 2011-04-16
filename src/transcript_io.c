@@ -82,12 +82,30 @@ int transcript_probe_convertor_nolock(const char *name) {
 	return probe_convertor(name, normalized_name, false);
 }
 
-/** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct. */
-static transcript_t *fill_utf(transcript_t *handle, transcript_utf_t utf_type) {
+
+/** Do-nothing function for reset_to/reset_from and save/load. */
+static void void_nop(void) {}
+
+/** Do-nothing function for flush_from. */
+static transcript_error_t success_nop(void) { return TRANSCRIPT_SUCCESS; }
+
+/** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct and put in a NOP function for missing functions. */
+static transcript_t *complete_convertor(transcript_t *handle, transcript_utf_t utf_type) {
 	if (handle == NULL)
 		return NULL;
 	handle->get_unicode = _transcript_get_get_unicode(utf_type);
 	handle->put_unicode = _transcript_get_put_unicode(utf_type);
+
+	if (handle->reset_to == NULL)
+		handle->reset_to = (reset_func_t) void_nop;
+	if (handle->reset_from == NULL)
+		handle->reset_from = (reset_func_t) void_nop;
+	if (handle->flush_from == NULL)
+		handle->flush_from = (flush_func_t) success_nop;
+	if (handle->save == NULL || handle->load == NULL) {
+		handle->save = (save_load_func_t) void_nop;
+		handle->load = (save_load_func_t) void_nop;
+	}
 	return handle;
 }
 
@@ -129,6 +147,16 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 				return result;
 			}
 			break;
+		case TRANSCRIPT_SBCS_TABLE_V1: {
+			const sbcs_convertor_v1_t *(*get_table)(void);
+			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
+				ERROR(TRANSCRIPT_INVALID_FORMAT);
+			if ((result = _transcript_open_sbcs_table_convertor(get_table(), flags, error)) != NULL) {
+				result->library_handle = handle;
+				return result;
+			}
+			break;
+		}
 		}
 		default:
 			ERROR(TRANSCRIPT_INVALID_FORMAT);
@@ -165,9 +193,9 @@ transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_
 				*error = TRANSCRIPT_CONVERTOR_DISABLED;
 			return NULL;
 		}
-		return fill_utf(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
+		return complete_convertor(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
 	}
-	return fill_utf(open_convertor(normalized_name, name, flags, error), utf_type);
+	return complete_convertor(open_convertor(normalized_name, name, flags, error), utf_type);
 }
 
 /** Try to open a file from a database directory.
