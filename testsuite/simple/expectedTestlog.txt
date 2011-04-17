@@ -1,2 +1,3 @@
-==== Testcase ../tests/ibm-1399-1.test ====
-==== Testcase ../tests/ibm-1399-2.test ====
+==== Testcase ../tests/ibm-1399.test ====
+  - executing test 0
+  - executing test 1

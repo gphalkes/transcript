@@ -1,5 +1,0 @@
-# -d from -u UTF-16BE ibm-1399_P110-2003
-# Test combined ibm-1390 & ibm-1399 to test variants
-0024 00A6 FF9D 000A
-%%
-5B 0E 426A 0F BC 25
