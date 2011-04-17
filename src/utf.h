@@ -23,6 +23,9 @@
 /* TRANSCRIPT_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
    from UTF-7/GB-18030/SCSU/BOCU-1 decoders. */
 #define TRANSCRIPT_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
+/* TRANSCRIPT_UTF_NO_VALUE is only used by the UTF-7 decoder, which may consume a '-'
+   character after a Base64 sequence without producing a new codepoint. */
+#define TRANSCRIPT_UTF_NO_VALUE UINT32_C(0xfffffffc)
 
 enum {
 	_TRANSCRIPT_UTF8_LOOSE = _TRANSCRIPT_UTFLAST,

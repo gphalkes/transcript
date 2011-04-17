@@ -93,23 +93,30 @@ static transcript_error_t unicode_conversion(convertor_state_t *handle, const ch
 
 	while (*inbuf < inbuflimit) {
 		codepoint = get_unicode(handle, (const char **) &_inbuf, inbuflimit, false);
-		switch (codepoint) {
-			case TRANSCRIPT_UTF_INTERNAL_ERROR:
-				return TRANSCRIPT_INTERNAL_ERROR;
-			case TRANSCRIPT_UTF_ILLEGAL:
-				return TRANSCRIPT_ILLEGAL;
-			case TRANSCRIPT_UTF_INCOMPLETE:
-				if (flags & TRANSCRIPT_END_OF_TEXT) {
-					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
-						return TRANSCRIPT_ILLEGAL_END;
-					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbuflimit)) != 0)
-						return result;
-					*inbuf = inbuflimit;
-					return TRANSCRIPT_SUCCESS;
-				}
-				return TRANSCRIPT_INCOMPLETE;
-			default:
-				break;
+		if (codepoint > 0x110000) {
+			switch (codepoint) {
+				case TRANSCRIPT_UTF_INTERNAL_ERROR:
+					return TRANSCRIPT_INTERNAL_ERROR;
+				case TRANSCRIPT_UTF_ILLEGAL:
+					return TRANSCRIPT_ILLEGAL;
+				case TRANSCRIPT_UTF_INCOMPLETE:
+					if (flags & TRANSCRIPT_END_OF_TEXT) {
+						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+							return TRANSCRIPT_ILLEGAL_END;
+						if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbuflimit)) != 0)
+							return result;
+						*inbuf = inbuflimit;
+						return TRANSCRIPT_SUCCESS;
+					}
+					return TRANSCRIPT_INCOMPLETE;
+				case TRANSCRIPT_UTF_NO_VALUE:
+					/* This is only returned if the last byte of the sequence is a '-'
+					   as part of a Base64 sequence. */
+					*inbuf = (const char *) _inbuf;
+					continue;
+				default:
+					return TRANSCRIPT_INTERNAL_ERROR;
+			}
 		}
 		/* FIXME: do we really want to check this on output as well? For now we
 		   assume we do, because writing private use characters is not really
@@ -257,7 +264,7 @@ static int compare(const char *key, const name_to_utftype *ptr) {
     @param flags Flags for the convertor.
     @param error The location to store an error.
 */
-TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int flags, transcript_error_t *error) {
+static transcript_t *open_unicode(const char *name, int flags, transcript_error_t *error) {
 	convertor_state_t *retval;
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
@@ -323,7 +330,7 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 		case _TRANSCRIPT_SCSU:
 			break;
 		case _TRANSCRIPT_UTF7:
-			retval->common.flush_from = _transcript_from_unicode_flush_utf7;
+			retval->common.flush_from = (flush_func_t) _transcript_from_unicode_flush_utf7;
 			retval->common.save = (save_load_func_t) save_state;
 			retval->common.load = (save_load_func_t) load_state;
 			retval->state.utf7_get_mode = UTF7_MODE_DIRECT;
@@ -341,7 +348,7 @@ TRANSCRIPT_EXPORT transcript_t *transcript_open_unicode(const char *name, int fl
 	return (transcript_t *) retval;
 }
 
-TRANSCRIPT_EXPORT bool transcript_probe_unicode(const char *name) {
+TRANSCRIPT_EXPORT bool transcript_probe_gb18030(const char *name) {
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
@@ -360,7 +367,6 @@ static void close_convertor(convertor_state_t *handle) {
 	transcript_close_convertor(handle->gb18030_table_conv);
 }
 
-TRANSCRIPT_EXPORT int transcript_get_iface_unicode(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
 	static const char * const namelist[] = {
 		"UTF-8", "UTF-8-BOM", "UTF-16", "UTF-16-NoBOM", "UTF-16BE", "UTF-16LE"
@@ -370,3 +376,25 @@ TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
 	};
 	return namelist;
 }
+
+#define DEFINE_INTERFACE(name) \
+TRANSCRIPT_ALIAS_OPEN(open_unicode, name) \
+TRANSCRIPT_EXPORT int transcript_get_iface_##name(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+
+DEFINE_INTERFACE(utf8)
+DEFINE_INTERFACE(utf8bom)
+DEFINE_INTERFACE(utf16)
+DEFINE_INTERFACE(utf16nobom)
+DEFINE_INTERFACE(utf16be)
+DEFINE_INTERFACE(utf16le)
+DEFINE_INTERFACE(utf32)
+DEFINE_INTERFACE(utf32nobom)
+DEFINE_INTERFACE(utf32be)
+DEFINE_INTERFACE(utf32le)
+DEFINE_INTERFACE(utf16bebom)
+DEFINE_INTERFACE(utf16lebom)
+DEFINE_INTERFACE(utf32bebom)
+DEFINE_INTERFACE(utf32lebom)
+DEFINE_INTERFACE(utf7)
+DEFINE_INTERFACE(cesu8)
+DEFINE_INTERFACE(gb18030)

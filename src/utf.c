@@ -309,7 +309,7 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 		case TRANSCRIPT_UTF32LE:
 		case _TRANSCRIPT_UTF32LE_BOM:
-			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
+			return htons(1) == swaps_a(1) ? put_utf32_b : put_utf32_a;
 
 		case _TRANSCRIPT_CESU8:
 			return put_cesu8;

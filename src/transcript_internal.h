@@ -42,6 +42,10 @@ TRANSCRIPT_LOCAL extern void (*_transcript_acquire_lock)(void *);
 TRANSCRIPT_LOCAL extern void (*_transcript_release_lock)(void *);
 TRANSCRIPT_LOCAL extern void *_transcript_lock;
 
+enum {
+	_TRANSCRIPT_HANDLING_UNASSIGNED = (1<<14)
+};
+
 struct _transcript_iconv_t {
 	transcript_t *from, *to;
 };

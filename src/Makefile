@@ -45,7 +45,7 @@ EXTRATARGETS := convertor-links
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-CFLAGS += -DDB_DIRECTORY=\"$(PWD)/modules/.libs:$(PWD)/tables/.libs:$(PWD)\" #-O2
+CFLAGS += -DDB_DIRECTORY=\"$(CURDIR)/modules/.libs:$(CURDIR)/tables/.libs:$(CURDIR)\" #-O2
 CFLAGS += -DUSE_ENDIAN
 CFLAGS += -DHAS_INLINE
 CFLAGS += -DHAS_NL_LANGINFO

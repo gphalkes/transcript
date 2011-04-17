@@ -529,6 +529,9 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 	const char *fallback_ptr;
 	transcript_error_t result;
 
+	if (flags & _TRANSCRIPT_HANDLING_UNASSIGNED)
+		return TRANSCRIPT_UNASSIGNED;
+
 	if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xFFFF)) {
 		if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
 			return TRANSCRIPT_FALLBACK;
@@ -536,8 +539,8 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 		handle->get_unicode = _transcript_get_utf32_no_check;
 		fallback_ptr = (const char *) &codepoint;
 
-		result = handle->convert_from(handle, &fallback_ptr, fallback_ptr + sizeof(uint32_t),
-			outbuf, outbuflimit, flags | TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION);
+		result = handle->convert_from(handle, &fallback_ptr, fallback_ptr + sizeof(uint32_t), outbuf, outbuflimit,
+			flags | TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION | _TRANSCRIPT_HANDLING_UNASSIGNED);
 		handle->get_unicode = saved_get_unicode_func;
 		switch (result) {
 			case TRANSCRIPT_NO_SPACE:

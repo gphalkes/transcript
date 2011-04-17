@@ -97,7 +97,7 @@ static const uint8_t value_to_base64[64] = {
 
 /** Simplification macro to write any unicode character, either in base64 or direct mode. */
 #define HANDLE_UNICODE(bits_left, include_plus) do { \
-	if (codepoint > UINT32_C(0x10000)) { \
+	if (codepoint >= UINT32_C(0x10000)) { \
 		ENSURE_OUTBYTESLEFT(5 + (bits_left == 2) + include_plus); \
 		codepoint -= UINT32_C(0x10000); \
 		low_surrogate = (codepoint & 0x3ff) + UINT32_C(0xdc00); \
@@ -109,19 +109,21 @@ static const uint8_t value_to_base64[64] = {
 	*(*outbuf)++ = value_to_base64[handle->state.utf7_put_save | (codepoint >> (16 - bits_left))]; \
 	*(*outbuf)++ = value_to_base64[(codepoint >> (16 - bits_left - 6)) & 0x3f]; \
 	if (bits_left == 4) { \
-		*(*outbuf)++ = value_to_base64[(codepoint >> (16 - bits_left - 6)) & 0x3f]; \
 		handle->state.utf7_put_save = 0; \
 		handle->state.utf7_put_mode = UTF7_MODE_BASE64_0; \
 	} else if (bits_left == 2) { \
+		*(*outbuf)++ = value_to_base64[(codepoint >> 2) & 0x3f]; \
 		handle->state.utf7_put_save = (codepoint & 3) << 4; \
 		handle->state.utf7_put_mode = UTF7_MODE_BASE64_4; \
 	} else if (bits_left == 6) { \
 		handle->state.utf7_put_save = (codepoint & 15) << 2; \
 		handle->state.utf7_put_mode = UTF7_MODE_BASE64_2; \
 	} \
-	handle->state.utf7_put_mode = UTF7_MODE_BASE64_2; \
-	if (low_surrogate != 0) \
+	if (low_surrogate != 0) { \
+		codepoint = low_surrogate; \
+		low_surrogate = 0; \
 		goto next_surrogate; \
+	} \
 	return TRANSCRIPT_SUCCESS; \
 } while (0)
 
@@ -347,7 +349,7 @@ uint_fast32_t _transcript_get_utf7(convertor_state_t *handle, const char **inbuf
 
 					*inbuf = (const char *) _inbuf;
 					handle->state.utf7_get_mode = next_mode;
-					return (codepoint - UINT32_C(0xdc00)) + ((high_surrogate - UINT32_C(0xd800)) >> 10) + UINT32_C(0x10000);
+					return (codepoint - UINT32_C(0xdc00)) + ((high_surrogate - UINT32_C(0xd800)) << 10) + UINT32_C(0x10000);
 				}
 
 				if (high_surrogate != 0) {
@@ -368,7 +370,7 @@ uint_fast32_t _transcript_get_utf7(convertor_state_t *handle, const char **inbuf
 				return TRANSCRIPT_UTF_INTERNAL_ERROR;
 		}
 	}
-	return TRANSCRIPT_UTF_INCOMPLETE;
+	return handle->state.utf7_get_mode == UTF7_MODE_DIRECT ? TRANSCRIPT_UTF_NO_VALUE : TRANSCRIPT_UTF_INCOMPLETE;
 
 skip_non_base64:
 	if (!skip)

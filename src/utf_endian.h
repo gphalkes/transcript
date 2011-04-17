@@ -109,6 +109,7 @@ static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbufl
 		return TRANSCRIPT_UTF_INCOMPLETE;
 
 	memcpy(&codepoint, *inbuf, 4);
+	codepoint = ALT(swapl)(codepoint);
 	if (!skip) {
 		CHECK_CODEPOINT_ILLEGAL();
 		CHECK_CODEPOINT_SURROGATES();
