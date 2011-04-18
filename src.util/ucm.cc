@@ -454,8 +454,8 @@ void Ucm::ensure_ascii_controls(void) {
 	}
 	if (seen != 7)
 		return;
-	fprintf(stderr, "%s: WARNING: mappings define IBM specific control code mappings. Correcting.\n", name);
 
+	fprintf(stderr, "%s: WARNING: correcting IBM specific control code mappings.\n", name);
 	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		switch ((*iter)->codepage_bytes[0]) {
 			case 0x1a:

@@ -1,30 +1,3 @@
-- for shared library format we should consider the following:
-  - for SBC, we should use a two-level trie, with 5 bit steps for the Unicode
-    to codepage conversion. This gives a small file and good look-up speed.
-	Using a fixed parameter trie is makes the implementation faster and we can
-	more easily encorporate it in the ucm2cct code.
-	Restrictions on SBCS for the new scheme:
-	- must map only to BMP
-	- may not include multi-mappings
-	- 0 byte must map only to U0000 [ allows checking for absence without checking flags ]
-
-	Only need to store the fallback mapping flag. Private use can be checked
-	simply by checking the codepoints (which is easier for the BMP than general).
-
-	We should check how often it happens that no private use characters are used
-	and no fallback flags are needed. In those cases we can have a simpler
-	conversion routine.
-
-	!! do we have to restrict it to no variants? Would it really save much
-	having variants?
-
-	We can use the location in the mapping trie to store the flags as well!
-
-  - for small tables, we may want to create bundles. For example, we may want
-	to bundle all the ISO-8859 convertors in a single library. This way, we
-	spread the overhead (~6KB).
-
-
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now.
 
@@ -32,17 +5,6 @@
 ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter than <mb_cur_min>
 
 
-- we probably want to retain the CCT based format for platforms which do not
-  have shared libraries. But here we may want two separate formats (one for SBC
-  and one for the rest) as well. The first library release may do without the
-  CCT based format though.
-
-- if we use zlib/lzo for compression, then we can optimize our tables for
-  in-memory size. This makes the state machine minimization easier. On the
-  other hand, that would introduce a dependency which we may want to avoid, and
-  disk space is not expensive.
-- perhaps it is a good idea to save the data such that we can simply use a
-  read-only mmap and a small set of pointers into the file.
 - allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also
   set
 - The following checks have to be implemented:

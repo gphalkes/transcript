@@ -511,7 +511,7 @@ static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
     @brief Get a generic fallback.
 */
 uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
-	return get_generic_fallback(codepoint);
+	return codepoint < UINT32_C(0x10000) ? get_generic_fallback(codepoint) : UINT32_C(0xffff);
 }
 
 /** @internal
@@ -529,10 +529,10 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 	const char *fallback_ptr;
 	transcript_error_t result;
 
-	if (flags & _TRANSCRIPT_HANDLING_UNASSIGNED)
+	if (flags & _TRANSCRIPT_HANDLING_UNASSIGNED || codepoint > UINT32_C(0xffff))
 		return TRANSCRIPT_UNASSIGNED;
 
-	if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xFFFF)) {
+	if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xffff)) {
 		if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
 			return TRANSCRIPT_FALLBACK;
 		saved_get_unicode_func = handle->get_unicode;

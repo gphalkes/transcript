@@ -66,6 +66,7 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 		((uint8_t *) map)[(*iter)->codepoints[0]] = (*iter)->codepage_bytes[0];
 
 	level1_map_used = 1;
+	level1_indices[0][0] = 0;
 	for (i = 1; i < 2048; i++) {
 		for (j = 0; j < level1_map_used; j++) {
 			if (memcmp(map[i], map[j], 32) == 0) {
@@ -88,7 +89,7 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 		PANIC();
 
 	level0_map_used = 1;
-	level1_indices[0][0] = 0;
+	level0_indices[0] = 0;
 	for (i = 1; i < 64; i++) {
 		for (j = 0; j < level0_map_used; j++) {
 			if (memcmp(level1_indices[i], level1_indices[j], 32) == 0) {

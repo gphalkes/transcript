@@ -306,7 +306,7 @@ extern "C" void fatal(const char *fmt, ...);
 #define ASSERT(x) do { if (!(x)) PANIC(); } while (0)
 
 extern const char *option_convertor_name;
-extern bool option_verbose, option_internal_table;
+extern bool option_verbose, option_internal_table, option_allow_ibm_rotate;
 
 Ucm::tag_t string_to_tag(const char *str);
 void parse_byte_sequence(char *charseq, vector<uint8_t> &store);

@@ -34,7 +34,6 @@ typedef struct {
 /* Mapping from name to integer constant. */
 static const name_to_utftype map[] = {
 	{ "utf8", _TRANSCRIPT_UTF8_LOOSE },
-	{ "utf8bom", _TRANSCRIPT_UTF8_BOM },
 	{ "utf16", TRANSCRIPT_UTF16 },
 	{ "utf16be", TRANSCRIPT_UTF16BE },
 	{ "utf16le", TRANSCRIPT_UTF16LE },
@@ -140,7 +139,7 @@ static transcript_error_t unicode_conversion(convertor_state_t *handle, const ch
 static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
-	if (flags & TRANSCRIPT_FILE_START && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
+	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
 		uint_fast32_t codepoint = 0;
 		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 		get_unicode_func_t get_le, get_be;
@@ -205,17 +204,9 @@ static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf
 	if (inbuf == NULL || *inbuf == NULL)
 		return TRANSCRIPT_SUCCESS;
 
-	if (flags & TRANSCRIPT_FILE_START) {
-		switch (handle->utf_type) {
-			case TRANSCRIPT_UTF32:
-			case TRANSCRIPT_UTF16:
-			case _TRANSCRIPT_UTF8_BOM:
-				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
-					return TRANSCRIPT_NO_SPACE;
-				break;
-			default:
-				break;
-		}
+	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
+		if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
+			return TRANSCRIPT_NO_SPACE;
 	}
 
 	return unicode_conversion(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags,
@@ -390,7 +381,6 @@ TRANSCRIPT_ALIAS_OPEN(open_unicode, name) \
 TRANSCRIPT_EXPORT int transcript_get_iface_##name(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 
 DEFINE_INTERFACE(utf8)
-DEFINE_INTERFACE(utf8bom)
 DEFINE_INTERFACE(utf16)
 DEFINE_INTERFACE(utf16be)
 DEFINE_INTERFACE(utf16le)

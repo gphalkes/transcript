@@ -38,6 +38,8 @@ MEDIUM PRIORITY
   (/etc/transcript/aliases.txt?) The simple way would be to include
   /etc/transcript in the search path, but that would also mean we will try to
   load modules from there which is not what we want.
+- perhaps we could provide a flag to force consumption of BOMs/generation of
+  BOMs in the unicode convertor
 
 LOW PRIORITY
 ============

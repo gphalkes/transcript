@@ -26,7 +26,7 @@
 
 #warning FIXME: check names in different UCM sets against each other for clashes
 
-bool option_verbose, option_internal_table, option_dump;
+bool option_verbose, option_internal_table, option_dump, option_allow_ibm_rotate;
 #ifdef DEBUG
 bool option_abort = true;
 #endif
@@ -97,8 +97,9 @@ static void print_usage(void) {
 	printf("  -o<output>, --output=<output> Specify the output file name\n");
 	printf("  -v,--verbose                  Increase verbosity\n");
 	printf("  -n<name>,--name=<name>        Set convertor name to <name>\n");
-	printf("  -c,--concatenate              Concatenate the following convertors.\n");
-	printf("       Use this to write multiple unrelated convertors to a single file.\n");
+	printf("  -c,--concatenate              Concatenate the following convertors\n");
+	printf("       Use this to write multiple unrelated convertors to a single file\n");
+	printf("  -i,--allow-ibm-rotate         Allow IBM specific rotation of control chars\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -440,6 +441,9 @@ PARSE_FUNCTION(parse_options)
 			option_internal_table = false;
 			option_convertor_name = NULL;
 		END_OPTION
+		OPTION('i', "allow-ibm-rotate", NO_ARG)
+			option_allow_ibm_rotate = true;
+		END_OPTION
 #ifdef DEBUG
 		OPTION('a', "abort", NO_ARG)
 			option_abort = true;
@@ -460,7 +464,8 @@ PARSE_FUNCTION(parse_options)
 		if (ucm->variants.size() == 1)
 			fatal("%s: Only a single variant defined\n", ucm->name);
 		ucm->check_duplicates();
-		ucm->ensure_ascii_controls();
+		if (!option_allow_ibm_rotate)
+			ucm->ensure_ascii_controls();
 		ucm->remove_generic_fallbacks();
 		ucm->remove_private_use_fallbacks();
 

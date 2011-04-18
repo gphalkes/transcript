@@ -64,7 +64,8 @@ generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 
 clean::
 	rm generic_fallbacks.[ch] 2>/dev/null
-	rm -rf modules/.libs 2>/dev/null
+	rm -rf modules/.libs modules/*.la 2>/dev/null
+	rm -rf tables/.libs tables/*.la 2>/dev/null
 
 $(patsubst %.c, .objects/%.lo, $(MODULESOURCES)): | links
 $(patsubst %.c, .objects/%.lo, $(TABLESOURCES)): | links

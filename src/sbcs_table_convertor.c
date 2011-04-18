@@ -42,7 +42,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 	uint_fast32_t codepoint;
 
 	while (*inbuf < inbuflimit) {
-		codepoint = handle->tables.byte_to_codepoint[**(const uint8_t **) inbuf];
+		codepoint = handle->tables.byte_to_codepoint[*(const uint8_t *) *inbuf];
 
 		if (codepoint != 0xffff) {
 			if (handle->tables.byte_to_codepoint_flags != NULL && !(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
@@ -108,7 +108,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 			continue;
 		}
 
-		if (codepoint < 0xffff) {
+		if (codepoint < UINT32_C(0x10000)) {
 			unsigned int idx = LOOKUP_IDX(codepoint);
 			uint8_t byte = handle->tables.codepoint_to_byte_data[idx][codepoint & 0x1f];
 			if (byte != 0 || codepoint == 0) {

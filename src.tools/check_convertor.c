@@ -11,7 +11,7 @@
 #include "optionMacros.h"
 
 static const char *option_transcript_name, *option_iconv_name;
-static int option_unicode, option_no_private_use;
+static int option_unicode, option_no_private_use, option_check_fallbacks;
 
 static void fatal(const char *fmt, ...) {
 	va_list args;
@@ -43,6 +43,9 @@ PARSE_FUNCTION(parse_options)
 		END_OPTION
 		OPTION('h', "help", NO_ARG)
 			print_usage();
+		END_OPTION
+		OPTION('f', "check-fallbacks", NO_ARG)
+			option_check_fallbacks = 1;
 		END_OPTION
 		DOUBLE_DASH
 			NO_MORE_OPTIONS;
@@ -126,6 +129,9 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
 			}
 			break;
 		case TRANSCRIPT_FALLBACK:
+			if (!option_check_fallbacks)
+				return -1;
+
 			*fallback = 1;
 			if (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4,
 					&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE |
@@ -138,6 +144,7 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
 				transcript_from_unicode_reset(handle);
 				return -1;
 			}
+			break;
 		default:
 			return -1;
 	}
@@ -183,7 +190,9 @@ int main(int argc, char *argv[]) {
 		iconv_result_length = iconv_convert(iconv_handle, i, iconv_result, &iconv_fallback);
 		transcript_result_length = transcript_convert(transcript_handle, i, transcript_result, &transcript_fallback);
 		if (iconv_result_length != transcript_result_length ||
-				(iconv_result_length >= 0 && memcmp(iconv_result, transcript_result, iconv_result_length) != 0)) {
+				(iconv_result_length >= 0 && memcmp(iconv_result, transcript_result, iconv_result_length) != 0) ||
+				iconv_fallback != transcript_fallback)
+		{
 			/* Filter out tag mappings. These can not be mapped, but glibc iconv sometimes simply discards them. */
 			if (i >= 0xe0000 && i < 0xe0100 && iconv_result_length == 0 && transcript_result_length == -1)
 				continue;
