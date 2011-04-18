@@ -645,3 +645,30 @@ void Ucm::write_namelist_entries(FILE *output) {
 			fprintf(output, "\t\"%s\",\n", (*variant_iter)->id);
 	}
 }
+
+void Ucm::ensure_subchar_mapping(void) {
+	vector<Mapping *>::iterator iter;
+	vector<uint8_t> subchar;
+
+	parse_byte_sequence(tag_values[SUBCHAR].str, subchar);
+	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->precision == 0 && subchar.size() == (*iter)->codepage_bytes.size() &&
+				equal(subchar.begin(), subchar.end(), (*iter)->codepage_bytes.begin()))
+			break;
+	}
+	if (iter == simple_mappings.end())
+		fprintf(stderr, "%s: WARNING: subchar does not map to a codepoint (normally FFFD would be a good choice)\n", name);
+
+	if (tag_values[SUBCHAR1].str == NULL)
+		return;
+
+	subchar.clear();
+	parse_byte_sequence(tag_values[SUBCHAR1].str, subchar);
+	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->precision == 0 && subchar.size() == (*iter)->codepage_bytes.size() &&
+				equal(subchar.begin(), subchar.end(), (*iter)->codepage_bytes.begin()))
+			break;
+	}
+	if (iter == simple_mappings.end())
+		fprintf(stderr, "%s: WARNING: subchar1 does not map to a codepoint (normally FFFD would be a good choice)\n", name);
+}

@@ -490,8 +490,8 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 
 		codepoint = htonl((*mapping_iter)->codepoints[0]);
 		idx = map_charseq(unicode_states, 1 + (uint8_t *) &codepoint, 3, 0);
-		save_flags[idx] |= (*mapping_iter)->from_unicode_flags;
 		save_flags[idx] &= ~Mapping::FROM_UNICODE_NOT_AVAIL;
+		save_flags[idx] |= (*mapping_iter)->from_unicode_flags;
 	}
 
 	for (mapping_iter = multi_mappings.begin(); mapping_iter != multi_mappings.end(); mapping_iter++) {

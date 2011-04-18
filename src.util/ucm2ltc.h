@@ -293,6 +293,7 @@ class Ucm : public UcmBase {
 		void write_namelist_entries(FILE *output);
 		bool is_simple_table(void);
 		void write_simple(FILE *output);
+		void ensure_subchar_mapping(void);
 
 		void dump(void);
 };

@@ -370,6 +370,7 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 			ucm->merge_variants(*iter);
 		}
 	}
+
 	ucm->calculate_item_costs();
 
 	if (option_dump) {
@@ -468,6 +469,7 @@ PARSE_FUNCTION(parse_options)
 			ucm->ensure_ascii_controls();
 		ucm->remove_generic_fallbacks();
 		ucm->remove_private_use_fallbacks();
+		ucm->ensure_subchar_mapping();
 
 		ucms.push_back(ucm);
 		fclose(yyin);

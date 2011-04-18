@@ -108,7 +108,7 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
 	char *result_limit = result + 80;
 
 	switch (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4,
-			&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE))
+			&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE | TRANSCRIPT_END_OF_TEXT))
 	{
 		case TRANSCRIPT_SUCCESS:
 			if (transcript_from_unicode_flush(handle, &result, result_limit) != TRANSCRIPT_SUCCESS) {
@@ -120,14 +120,14 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
 			if (!option_check_fallbacks)
 				return -1;
 
-			*fallback = 1;
 			if (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4,
 					&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE |
-					TRANSCRIPT_ALLOW_FALLBACK) != TRANSCRIPT_SUCCESS)
+					TRANSCRIPT_END_OF_TEXT | TRANSCRIPT_ALLOW_FALLBACK) != TRANSCRIPT_SUCCESS)
 			{
 				return -1;
 				transcript_from_unicode_reset(handle);
 			}
+			*fallback = 1;
 			if (transcript_from_unicode_flush(handle, &result, result_limit) != TRANSCRIPT_SUCCESS) {
 				transcript_from_unicode_reset(handle);
 				return -1;

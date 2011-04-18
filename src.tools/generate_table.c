@@ -12,7 +12,7 @@
 #include "optionMacros.h"
 
 static const char *option_convertor_name;
-static int option_generate_fallbacks;
+static int option_generate_fallbacks, option_strip_mbcs_switch;
 
 static void fatal(const char *fmt, ...) {
 	va_list args;
@@ -25,6 +25,8 @@ static void fatal(const char *fmt, ...) {
 
 static void print_usage(void) {
 	printf("Usage: generate_table [<options>] <convertor name>\n");
+	printf(" -f,--generate-fallbacks         Include fallbacks in the table\n");
+	printf(" -s,--strip-mbcs-switch          Strip 0E/0F bytes from MBCS output\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -33,7 +35,10 @@ PARSE_FUNCTION(parse_options)
 		OPTION('f', "generate-fallbacks", NO_ARG)
 			option_generate_fallbacks = 1;
 		END_OPTION
-		OPTION('n', "help", NO_ARG)
+		OPTION('s', "strip-mbcs-switch", NO_ARG)
+			option_strip_mbcs_switch = 1;
+		END_OPTION
+		OPTION('h', "help", NO_ARG)
 			print_usage();
 		END_OPTION
 		DOUBLE_DASH
@@ -56,7 +61,7 @@ static int convert(transcript_t *handle, uint32_t codepoint, char *result, int *
 	char *result_limit = result + 80;
 
 	switch (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4,
-			&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE))
+			&result, result_limit, TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE | TRANSCRIPT_END_OF_TEXT))
 	{
 		case TRANSCRIPT_SUCCESS:
 			if (transcript_from_unicode_flush(handle, &result, result_limit) != TRANSCRIPT_SUCCESS) {
@@ -108,7 +113,8 @@ int main(int argc, char *argv[]) {
 			continue;
 
 		printf("0x");
-		for (j = 0; j < result_length; j++)
+		for (j = option_strip_mbcs_switch && result[0] == 0x0E ? 1 : 0;
+				j < result_length - (option_strip_mbcs_switch && result[result_length - 1] == 0x0F); j++)
 			printf("%02X", ((unsigned char *) result)[j]);
 		printf("\t0x%04" PRIX32 "\n", i);
 	}

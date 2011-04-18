@@ -1,5 +1,11 @@
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now.
+- if the subchar or subchar1 don't map to anything, they should be automatically
+  mapped to the replacement char (FFFD)
+- implement find_by_codepoint and find_by_codepage_bytes which should in some
+  cases also look in variants. Also a precision indicator must be added such
+  that only some precisions match (bitmap)
+- use equal in comparisons more often, instead of manual for loop.
 
 - check out the following error:
 ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter than <mb_cur_min>
@@ -13,14 +19,3 @@ ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter 
 	- the above must hold for variants as well
 	- the subchar and subchar1 characters may not appear in variants for
 		to_unicode mappings.
-
-Conversion issues:
-- fullwidth to half-width fallbacks and vice-versa
-- what to do with the mu versus micro sign? In latin-1 the character is the mu
-  sign, but when then converting to code page 437 we have a problem (if we consider
-  that the mu in there is the greek letter).
-  See the wikipedia page on code page 437: http://en.wikipedia.org/wiki/Codepage_437
-  especially the section on "Multiple-meaning character glyphs". In case of the
-  micro sign, I think choosing the micro sign is best because it maps best to
-  latin-1, and everyone else is doing that as well. The others are less relevant.
-  We could add 03B5 -> E6 as fallback.
