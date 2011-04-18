@@ -38,19 +38,17 @@ static const name_to_utftype map[] = {
 	{ "utf16", TRANSCRIPT_UTF16 },
 	{ "utf16be", TRANSCRIPT_UTF16BE },
 	{ "utf16le", TRANSCRIPT_UTF16LE },
-	{ "utf16nobom", _TRANSCRIPT_UTF16_NOBOM },
-	{ "utf16bebom", _TRANSCRIPT_UTF16BE_BOM },
-	{ "utf16lebom", _TRANSCRIPT_UTF16LE_BOM },
 	{ "utf32", TRANSCRIPT_UTF32 },
 	{ "utf32be", TRANSCRIPT_UTF32BE },
 	{ "utf32le", TRANSCRIPT_UTF32LE },
-	{ "utf32nobom", _TRANSCRIPT_UTF32_NOBOM },
-	{ "utf32bebom", _TRANSCRIPT_UTF32BE_BOM },
-	{ "utf32lebom", _TRANSCRIPT_UTF32LE_BOM },
 	{ "cesu8", _TRANSCRIPT_CESU8 },
 	{ "gb18030", _TRANSCRIPT_GB18030 },
 	/* Disabled for now { "scsu", _TRANSCRIPT_SCSU }, */
-	{ "utf7", _TRANSCRIPT_UTF7 }
+	{ "utf7", _TRANSCRIPT_UTF7 },
+	{ "xutf16bebom", _TRANSCRIPT_UTF16BE_BOM },
+	{ "xutf16lebom", _TRANSCRIPT_UTF16LE_BOM },
+	{ "xutf32bebom", _TRANSCRIPT_UTF32BE_BOM },
+	{ "xutf32lebom", _TRANSCRIPT_UTF32LE_BOM },
 };
 
 static void close_convertor(convertor_state_t *handle);
@@ -142,35 +140,30 @@ static transcript_error_t unicode_conversion(convertor_state_t *handle, const ch
 static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
-	if (flags & TRANSCRIPT_FILE_START) {
+	if (flags & TRANSCRIPT_FILE_START && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
 		uint_fast32_t codepoint = 0;
 		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
+		get_unicode_func_t get_le, get_be;
 
-		if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16 ||
-				handle->utf_type == _TRANSCRIPT_UTF32_NOBOM || handle->utf_type == _TRANSCRIPT_UTF16_NOBOM)
-		{
-			get_unicode_func_t get_le, get_be;
-
-			if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == _TRANSCRIPT_UTF32_NOBOM) {
-				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
-				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF32LE);
-			} else {
-				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
-				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF16LE);
-			}
-
-			codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
-			if (codepoint == UINT32_C(0xFEFF)) {
-				handle->to_unicode_get = get_be;
-			} else if (codepoint == TRANSCRIPT_ILLEGAL) {
-				codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
-				if (codepoint == UINT32_C(0xFEFF))
-					handle->to_unicode_get = get_le;
-				else
-					handle->to_unicode_get = get_be;
-			}
+		if (handle->utf_type == TRANSCRIPT_UTF32) {
+			get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
+			get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF32LE);
 		} else {
-			codepoint = handle->to_unicode_get((const char **) &_inbuf, inbuflimit, false);
+			get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
+			get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF16LE);
+		}
+
+		/* Set to Big Endian first, as that is what should be assumed if no BOM
+		   is present. */
+		handle->to_unicode_get = get_be;
+
+		codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
+		/* If the input is Little Endian, it will look like 0xfffe (or 0xfffe0000) if read in
+		   Big Endian, which will result in a TRANSCRIPT_UTF_ILLEGAL result. */
+		if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
+			codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
+			if (codepoint == UINT32_C(0xFEFF))
+				handle->to_unicode_get = get_le;
 		}
 		/* Anything, including bad input, will simply not cause a pointer update,
 		   meaning that only the BOM will be ignored. */
@@ -192,11 +185,9 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 static void to_unicode_reset(convertor_state_t *handle) {
 	switch (handle->utf_type) {
 		case TRANSCRIPT_UTF16:
-		case _TRANSCRIPT_UTF16_NOBOM:
 			handle->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
 			break;
 		case TRANSCRIPT_UTF32:
-		case _TRANSCRIPT_UTF32_NOBOM:
 			handle->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
 			break;
 		case _TRANSCRIPT_UTF7:
@@ -218,10 +209,6 @@ static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf
 		switch (handle->utf_type) {
 			case TRANSCRIPT_UTF32:
 			case TRANSCRIPT_UTF16:
-			case _TRANSCRIPT_UTF16BE_BOM:
-			case _TRANSCRIPT_UTF16LE_BOM:
-			case _TRANSCRIPT_UTF32BE_BOM:
-			case _TRANSCRIPT_UTF32LE_BOM:
 			case _TRANSCRIPT_UTF8_BOM:
 				if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
 					return TRANSCRIPT_NO_SPACE;
@@ -298,24 +285,45 @@ static transcript_t *open_unicode(const char *name, int flags, transcript_error_
 
 	switch (retval->utf_type) {
 		case TRANSCRIPT_UTF16:
-		case _TRANSCRIPT_UTF16_NOBOM:
 			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
-			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF16BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF16);
 			break;
 		case TRANSCRIPT_UTF32:
-		case _TRANSCRIPT_UTF32_NOBOM:
 			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
-			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32);
 			break;
 		case _TRANSCRIPT_GB18030:
 		case _TRANSCRIPT_SCSU:
 		case _TRANSCRIPT_UTF7:
+			/* These have their own special get and put functions, so they don't
+			   need their to_unicode_get and from_unicode_put pointers set. (see below). */
+			break;
+		case _TRANSCRIPT_UTF16BE_BOM:
+			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF16BE);
+			retval->utf_type = TRANSCRIPT_UTF16;
+			break;
+		case _TRANSCRIPT_UTF16LE_BOM:
+			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF16LE);
+			retval->utf_type = TRANSCRIPT_UTF16;
+			break;
+		case _TRANSCRIPT_UTF32BE_BOM:
+			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32BE);
+			retval->utf_type = TRANSCRIPT_UTF32;
+			break;
+		case _TRANSCRIPT_UTF32LE_BOM:
+			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32LE);
+			retval->utf_type = TRANSCRIPT_UTF32;
 			break;
 		default:
 			retval->to_unicode_get = _transcript_get_get_unicode(retval->utf_type);
 			retval->from_unicode_put = _transcript_get_put_unicode(retval->utf_type);
 			break;
 	}
+
 	switch (retval->utf_type) {
 		case _TRANSCRIPT_GB18030:
 			if ((retval->gb18030_table_conv = transcript_open_convertor_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
@@ -369,10 +377,10 @@ static void close_convertor(convertor_state_t *handle) {
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
 	static const char * const namelist[] = {
-		"UTF-8", "UTF-8-BOM", "UTF-16", "UTF-16-NoBOM", "UTF-16BE", "UTF-16LE"
-		"UTF-32", "UTF-32-NOBOM", "UTF-32BE", "UTF-32LE", "UTF-16BE-BOM",
-		"UTF-16LE-BOM", "UTF-32BE-BOM", "UTF-32LE-BOM", "UTF-7", "SCSU", "CESU-8",
-		"GB18030", NULL
+		"UTF-8", "UTF-8-BOM", "UTF-16", "UTF-16BE", "UTF-16LE",
+		"UTF-32", "UTF-32BE", "UTF-32LE", "UTF-7", "SCSU", "CESU-8",
+		"GB18030", "x-UTF-16LE-BOM", "x-UTF-16BE-BOM", "x-UTF-32LE-BOM",
+		"x-UTF-32BE-BOM", NULL
 	};
 	return namelist;
 }
@@ -384,17 +392,15 @@ TRANSCRIPT_EXPORT int transcript_get_iface_##name(void) { return TRANSCRIPT_FULL
 DEFINE_INTERFACE(utf8)
 DEFINE_INTERFACE(utf8bom)
 DEFINE_INTERFACE(utf16)
-DEFINE_INTERFACE(utf16nobom)
 DEFINE_INTERFACE(utf16be)
 DEFINE_INTERFACE(utf16le)
 DEFINE_INTERFACE(utf32)
-DEFINE_INTERFACE(utf32nobom)
 DEFINE_INTERFACE(utf32be)
 DEFINE_INTERFACE(utf32le)
-DEFINE_INTERFACE(utf16bebom)
-DEFINE_INTERFACE(utf16lebom)
-DEFINE_INTERFACE(utf32bebom)
-DEFINE_INTERFACE(utf32lebom)
 DEFINE_INTERFACE(utf7)
 DEFINE_INTERFACE(cesu8)
 DEFINE_INTERFACE(gb18030)
+DEFINE_INTERFACE(xutf16bebom)
+DEFINE_INTERFACE(xutf16lebom)
+DEFINE_INTERFACE(xutf32bebom)
+DEFINE_INTERFACE(xutf32lebom)

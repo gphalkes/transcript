@@ -118,7 +118,7 @@ static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, cons
 /** Simplification macro to check whether a codepoint is a legal codepoint, and return an error if not. */
 #define CHECK_CODEPOINT_ILLEGAL() do { if (codepoint >= 0xfdd0 && (codepoint > UINT32_C(0x10ffff) || \
 	(codepoint & UINT32_C(0xfffe)) == UINT32_C(0xfffe) || \
-	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint <= UINT32_C(0xfdef)))) return TRANSCRIPT_UTF_ILLEGAL; } while (0)
+	(/* codepoint >= UINT32_C(0xfdd0) && */ codepoint < UINT32_C(0xfdf0)))) return TRANSCRIPT_UTF_ILLEGAL; } while (0)
 /** Simplification macro to check whether a codepoint is a surrogate, and return an error if not. */
 #define CHECK_CODEPOINT_SURROGATES() do { if (codepoint >= UINT32_C(0xd800) && codepoint <= UINT32_C(0xdfff)) \
 	return TRANSCRIPT_UTF_ILLEGAL; } while (0)
@@ -292,23 +292,17 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 		case _TRANSCRIPT_UTF8_BOM:
 			return put_utf8;
 		case TRANSCRIPT_UTF16:
-		case _TRANSCRIPT_UTF16_NOBOM:
 			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
 		case TRANSCRIPT_UTF32:
-		case _TRANSCRIPT_UTF32_NOBOM:
 			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
 
 		case TRANSCRIPT_UTF16BE:
-		case _TRANSCRIPT_UTF16BE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf16_a : put_utf16_b;
 		case TRANSCRIPT_UTF16LE:
-		case _TRANSCRIPT_UTF16LE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf16_b : put_utf16_a;
 		case TRANSCRIPT_UTF32BE:
-		case _TRANSCRIPT_UTF32BE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
 		case TRANSCRIPT_UTF32LE:
-		case _TRANSCRIPT_UTF32LE_BOM:
 			return htons(1) == swaps_a(1) ? put_utf32_b : put_utf32_a;
 
 		case _TRANSCRIPT_CESU8:
@@ -326,10 +320,8 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 		case TRANSCRIPT_UTF8:
 			return get_utf8strict;
 		case TRANSCRIPT_UTF16:
-		case _TRANSCRIPT_UTF16_NOBOM:
 			return swaps_a(1) == 1 ? get_utf16_a : get_utf16_b;
 		case TRANSCRIPT_UTF32:
-		case _TRANSCRIPT_UTF32_NOBOM:
 			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
 
 		case _TRANSCRIPT_UTF8_LOOSE:
@@ -338,16 +330,12 @@ get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
 			return get_utf8;
 
 		case TRANSCRIPT_UTF16BE:
-		case _TRANSCRIPT_UTF16BE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf16_a : get_utf16_b;
 		case TRANSCRIPT_UTF16LE:
-		case _TRANSCRIPT_UTF16LE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf16_b : get_utf16_a;
 		case TRANSCRIPT_UTF32BE:
-		case _TRANSCRIPT_UTF32BE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf32_a : get_utf32_b;
 		case TRANSCRIPT_UTF32LE:
-		case _TRANSCRIPT_UTF32LE_BOM:
 			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
 
 		case _TRANSCRIPT_UTF32_NO_CHECK:

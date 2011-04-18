@@ -82,6 +82,7 @@ static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbufl
 		codepoint -= UINT32_C(0xd800);
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00);
+		codepoint += UINT32_C(0x10000);
 
 		if (!skip)
 			CHECK_CODEPOINT_ILLEGAL();

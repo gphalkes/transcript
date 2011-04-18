@@ -31,10 +31,9 @@
 # with that version. So an error should be reported if you use codepoints that
 # are not available in that version.
 
-# The UTF-16 and UTF-32 encodings will write a BOM, unless directed not to by
-# the nobom name. All UTF-16 and UTF-32 encodings will read a BOM. The UTF-16
-# and UTF-32 encodings will switch endianess when encountering a BOM. By
-# default they use the big endian encoding.
+# The UTF-16 and UTF-32 encodings will write a BOM and produce output in the
+# platform byte order. The UTF-16 and UTF-32 encodings will switch endianess
+# when encountering a BOM on input. By default they use the big endian encoding.
 
 *UTF-8 IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
 	IBM-17592 ibm-17593 Windows-65001 cp1208
@@ -43,7 +42,6 @@ UTF-8-BOM
 # because people simply use UCS-2 and UTF-16 interchangebly, it is better to
 # do it this way.
 *UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
-UTF-16-NoBOM
 *UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
 	IBM-13488 IBM-13489 ibm-17584 IBM-17585 IBM-21680 IBM-21681 IBM-25776
 	IBM-25777 IBM-29872 ibm-29873 IBM-61955 IBM-61956 Windows-1201 cp1200
@@ -52,14 +50,15 @@ UTF-16-NoBOM
 	IBM-13490 ibm-13491 IBM-17586 IBM-17587 IBM-21682 IBM-21683 IBM-25778
 	IBM-25779 ibm-29874 IBM-29875 UTF16_LittleEndian Windows-1200
 *UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
-UTF-32-NOBOM
 *UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
 *UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 
-*UTF-16BE-BOM *UnicodeBig
-*UTF-16LE-BOM *UnicodeLittle x-UTF-16LE-BOM
-UTF-32BE-BOM
-UTF-32LE-BOM
+# These special names force a particular endianess on output, but also write
+# (and read) a BOM.
+*x-UTF-16BE-BOM *UnicodeBig
+*x-UTF-16LE-BOM *UnicodeLittle
+x-UTF-32BE-BOM
+x-UTF-32LE-BOM
 
 # FIXME: add platform endian variants, default is without BOM (if you want platform
 # endian, you want it for communicating with a program that expects it in that ordering).
