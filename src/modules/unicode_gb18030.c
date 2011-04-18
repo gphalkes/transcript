@@ -54,7 +54,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 	uint8_t *_outbuf;
 
 	switch (handle->gb18030_table_conv->convert_from(handle->gb18030_table_conv, &codepoint_ptr, codepoint_ptr + 4, outbuf,
-			outbuflimit, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION))
+			outbuflimit, TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION | TRANSCRIPT_HANDLING_UNASSIGNED))
 	{
 		case TRANSCRIPT_SUCCESS:
 			return TRANSCRIPT_SUCCESS;

@@ -33,6 +33,7 @@ enum {
 };
 
 enum {
+	TRANSCRIPT_HANDLING_UNASSIGNED = (1<<14),
 	TRANSCRIPT_INTERNAL = (1<<15)
 };
 

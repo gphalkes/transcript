@@ -28,6 +28,8 @@ static void print_usage(void) {
 	printf(" -t<name>,--transcript-name=<name>  Use <name> as convertor name for transcript\n");
 	printf(" -u,--unicode                       Ignore surrogates and non-characters\n");
 	printf(" -p,--no-private-use                Ignore private-use mappings\n");
+	printf(" -f,--check-fallbacks               Compare fallbacks as well\n");
+	printf(" -s<start>,--start=<start>          Start iteration from <start>\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -101,24 +103,6 @@ static uint32_t iconv_revert(iconv_t handle, char *seq, int length) {
 	return codepoint_buffer[0];
 }
 
-static uint32_t transcript_revert(transcript_t *handle, const char *seq, int length) {
-	uint32_t codepoint_buffer[20];
-	char *codepoint_ptr = (char *) codepoint_buffer;
-
-	switch (transcript_to_unicode(handle, &seq, seq + length, &codepoint_ptr, codepoint_ptr + 20,
-			TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE)) {
-		case TRANSCRIPT_SUCCESS:
-			break;
-		default:
-			transcript_to_unicode_reset(handle);
-			return UINT32_C(0xffffffff);
-	}
-	transcript_to_unicode_reset(handle);
-	if ((codepoint_ptr - (char *) codepoint_buffer) != 4)
-		return UINT32_C(0xffffffff);
-	return codepoint_buffer[0];
-}
-
 static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *result, int *fallback) {
 	const char *codepoint_ptr = (char *) &codepoint;
 	char *result_limit = result + 80;
@@ -153,6 +137,24 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
 			return -1;
 	}
 	return 80 - (result_limit - result);
+}
+
+static uint32_t transcript_revert(transcript_t *handle, const char *seq, int length) {
+	uint32_t codepoint_buffer[20];
+	char *codepoint_ptr = (char *) codepoint_buffer;
+
+	switch (transcript_to_unicode(handle, &seq, seq + length, &codepoint_ptr, codepoint_ptr + 20,
+			TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE)) {
+		case TRANSCRIPT_SUCCESS:
+			break;
+		default:
+			transcript_to_unicode_reset(handle);
+			return UINT32_C(0xffffffff);
+	}
+	transcript_to_unicode_reset(handle);
+	if ((codepoint_ptr - (char *) codepoint_buffer) != 4)
+		return UINT32_C(0xffffffff);
+	return codepoint_buffer[0];
 }
 
 static void print_result(char *result, int result_length, int fallback) {

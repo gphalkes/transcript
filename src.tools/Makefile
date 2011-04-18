@@ -15,7 +15,11 @@ SOURCES.check_convertor := check_convertor.c
 LDFLAGS.check_convertor := -L../src/.libs -ltranscript
 CFLAGS.check_convertor := -I../src
 
-TARGETS := check_convertor
+SOURCES.generate_table := generate_table.c
+LDFLAGS.generate_table := -L../src/.libs -ltranscript
+CFLAGS.generate_table := -I../src
+
+TARGETS := check_convertor generate_table
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
@@ -23,6 +27,7 @@ include ../../makesys/rules.mk
 #================================================#
 
 check_convertor: | library
+generate_table: | library
 
 library:
 	@$(MAKE) -q -C ../src libtranscript.la || $(MAKE) -C ../src libtranscript.la

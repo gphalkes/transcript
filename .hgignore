@@ -25,3 +25,6 @@ testsuite/simple/.deps
 testsuite/simple/.objects
 .backupfilter.hg
 doc/API
+
+src.tools/check_convertor
+src.tools/generate_table
