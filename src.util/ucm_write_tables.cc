@@ -59,6 +59,8 @@ static void write_word_data(FILE *output, uint16_t *data, size_t size, int inden
 }
 
 void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &total_entries) {
+	int action_mask;
+
 	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		(*state_iter)->entries_start = total_entries;
 		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
@@ -66,8 +68,13 @@ void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &tot
 		{
 			if (total_entries != 0)
 				fprintf(output, ",\n");
+
+			action_mask = (entry_iter->action & ACTION_FLAG_PAIR) && entry_iter->action != ACTION_FINAL_PAIR_NOFLAGS ?
+				ACTION_FLAG_PAIR : 0;
+
 			fprintf(output, "\t{ UINT16_C(0x%08x), UINT16_C(0x%08x), 0x%02x, 0x%02x, 0x%02x }",
-				entry_iter->base, entry_iter->mul, entry_iter->low, entry_iter->next_state, entry_iter->action & ~ACTION_FLAG_PAIR);
+				entry_iter->base, entry_iter->mul, entry_iter->low, entry_iter->next_state,
+					entry_iter->action & ~action_mask);
 			total_entries++;
 		}
 	}

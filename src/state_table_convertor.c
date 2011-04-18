@@ -167,14 +167,24 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 		_inbuf++;
 
 		if (entry->action == ACTION_FINAL_NOFLAGS) {
-			PUT_UNICODE(handle->tables.convertor->codepage_mappings[idx]);
+			codepoint = handle->tables.convertor->codepage_mappings[idx];
+			if (codepoint == UINT32_C(0xffff)) {
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
+				codepoint = UINT32_C(0xfffd);
+			}
+			PUT_UNICODE(codepoint);
 		} else if (entry->action == ACTION_VALID) {
 			/* Sequence not complete yet... */
 			state = entry->next_state;
 			continue;
 		} else if (entry->action == ACTION_FINAL_PAIR_NOFLAGS) {
 			codepoint = handle->tables.convertor->codepage_mappings[idx];
-			if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
+			if (codepoint == UINT32_C(0xffff)) {
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
+				codepoint = UINT32_C(0xfffd);
+			} else if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 				codepoint -= UINT32_C(0xd800);
 				codepoint <<= 10;
 				codepoint += handle->tables.convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
@@ -563,7 +573,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		   byte-by-byte loop. */
 
 		/* Optimize common case by not doing an actual lookup when the first byte is 0. */
-		if (codepoint > 0x10000L) {
+		if (codepoint > UINT32_C(0xffff)) {
 			byte = (codepoint >> 16) & 0xff;
 			entry = &handle->tables.convertor->unicode_states[0].entries[handle->tables.convertor->unicode_states[0].map[byte]];
 			idx = entry->base + (byte - entry->low) * entry->mul;

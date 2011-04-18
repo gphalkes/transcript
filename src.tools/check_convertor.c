@@ -12,6 +12,7 @@
 
 static const char *option_transcript_name, *option_iconv_name;
 static int option_unicode, option_no_private_use, option_check_fallbacks;
+static uint32_t option_start;
 
 static void fatal(const char *fmt, ...) {
 	va_list args;
@@ -46,6 +47,9 @@ PARSE_FUNCTION(parse_options)
 		END_OPTION
 		OPTION('f', "check-fallbacks", NO_ARG)
 			option_check_fallbacks = 1;
+		END_OPTION
+		OPTION('s', "start", REQUIRED_ARG)
+			option_start = strtol(optArg, NULL, 16);
 		END_OPTION
 		DOUBLE_DASH
 			NO_MORE_OPTIONS;
@@ -181,8 +185,7 @@ int main(int argc, char *argv[]) {
 		fatal("Could not open transcript convertor %s\n", option_transcript_name);
 
 
-	for (i = 0; i < 0x110000; i++) {
-	//~ for (i = 0x10000; i < 0x110000; i++) {
+	for (i = option_start; i < 0x110000; i++) {
 		char iconv_result[80], transcript_result[80];
 		int iconv_result_length, transcript_result_length;
 		int iconv_fallback = 0, transcript_fallback = 0;

@@ -78,7 +78,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 
 	do {
 		mid = low + ((high - low) / 2);
-		if (gb_range_map[mid].unicode_high <= codepoint)
+		if (gb_range_map[mid].unicode_high < codepoint)
 			low = mid + 1;
 		else
 			high = mid;
@@ -158,7 +158,7 @@ uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **in
 
 	do {
 		mid = low + ((high - low) / 2);
-		if (gb_range_map[mid].high <= codepoint)
+		if (gb_range_map[mid].high < codepoint)
 			low = mid + 1;
 		else
 			high = mid;

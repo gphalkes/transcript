@@ -134,7 +134,7 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 				flag_data[idx >> 3] |= 1 << (idx & 7);
 			}
 		}
-		fprintf(output, "static const uint8_t codepoint_to_byte_flags_%d[%d] = {\n", unique, level1_map_used * 4);
+		fprintf(output, "static const uint8_t codepoint_to_byte_flags_%d[%d] = {\n\t", unique, level1_map_used * 4);
 		write_byte_data(output, flag_data, level1_map_used * 4, 1);
 		fprintf(output, "\n};\n\n");
 		free(flag_data);
