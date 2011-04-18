@@ -129,7 +129,8 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 		for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 			if ((*iter)->from_unicode_flags & Mapping::FROM_UNICODE_FALLBACK) {
 				uint16_t codepoint = (*iter)->codepoints[0];
-				uint16_t idx = level1_indices[level0_indices[codepoint >> 10]][(codepoint >> 5) & 0x1f] + (codepoint & 0x1f);
+				uint16_t idx = ((uint16_t) level1_indices[level0_indices[codepoint >> 10]][(codepoint >> 5) & 0x1f] << 5)
+					+ (codepoint & 0x1f);
 				flag_data[idx >> 3] |= 1 << (idx & 7);
 			}
 		}
@@ -151,8 +152,10 @@ void Ucm::write_simple(FILE *output) {
 	transcript_normalize_name(variant.id, normalized_name, sizeof(normalized_name));
 
 	memset(byte_to_codepoint, 0xff, sizeof(byte_to_codepoint));
-	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
-		byte_to_codepoint[(unsigned int) (*iter)->codepage_bytes[0]] = (*iter)->codepoints[0];
+	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if (!((*iter)->from_unicode_flags & Mapping::FROM_UNICODE_FALLBACK))
+			byte_to_codepoint[(unsigned int) (*iter)->codepage_bytes[0]] = (*iter)->codepoints[0];
+	}
 
 	level0_indices = write_simple_from_unicode(output);
 	fprintf(output, "static const sbcs_convertor_v1_t sbcs_convertor_%d = {\n", unique);
