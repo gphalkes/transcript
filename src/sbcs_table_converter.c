@@ -20,14 +20,14 @@ enum {
 	INTERNAL_TABLE = (1<<0)
 };
 
-/** @struct convertor_state_t
-    Structure holding the pointers to the data and the state of a state table convertor. */
+/** @struct converter_state_t
+    Structure holding the pointers to the data and the state of a state table converter. */
 typedef struct {
 	transcript_t common;
-	sbcs_convertor_v1_t tables;
-} convertor_state_t;
+	sbcs_converter_v1_t tables;
+} converter_state_t;
 
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit);
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
@@ -35,8 +35,8 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 		return result; \
 } while (0)
 
-/** convert_to implementation for SBCS table convertors. */
-static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_to implementation for SBCS table converters. */
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -63,15 +63,15 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** skip_to implementation for SBCS table convertors. */
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+/** skip_to implementation for SBCS table converters. */
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	(void) handle;
 	(void) inbuflimit;
 	(*inbuf)++;
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** Simplification macro for the get_unicode function in the convertor handle. */
+/** Simplification macro for the get_unicode function in the converter handle. */
 #define GET_UNICODE() do { \
 	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
 } while (0)
@@ -88,8 +88,8 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 	handle->tables.codepoint_to_byte_idx0[codepoint >> 10]] \
 	[(codepoint >> 5) & 0x1f]
 
-/** convert_from implementation for SBCS table convertors. */
-static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_from implementation for SBCS table converters. */
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -152,13 +152,13 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 }
 
 /** @internal
-    @brief Create a convertor handle from an SBCS table handle.
+    @brief Create a converter handle from an SBCS table handle.
     @param tables The SBCS table handle
-    @param flags Flags for the convertor.
+    @param flags Flags for the converter.
     @param error The location to store an error.
 */
-void *_transcript_open_sbcs_table_convertor(const sbcs_convertor_v1_t *tables, int flags, transcript_error_t *error) {
-	convertor_state_t *retval;
+void *_transcript_open_sbcs_table_converter(const sbcs_converter_v1_t *tables, int flags, transcript_error_t *error) {
+	converter_state_t *retval;
 
 	if (!(flags & TRANSCRIPT_INTERNAL) && tables->flags & INTERNAL_TABLE) {
 		if (error != NULL)
@@ -166,7 +166,7 @@ void *_transcript_open_sbcs_table_convertor(const sbcs_convertor_v1_t *tables, i
 		return NULL;
 	}
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+	if ((retval = malloc(sizeof(converter_state_t))) == NULL) {
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;

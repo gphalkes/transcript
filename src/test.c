@@ -18,12 +18,12 @@ void fatal(const char *fmt, ...) {
 }
 
 void print_usage(void) {
-	printf("Usage: test [OPTIONS] <CONVERTOR NAME>\n");
+	printf("Usage: test [OPTIONS] <CONVERTER NAME>\n");
 	printf("  -d<to|from>      Conversion direction (default=from)\n");
 	printf("  -u<type>         Unicode type: UTF-?\n");
 	printf("  -D               Dump raw output\n");
 	printf("  -f               Allow fallbacks\n");
-	printf("  -l               List convertors\n");
+	printf("  -l               List converters\n");
 }
 
 void show_names(void) {
@@ -102,8 +102,8 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     or: test -l");
 
-	if ((conv = transcript_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
-		fatal("Error opening convertor: %s\n", transcript_strerror(error));
+	if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL)
+		fatal("Error opening converter: %s\n", transcript_strerror(error));
 
 	while ((result = fread(inbuf + fill, 1, 1024 - fill, stdin)) != 0) {
 		inbuf_ptr = inbuf;

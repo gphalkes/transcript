@@ -158,7 +158,7 @@ void Ucm::write_simple(FILE *output) {
 	}
 
 	level0_indices = write_simple_from_unicode(output);
-	fprintf(output, "static const sbcs_convertor_v1_t sbcs_convertor_%d = {\n", unique);
+	fprintf(output, "static const sbcs_converter_v1_t sbcs_converter_%d = {\n", unique);
 	if (used_from_unicode_flags & Mapping::FROM_UNICODE_FALLBACK)
 		fprintf(output, "\tcodepoint_to_byte_flags_%d, ", unique);
 	else
@@ -187,6 +187,6 @@ void Ucm::write_simple(FILE *output) {
 	fprintf(output, " },\n\t0x%02x, 0x%02x\n};\n\n", !!(flags & INTERNAL_TABLE), subchar[0]);
 
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_SBCS_TABLE_V1; }\n", normalized_name);
-	fprintf(output, "TRANSCRIPT_EXPORT const sbcs_convertor_v1_t *transcript_get_table_%s(void) { return &sbcs_convertor_%d; }\n\n",
+	fprintf(output, "TRANSCRIPT_EXPORT const sbcs_converter_v1_t *transcript_get_table_%s(void) { return &sbcs_converter_%d; }\n\n",
 		normalized_name, unique);
 }

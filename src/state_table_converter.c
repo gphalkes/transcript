@@ -66,7 +66,7 @@ enum {
 };
 
 /** @struct save_state_t
-    Structure holding the shift state of a state table convertor. */
+    Structure holding the shift state of a state table converter. */
 typedef struct _transcript_state_table_state_t {
 	uint8_t to, from;
 } save_state_t;
@@ -79,17 +79,17 @@ typedef struct {
 	const uint8_t *bits2flags;
 } flag_handler_t;
 
-/** @struct convertor_state_t
-    Structure holding the pointers to the data and the state of a state table convertor. */
+/** @struct converter_state_t
+    Structure holding the pointers to the data and the state of a state table converter. */
 typedef struct {
 	transcript_t common;
-	convertor_tables_v1_t tables;
+	converter_tables_v1_t tables;
 	flag_handler_t codepage_flags;
 	flag_handler_t unicode_flags;
 	save_state_t state;
-} convertor_state_t;
+} converter_state_t;
 
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit);
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit);
 static bool init_flag_handler(flag_handler_t *flags, uint8_t flag_info);
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
@@ -105,8 +105,8 @@ static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
 
 /** Find variant conversion for to-Unicode conversion.
 
-    The state table based convertors can store multiple similar convertors in a single
-    table. For the different convertors, or variants, look-up tables are provided
+    The state table based converters can store multiple similar converters in a single
+    table. For the different converters, or variants, look-up tables are provided
     to find the actual conversion. This function perform the look-up.
 */
 static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *bytes, size_t length,
@@ -149,25 +149,25 @@ static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *
 	*codepoint = mapping->codepoint;
 }
 
-/** convert_to implementation for state table convertors. */
-static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_to implementation for state table converters. */
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
-	uint_fast32_t idx = handle->tables.convertor->codepage_states[handle->state.to].base;
+	uint_fast32_t idx = handle->tables.converter->codepage_states[handle->state.to].base;
 	uint_fast32_t codepoint;
 	const entry_v1_t *entry;
 	uint_fast8_t conv_flags;
 
 	while (_inbuf < (const uint8_t *) inbuflimit) {
-		entry = &handle->tables.convertor->codepage_states[state].entries[handle->tables.convertor->codepage_states[state].map[*_inbuf]];
+		entry = &handle->tables.converter->codepage_states[state].entries[handle->tables.converter->codepage_states[state].map[*_inbuf]];
 
 		idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
 		_inbuf++;
 
 		if (entry->action == ACTION_FINAL_NOFLAGS) {
-			codepoint = handle->tables.convertor->codepage_mappings[idx];
+			codepoint = handle->tables.converter->codepage_mappings[idx];
 			if (codepoint == UINT32_C(0xffff)) {
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_UNASSIGNED;
@@ -179,7 +179,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 			state = entry->next_state;
 			continue;
 		} else if (entry->action == ACTION_FINAL_PAIR_NOFLAGS) {
-			codepoint = handle->tables.convertor->codepage_mappings[idx];
+			codepoint = handle->tables.converter->codepage_mappings[idx];
 			if (codepoint == UINT32_C(0xffff)) {
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_UNASSIGNED;
@@ -187,13 +187,13 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 			} else if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 				codepoint -= UINT32_C(0xd800);
 				codepoint <<= 10;
-				codepoint += handle->tables.convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
+				codepoint += handle->tables.converter->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
 				codepoint += 0x10000;
 			}
 			PUT_UNICODE(codepoint);
 		} else if (entry->action == ACTION_FINAL) {
 			/* NOTE: we don't check for FINAL_PAIR, because that was converted when loading. */
-			conv_flags = handle->codepage_flags.get_flags(&handle->tables.convertor->codepage_flags,
+			conv_flags = handle->codepage_flags.get_flags(&handle->tables.converter->codepage_flags,
 				handle->codepage_flags.bits2flags, idx);
 			if ((conv_flags & TO_UNICODE_MULTI_START) &&
 					(flags & (TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION)) < TRANSCRIPT_NO_1N_CONVERSION)
@@ -245,7 +245,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 					while ((const uint8_t *) *inbuf < _inbuf)
 						if (to_unicode_skip(handle, inbuf, inbuflimit) != 0)
 							return TRANSCRIPT_INTERNAL_ERROR;
-					idx = handle->tables.convertor->codepage_states[handle->state.to].base;
+					idx = handle->tables.converter->codepage_states[handle->state.to].base;
 					if (flags & TRANSCRIPT_SINGLE_CONVERSION)
 						return TRANSCRIPT_SUCCESS;
 					break; /* Break from multi-mapping search. */
@@ -254,7 +254,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 					continue;
 			}
 
-			codepoint = handle->tables.convertor->codepage_mappings[idx];
+			codepoint = handle->tables.converter->codepage_mappings[idx];
 			if (conv_flags & TO_UNICODE_VARIANT) {
 				find_to_unicode_variant(handle->tables.variant, (const uint8_t *) *inbuf, (const char *) _inbuf - *inbuf,
 					&conv_flags, &codepoint);
@@ -274,7 +274,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 				if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
 					codepoint -= UINT32_C(0xd800);
 					codepoint <<= 10;
-					codepoint += handle->tables.convertor->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
+					codepoint += handle->tables.converter->codepage_mappings[idx + 1] - UINT32_C(0xdc00);
 					codepoint += 0x10000;
 				}
 				PUT_UNICODE(codepoint);
@@ -293,7 +293,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 		/* Update state. */
 		*inbuf = (const char *) _inbuf;
 		handle->state.to = state = entry->next_state;
-		idx = handle->tables.convertor->codepage_states[handle->state.to].base;
+		idx = handle->tables.converter->codepage_states[handle->state.to].base;
 
 		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
 			return TRANSCRIPT_SUCCESS;
@@ -313,15 +313,15 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** skip_to implementation for state table convertors. */
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+/** skip_to implementation for state table converters. */
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
-	uint_fast32_t idx = handle->tables.convertor->codepage_states[handle->state.to].base;
+	uint_fast32_t idx = handle->tables.converter->codepage_states[handle->state.to].base;
 	const entry_v1_t *entry;
 
 	while (_inbuf < (const uint8_t *) inbuflimit) {
-		entry = &handle->tables.convertor->codepage_states[state].entries[handle->tables.convertor->codepage_states[state].map[*_inbuf]];
+		entry = &handle->tables.converter->codepage_states[state].entries[handle->tables.converter->codepage_states[state].map[*_inbuf]];
 
 		idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
 		_inbuf++;
@@ -346,12 +346,12 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 	return TRANSCRIPT_INCOMPLETE;
 }
 
-/** reset_to implementation for state table convertors. */
-static void to_unicode_reset(convertor_state_t *handle) {
+/** reset_to implementation for state table converters. */
+static void to_unicode_reset(converter_state_t *handle) {
 	handle->state.to = 0;
 }
 
-/** Simplification macro for the get_unicode function in the convertor handle. */
+/** Simplification macro for the get_unicode function in the converter handle. */
 #define GET_UNICODE() do { \
 	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
 } while (0)
@@ -363,26 +363,26 @@ static void to_unicode_reset(convertor_state_t *handle) {
 } while (0)
 
 /** Write a byte sequence to the output, prepending a shift sequence if necessary. */
-static _TRANSCRIPT_INLINE transcript_error_t put_bytes(convertor_state_t *handle, char **outbuf,
+static _TRANSCRIPT_INLINE transcript_error_t put_bytes(converter_state_t *handle, char **outbuf,
 		const char const *outbuflimit, size_t count, const uint8_t *bytes)
 {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
 
-	/* Shift sequences are only necessary for specificly marked convertors. */
-	if (handle->tables.convertor->flags & MULTIBYTE_START_STATE_1) {
+	/* Shift sequences are only necessary for specificly marked converters. */
+	if (handle->tables.converter->flags & MULTIBYTE_START_STATE_1) {
 		required_state = count > 1 ? 1 : 0;
 		if (handle->state.from != required_state) {
 			/* Find the correct shift sequence. This can handle more than simply
 			   going from state 0 to 1 and vice versa. */
-			for (i = 0; i < handle->tables.convertor->nr_shift_states; i++) {
-				if (handle->tables.convertor->shift_states[i].from_state == handle->state.from &&
-						handle->tables.convertor->shift_states[i].to_state == required_state)
+			for (i = 0; i < handle->tables.converter->nr_shift_states; i++) {
+				if (handle->tables.converter->shift_states[i].from_state == handle->state.from &&
+						handle->tables.converter->shift_states[i].to_state == required_state)
 				{
-					if ((*outbuf) + count + handle->tables.convertor->shift_states[i].len > outbuflimit)
+					if ((*outbuf) + count + handle->tables.converter->shift_states[i].len > outbuflimit)
 						return TRANSCRIPT_NO_SPACE;
-					memcpy(*outbuf, handle->tables.convertor->shift_states[i].bytes, handle->tables.convertor->shift_states[i].len);
-					*outbuf += handle->tables.convertor->shift_states[i].len;
+					memcpy(*outbuf, handle->tables.converter->shift_states[i].bytes, handle->tables.converter->shift_states[i].len);
+					*outbuf += handle->tables.converter->shift_states[i].len;
 					handle->state.from = required_state;
 					/* The space check has already been done, so simply skip to
 					   the copying of the output bytes. */
@@ -412,7 +412,7 @@ write_bytes:
 }
 
 /** Check if the current input is a multi-mapping for a from-Unicode conversion. */
-static transcript_error_t from_unicode_check_multi_mappings(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -504,8 +504,8 @@ check_next_mapping: ;
 
 /** Find variant conversion for from-Unicode conversion.
 
-    The state table based convertors can store multiple similar convertors in a single
-    table. For the different convertors, or variants, look-up tables are provided
+    The state table based converters can store multiple similar converters in a single
+    table. For the different converters, or variants, look-up tables are provided
     to find the actual conversion. This function perform the look-up.
 */
 static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t codepoint,
@@ -536,8 +536,8 @@ static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t code
 	*bytes = (uint8_t *) &mapping->codepage_bytes;
 }
 
-/** convert_from implementation for state table convertors. */
-static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_from implementation for state table converters. */
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf;
@@ -552,7 +552,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 	_inbuf = (const uint8_t *) *inbuf;
 
 
-	entry = &handle->tables.convertor->unicode_states[0].entries[handle->tables.convertor->unicode_states[0].map[0]];
+	entry = &handle->tables.converter->unicode_states[0].entries[handle->tables.converter->unicode_states[0].map[0]];
 	state_16_bit = entry->next_state;
 
 	while (*inbuf < inbuflimit) {
@@ -563,7 +563,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
 			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
 				return TRANSCRIPT_ILLEGAL;
-			PUT_BYTES(handle->tables.convertor->subchar_len, handle->tables.convertor->subchar);
+			PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
 			*inbuf = (const char *) _inbuf;
 			continue;
 		}
@@ -575,7 +575,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		/* Optimize common case by not doing an actual lookup when the first byte is 0. */
 		if (codepoint > UINT32_C(0xffff)) {
 			byte = (codepoint >> 16) & 0xff;
-			entry = &handle->tables.convertor->unicode_states[0].entries[handle->tables.convertor->unicode_states[0].map[byte]];
+			entry = &handle->tables.converter->unicode_states[0].entries[handle->tables.converter->unicode_states[0].map[byte]];
 			idx = entry->base + (byte - entry->low) * entry->mul;
 			state = entry->next_state;
 		} else {
@@ -584,20 +584,20 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		}
 
 		byte = (codepoint >> 8) & 0xff;
-		entry = &handle->tables.convertor->unicode_states[state].entries[handle->tables.convertor->unicode_states[state].map[byte]];
+		entry = &handle->tables.converter->unicode_states[state].entries[handle->tables.converter->unicode_states[state].map[byte]];
 		idx += entry->base + (byte - entry->low) * entry->mul;
 		state = entry->next_state;
 
 		byte = codepoint & 0xff;
-		entry = &handle->tables.convertor->unicode_states[state].entries[handle->tables.convertor->unicode_states[state].map[byte]];
+		entry = &handle->tables.converter->unicode_states[state].entries[handle->tables.converter->unicode_states[state].map[byte]];
 		idx += entry->base + (byte - entry->low) * entry->mul;
 
 		/* First check for the most common case: a simple conversion without any special flags. */
 		if (entry->action >= ACTION_FINAL_LEN1_NOFLAGS && entry->action <= ACTION_FINAL_LEN4_NOFLAGS) {
-			bytes = &handle->tables.convertor->unicode_mappings[idx * handle->tables.convertor->single_size];
+			bytes = &handle->tables.converter->unicode_mappings[idx * handle->tables.converter->single_size];
 			PUT_BYTES(entry->action - ACTION_FINAL_LEN1_NOFLAGS + 1, bytes);
 		} else if (entry->action == ACTION_FINAL) {
-			conv_flags = handle->unicode_flags.get_flags(&handle->tables.convertor->unicode_flags,
+			conv_flags = handle->unicode_flags.get_flags(&handle->tables.converter->unicode_flags,
 				handle->unicode_flags.bits2flags, idx);
 			if ((conv_flags & FROM_UNICODE_MULTI_START) &&
 					(flags & (TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION)) < TRANSCRIPT_NO_1N_CONVERSION)
@@ -621,7 +621,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 				}
 			}
 
-			bytes = &handle->tables.convertor->unicode_mappings[idx * handle->tables.convertor->single_size];
+			bytes = &handle->tables.converter->unicode_mappings[idx * handle->tables.converter->single_size];
 			if (conv_flags & FROM_UNICODE_VARIANT)
 				find_from_unicode_variant(handle->tables.variant, codepoint, &conv_flags, &bytes);
 
@@ -635,9 +635,9 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 					if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 						return TRANSCRIPT_UNASSIGNED;
 					if (conv_flags & FROM_UNICODE_SUBCHAR1)
-						PUT_BYTES(1, &handle->tables.convertor->subchar1);
+						PUT_BYTES(1, &handle->tables.converter->subchar1);
 					else
-						PUT_BYTES(handle->tables.convertor->subchar_len, handle->tables.convertor->subchar);
+						PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
 				)
 			} else {
 				PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
@@ -645,14 +645,14 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		} else if (entry->action == ACTION_ILLEGAL) {
 			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
 				return TRANSCRIPT_ILLEGAL;
-			PUT_BYTES(handle->tables.convertor->subchar_len, handle->tables.convertor->subchar);
+			PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
 		} else if (entry->action == ACTION_UNASSIGNED) {
 			/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
 			   uses the code in parentheses when even that doesn't result in a mapping. */
 			HANDLE_UNASSIGNED(
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_UNASSIGNED;
-				PUT_BYTES(handle->tables.convertor->subchar_len, handle->tables.convertor->subchar);
+				PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
 			)
 		} else {
 			return TRANSCRIPT_INTERNAL_ERROR;
@@ -667,7 +667,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 		if (flags & TRANSCRIPT_END_OF_TEXT) {
 			if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
 				return TRANSCRIPT_ILLEGAL_END;
-			PUT_BYTES(handle->tables.convertor->subchar_len, handle->tables.convertor->subchar);
+			PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
 			*inbuf = inbuflimit;
 		} else {
 			return TRANSCRIPT_INCOMPLETE;
@@ -676,46 +676,46 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** flush_from implementation for state table convertors. */
-static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
+/** flush_from implementation for state table converters. */
+static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** reset_from implementation for state table convertors. */
-static void from_unicode_reset(convertor_state_t *handle) {
+/** reset_from implementation for state table converters. */
+static void from_unicode_reset(converter_state_t *handle) {
 	handle->state.from = 0;
 }
 
-/** save implementation for state table convertors. */
-static void save_state_table_state(convertor_state_t *handle, save_state_t *save) {
+/** save implementation for state table converters. */
+static void save_state_table_state(converter_state_t *handle, save_state_t *save) {
 	memcpy(save, &handle->state, sizeof(save_state_t));
 }
 
-/** load implementation for state table convertors. */
-static void load_state_table_state(convertor_state_t *handle, save_state_t *save) {
+/** load implementation for state table converters. */
+static void load_state_table_state(converter_state_t *handle, save_state_t *save) {
 	memcpy(&handle->state, save, sizeof(save_state_t));
 }
 
 /** @internal
-    @brief Load a state table table and create a convertor handle from it.
-    @param name The name of the convertor, which must correspond to a file name.
-    @param flags Flags for the convertor.
+    @brief Load a state table table and create a converter handle from it.
+    @param name The name of the converter, which must correspond to a file name.
+    @param flags Flags for the converter.
     @param error The location to store an error.
 */
-void *_transcript_open_state_table_convertor(const convertor_tables_v1_t *tables, int flags, transcript_error_t *error) {
-	convertor_state_t *retval;
+void *_transcript_open_state_table_converter(const converter_tables_v1_t *tables, int flags, transcript_error_t *error) {
+	converter_state_t *retval;
 
 	if (!(flags & TRANSCRIPT_INTERNAL) &&
-			((tables->variant == NULL ? tables->convertor->flags : tables->variant->flags) & (INTERNAL_TABLE | VARIANTS_AVAILABLE)))
+			((tables->variant == NULL ? tables->converter->flags : tables->variant->flags) & (INTERNAL_TABLE | VARIANTS_AVAILABLE)))
 	{
 		if (error != NULL)
 			*error = TRANSCRIPT_INTERNAL_TABLE;
 		return NULL;
 	}
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+	if ((retval = malloc(sizeof(converter_state_t))) == NULL) {
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
@@ -736,8 +736,8 @@ void *_transcript_open_state_table_convertor(const convertor_tables_v1_t *tables
 	retval->common.save = (save_load_func_t) save_state_table_state;
 	retval->common.load = (save_load_func_t) load_state_table_state;
 
-	init_flag_handler(&retval->codepage_flags, tables->convertor->codepage_flags.flags_type);
-	init_flag_handler(&retval->unicode_flags, tables->convertor->unicode_flags.flags_type);
+	init_flag_handler(&retval->codepage_flags, tables->converter->codepage_flags.flags_type);
+	init_flag_handler(&retval->unicode_flags, tables->converter->unicode_flags.flags_type);
 	return retval;
 }
 

@@ -39,7 +39,7 @@ for i in test[0-9][0-9] ; do
 
 	OPTIONS="`grep '^#%' \"$i\" | sed -r 's/^#%//'`"
 	ulimit -v 393216
-	TRANSCRIPT_PATH=../convertors/.libs LD_LIBRARY_PATH=../../../src/.libs ../test  $OPTIONS < input.txt > result.txt
+	TRANSCRIPT_PATH=../converters/.libs LD_LIBRARY_PATH=../../../src/.libs ../test  $OPTIONS < input.txt > result.txt
 	diff -uBw output.txt result.txt
 
 	if [ -n "$TESTNR" ] && [ "$i" == "$TESTNR" ] ; then

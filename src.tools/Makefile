@@ -11,22 +11,22 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-SOURCES.check_convertor := check_convertor.c
-LDFLAGS.check_convertor := -L../src/.libs -ltranscript
-CFLAGS.check_convertor := -I../src
+SOURCES.check_converter := check_converter.c
+LDFLAGS.check_converter := -L../src/.libs -ltranscript
+CFLAGS.check_converter := -I../src
 
 SOURCES.generate_table := generate_table.c
 LDFLAGS.generate_table := -L../src/.libs -ltranscript
 CFLAGS.generate_table := -I../src
 
-TARGETS := check_convertor generate_table
+TARGETS := check_converter generate_table
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
 
-check_convertor: | library
+check_converter: | library
 generate_table: | library
 
 library:

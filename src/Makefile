@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.libtranscript.la := transcript.c transcript_io.c utf.c transcript_iconv.c \
-	state_table_convertor.c aliases.c generic_fallbacks.c sbcs_table_convertor.c
+	state_table_converter.c aliases.c generic_fallbacks.c sbcs_table_converter.c
 LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
@@ -39,7 +39,7 @@ LDLIBS.test := -ltranscript
 
 TARGETS := test
 LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
-EXTRATARGETS := convertor-links
+EXTRATARGETS := converter-links
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
@@ -79,11 +79,11 @@ links:
 	@[ -L transcript/handle.h ] || ln -s ../handle.h transcript
 	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
-convertor-links: | linkltc $(LTTARGETS)
+converter-links: | linkltc $(LTTARGETS)
 	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
 	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
 
 linkltc: libtranscript.la
 	@$(MAKE) -q -C ../src.util linkltc || $(MAKE) --no-print-directory -C ../src.util linkltc
 
-.PHONY: links convertor-links linkltc
+.PHONY: links converter-links linkltc

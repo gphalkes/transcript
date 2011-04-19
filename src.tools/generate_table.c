@@ -11,7 +11,7 @@
 #include "transcript.h"
 #include "optionMacros.h"
 
-static const char *option_convertor_name;
+static const char *option_converter_name;
 static int option_generate_fallbacks, option_strip_mbcs_switch;
 
 static void fatal(const char *fmt, ...) {
@@ -24,7 +24,7 @@ static void fatal(const char *fmt, ...) {
 }
 
 static void print_usage(void) {
-	printf("Usage: generate_table [<options>] <convertor name>\n");
+	printf("Usage: generate_table [<options>] <converter name>\n");
 	printf(" -f,--generate-fallbacks         Include fallbacks in the table\n");
 	printf(" -s,--strip-mbcs-switch          Strip 0E/0F bytes from MBCS output\n");
 	exit(EXIT_SUCCESS);
@@ -47,13 +47,13 @@ PARSE_FUNCTION(parse_options)
 
 		printf("Unknown option " OPTFMT "\n", OPTPRARG);
 	NO_OPTION
-		if (option_convertor_name == NULL)
-			option_convertor_name = optcurrent;
+		if (option_converter_name == NULL)
+			option_converter_name = optcurrent;
 		else
-			fatal("Only one convertor name allowed\n");
+			fatal("Only one converter name allowed\n");
 	END_OPTIONS
-	if (option_convertor_name == NULL)
-		fatal("No convertor specified\n");
+	if (option_converter_name == NULL)
+		fatal("No converter specified\n");
 END_FUNCTION
 
 static int convert(transcript_t *handle, uint32_t codepoint, char *result, int *fallback) {
@@ -99,9 +99,9 @@ int main(int argc, char *argv[]) {
 
 	parse_options(argc, argv);
 
-	if ((handle = transcript_open_convertor(option_convertor_name,
+	if ((handle = transcript_open_converter(option_converter_name,
 			htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0, NULL)) == NULL)
-		fatal("Could not open transcript convertor %s\n", option_convertor_name);
+		fatal("Could not open transcript converter %s\n", option_converter_name);
 
 	for (i = 0; i < 0x110000; i++) {
 		char result[80];

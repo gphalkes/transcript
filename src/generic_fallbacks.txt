@@ -1,6 +1,6 @@
-# List of fallbacks that occur frequently in convertors. From this list a
+# List of fallbacks that occur frequently in converters. From this list a
 # static trie is derived which is used in the library. ucm2ltc removes these
-# fallbacks (and emits a warning) from the convertor.
+# fallbacks (and emits a warning) from the converter.
 
 # All fallback sources and targets must be within the BMP.
 

@@ -91,48 +91,48 @@ void transcript_set_lock_callbacks(void (*acquire)(void *), void (*release)(void
 	}
 }
 
-/** Check if a named convertor is available.
-    @param name The name of the convertor to check.
-    @return 1 if the convertor is avaible, 0 otherwise.
+/** Check if a named converter is available.
+    @param name The name of the converter to check.
+    @return 1 if the converter is avaible, 0 otherwise.
 */
-int transcript_probe_convertor(const char *name) {
+int transcript_probe_converter(const char *name) {
 	int result;
 
 	_transcript_init();
 	ACQUIRE_LOCK();
-	result = transcript_probe_convertor_nolock(name);
+	result = transcript_probe_converter_nolock(name);
 	RELEASE_LOCK();
 	return result;
 }
 
-/** Open a convertor.
-    @param name The name of the convertor to open.
+/** Open a converter.
+    @param name The name of the converter to open.
     @param utf_type The UTF type to use for representing Unicode codepoints.
-    @param flags The default flags for the convertor (see ::transcript_flags_t for possible values).
+    @param flags The default flags for the converter (see ::transcript_flags_t for possible values).
     @param error The location to store a possible error code.
 
-    The name of the convertor is in principle free-form. A list of known names
+    The name of the converter is in principle free-form. A list of known names
     can be retrieved through ::transcript_get_names. The @a name argument is
     passed through ::transcript_normalize_name first, and at most 79 characters of
     the normalized name are considered.
 */
-transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
+transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	transcript_t *result;
 
 	_transcript_init();
 	ACQUIRE_LOCK();
-	result = transcript_open_convertor_nolock(name, utf_type, flags, error);
+	result = transcript_open_converter_nolock(name, utf_type, flags, error);
 	RELEASE_LOCK();
 	return result;
 }
 
-/** Close a convertor.
-    @param handle The convertor to close.
+/** Close a converter.
+    @param handle The converter to close.
 
     This function releases all memory associated with @a handle. @a handle may
     be @c NULL.
 */
-void transcript_close_convertor(transcript_t *handle) {
+void transcript_close_converter(transcript_t *handle) {
 	if (handle != NULL) {
 		if (handle->close != NULL)
 			handle->close(handle);
@@ -143,13 +143,13 @@ void transcript_close_convertor(transcript_t *handle) {
 	}
 }
 
-/** Check if two names describe the same convertor.
+/** Check if two names describe the same converter.
     @param name_a
     @param name_b
-    @return 1 if @a name_a and @a name_b describe the same convertor, 0 otherwise.
+    @return 1 if @a name_a and @a name_b describe the same converter, 0 otherwise.
 */
 int transcript_equal(const char *name_a, const char *name_b) {
-	transcript_name_desc_t *convertor;
+	transcript_name_desc_t *converter;
 	char normalized_name_a[NORMALIZE_NAME_MAX], normalized_name_b[NORMALIZE_NAME_MAX];
 
 	_transcript_init();
@@ -159,13 +159,13 @@ int transcript_equal(const char *name_a, const char *name_b) {
 	if (strcmp(normalized_name_a, normalized_name_b) == 0)
 		return 1;
 
-	if ((convertor = _transcript_get_name_desc(normalized_name_a, 0)) == NULL)
+	if ((converter = _transcript_get_name_desc(normalized_name_a, 0)) == NULL)
 		return 0;
-	return convertor == _transcript_get_name_desc(normalized_name_b, 0);
+	return converter == _transcript_get_name_desc(normalized_name_b, 0);
 }
 
 /** Convert a buffer from a chararcter set to Unicode.
-    @param handle The convertor to use.
+    @param handle The converter to use.
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @param outbuf A double pointer to the start of the output buffer.
@@ -181,7 +181,7 @@ int transcript_equal(const char *name_a, const char *name_b) {
     @retval ::TRANSCRIPT_INTERNAL_ERROR
     @retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
 
-    This function uses the convertor indicated by @a handle to convert data from
+    This function uses the converter indicated by @a handle to convert data from
     the character set named in opening @a handle to Unicode. The interface is
     designed to work with incomplete buffers, and may return ::TRANSCRIPT_INCOMPLETE
     if the bytes at the end of the input buffer do not form a complete sequence.
@@ -199,7 +199,7 @@ transcript_error_t transcript_to_unicode(transcript_t *handle, const char const 
 }
 
 /** Convert a buffer from Unicode to a chararcter set.
-    @param handle The convertor to use.
+    @param handle The converter to use.
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @param outbuf A double pointer to the start of the output buffer.
@@ -215,7 +215,7 @@ transcript_error_t transcript_to_unicode(transcript_t *handle, const char const 
     @retval ::TRANSCRIPT_INTERNAL_ERROR
     @retval ::TRANSCRIPT_PRIVATE_USE &nbsp;
 
-    This function uses the convertor indicated by @a handle to convert data from
+    This function uses the converter indicated by @a handle to convert data from
     Unicode to the character set named in opening @a handle. The interface is
     designed to work with incomplete buffers, and may return ::TRANSCRIPT_INCOMPLETE
     if the bytes at the end of the input buffer do not form a complete sequence.
@@ -231,7 +231,7 @@ transcript_error_t transcript_from_unicode(transcript_t *handle, const char **in
 }
 
 /** Skip the next character in character set encoding.
-    @param handle The convertor to use.
+    @param handle The converter to use.
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @retval ::TRANSCRIPT_SUCCESS
@@ -247,7 +247,7 @@ transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char *
 }
 
 /** Skip the next character in Unicode encoding.
-    @param handle The convertor to use.
+    @param handle The converter to use.
     @param inbuf A double pointer to the start of the input buffer.
     @param inbuflimit A pointer to the end of the input buffer.
     @retval ::TRANSCRIPT_SUCCESS
@@ -265,14 +265,14 @@ transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char
 }
 
 /** Write out any bytes required to create a legal output in a character set.
-    @param handle The convertor to use.
+    @param handle The converter to use.
     @param outbuf A double pointer to the start of the output buffer.
     @param outbuflimit A pointer to the end of the output buffer.
     @retval ::TRANSCRIPT_SUCCESS
     @retval ::TRANSCRIPT_NO_SPACE
     @retval ::TRANSCRIPT_INTERNAL_ERROR &nbsp;
 
-    Some stateful encoding convertors need to store a shift sequence or some
+    Some stateful encoding converters need to store a shift sequence or some
     closing bytes at the end of the output, that can only be computed when it
     is known that there is no more input. For efficiency reasons, this is @em not
     done based on the ::TRANSCRIPT_END_OF_TEXT flag in ::transcript_from_unicode.
@@ -294,7 +294,7 @@ transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **ou
 }
 
 /** Reset the to-Unicode conversion to its initial state.
-    @param handle The convertor to reset.
+    @param handle The converter to reset.
 
     @note The to-Unicode and from-Unicode conversions are reset separately.
 */
@@ -303,7 +303,7 @@ void transcript_to_unicode_reset(transcript_t *handle) {
 }
 
 /** Reset the from-Unicode conversion to its initial state.
-    @param handle The convertor to reset.
+    @param handle The converter to reset.
 
     @note The to-Unicode and from-Unicode conversions are reset separately.
 */
@@ -311,16 +311,16 @@ void transcript_from_unicode_reset(transcript_t *handle) {
 	handle->reset_from(handle);
 }
 
-/** Save a convertor's state.
-    @param handle The convertor to save the state for.
+/** Save a converter's state.
+    @param handle The converter to save the state for.
     @param state A pointer to a buffer of at least ::TRANSCRIPT_SAVE_STATE_SIZE bytes.
 */
 void transcript_save_state(transcript_t *handle, void *state) {
 	handle->save(handle, state);
 }
 
-/** Restore a convertor's state.
-    @param handle The convertor to restore the state for.
+/** Restore a converter's state.
+    @param handle The converter to restore the state for.
     @param state A pointer to a buffer of at least ::TRANSCRIPT_SAVE_STATE_SIZE bytes.
 */
 void transcript_load_state(transcript_t *handle, void *state) {
@@ -368,8 +368,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("Map file is for internal use only");
 		case TRANSCRIPT_DLOPEN_FAILURE:
 			return _("Dynamic linker returned an error");
-		case TRANSCRIPT_CONVERTOR_DISABLED:
-			return _("Convertor has been disabled");
+		case TRANSCRIPT_CONVERTER_DISABLED:
+			return _("Converter has been disabled");
 	}
 }
 
@@ -520,7 +520,7 @@ uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
     This function does a lookup in the generic fall-back table. If no generic
     fall-back is found, this function simply returns ::TRANSCRIPT_UNASSIGNED.
     Otherwise, it handles conversion of the generic fall-back as if it were
-    specified in the convertor table.
+    specified in the converter table.
 */
 transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags)

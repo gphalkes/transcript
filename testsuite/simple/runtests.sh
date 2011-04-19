@@ -8,7 +8,7 @@ if [ $? -eq 0 ] ; then
 fi
 
 make -s
-make -s --no-print-directory -C convertors
+make -s --no-print-directory -C converters
 
 [ -d work ] || mkdir work
 

@@ -74,8 +74,8 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction>] [-u <utf type>] [-D] <codepage name>\n");
 
-	if ((conv = transcript_open_convertor(argv[optind], utf_type, 0, &error)) == NULL)
-		fatal("Error opening convertor: %s\n", transcript_strerror(error));
+	if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL)
+		fatal("Error opening converter: %s\n", transcript_strerror(error));
 
 	do {
 		while (fill < 1024 && fscanf(stdin, " %2hhx ", inbuf + fill) == 1)

@@ -24,20 +24,20 @@
 static FILE *fopen_wrapper(const char *name) { return fopen(name, "r"); }
 
 /** Load a suffixed symbol from a plugin. */
-static void *get_sym(lt_dlhandle handle, const char *sym, const char *convertor_name) {
+static void *get_sym(lt_dlhandle handle, const char *sym, const char *converter_name) {
 	char buffer[NORMALIZE_NAME_MAX + 32];
 	strcpy(buffer, sym);
-	strcat(buffer, convertor_name);
+	strcat(buffer, converter_name);
 	return lt_dlsym(handle, buffer);
 }
 
-/** Try to open (i.e. get a file handle) a convertor.
+/** Try to open (i.e. get a file handle) a converter.
 
-    If the option :probe_load has been set in the convertor, then instead
+    If the option :probe_load has been set in the converter, then instead
     of trying to open with fopen, it will actually be dlopened and the function
     transcript_probe_<name> will be called.
 */
-static bool probe_convertor(const char *name, const char *normalized_name, bool probe_load) {
+static bool probe_converter(const char *name, const char *normalized_name, bool probe_load) {
 	if (probe_load) {
 		bool (*probe)(const char *);
 		lt_dlhandle handle;
@@ -53,7 +53,7 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 		return result;
 	} else {
 		FILE *handle = NULL;
-		/* For most convertors it is sufficient to know that the file is readable. */
+		/* For most converters it is sufficient to know that the file is readable. */
 		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) fopen_wrapper, NULL)) != NULL)
 			fclose(handle);
 		return handle != NULL;
@@ -61,25 +61,25 @@ static bool probe_convertor(const char *name, const char *normalized_name, bool 
 }
 
 /** @internal
-    @brief Perform the action described at ::transcript_probe_convertor.
+    @brief Perform the action described at ::transcript_probe_converter.
 
-    This function does not call ::_transcript_init, which ::transcript_probe_convertor
+    This function does not call ::_transcript_init, which ::transcript_probe_converter
     does. However, ::_transcript_init only needs to be called once, so if we
     know it has already been called, we don't need to check again. Therefore,
     in the library itself we use this stripped down version.
 */
-int transcript_probe_convertor_nolock(const char *name) {
-	transcript_name_desc_t *convertor;
+int transcript_probe_converter_nolock(const char *name) {
+	transcript_name_desc_t *converter;
 	char normalized_name[NORMALIZE_NAME_MAX];
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-		if (convertor->flags & NAME_DESC_FLAG_DISABLED)
+	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
+		if (converter->flags & NAME_DESC_FLAG_DISABLED)
 			return false;
-		return probe_convertor(convertor->real_name, convertor->name, !!(convertor->flags & NAME_DESC_FLAG_PROBE_LOAD));
+		return probe_converter(converter->real_name, converter->name, !!(converter->flags & NAME_DESC_FLAG_PROBE_LOAD));
 	}
-	return probe_convertor(name, normalized_name, false);
+	return probe_converter(name, normalized_name, false);
 }
 
 
@@ -90,7 +90,7 @@ static void void_nop(void) {}
 static transcript_error_t success_nop(void) { return TRANSCRIPT_SUCCESS; }
 
 /** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct and put in a NOP function for missing functions. */
-static transcript_t *complete_convertor(transcript_t *handle, transcript_utf_t utf_type) {
+static transcript_t *complete_converter(transcript_t *handle, transcript_utf_t utf_type) {
 	if (handle == NULL)
 		return NULL;
 	handle->get_unicode = _transcript_get_get_unicode(utf_type);
@@ -109,8 +109,8 @@ static transcript_t *complete_convertor(transcript_t *handle, transcript_utf_t u
 	return handle;
 }
 
-/** Open a convertor plugin. */
-static transcript_t *open_convertor(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
+/** Open a converter plugin. */
+static transcript_t *open_converter(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
 	lt_dlhandle handle = NULL;
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
@@ -129,29 +129,29 @@ static transcript_t *open_convertor(const char *normalized_name, const char *rea
 
 	switch (get_iface()) {
 		case TRANSCRIPT_STATE_TABLE_V1: {
-			const convertor_tables_v1_t *(*get_table)(void);
+			const converter_tables_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = _transcript_open_state_table_convertor(get_table(), flags, error)) != NULL) {
+			if ((result = _transcript_open_state_table_converter(get_table(), flags, error)) != NULL) {
 				result->library_handle = handle;
 				return result;
 			}
 			break;
 		}
 		case TRANSCRIPT_FULL_MODULE_V1: {
-			transcript_t *(*open_convertor)(const char *, int flags, transcript_error_t *);
-			if ((open_convertor = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
+			transcript_t *(*open_converter)(const char *, int flags, transcript_error_t *);
+			if ((open_converter = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = open_convertor(normalized_name, flags, error)) != NULL) {
+			if ((result = open_converter(normalized_name, flags, error)) != NULL) {
 				result->library_handle = handle;
 				return result;
 			}
 			break;
 		case TRANSCRIPT_SBCS_TABLE_V1: {
-			const sbcs_convertor_v1_t *(*get_table)(void);
+			const sbcs_converter_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = _transcript_open_sbcs_table_convertor(get_table(), flags, error)) != NULL) {
+			if ((result = _transcript_open_sbcs_table_converter(get_table(), flags, error)) != NULL) {
 				result->library_handle = handle;
 				return result;
 			}
@@ -169,14 +169,14 @@ end_error:
 }
 
 /** @internal
-    @brief Open a convertor.
+    @brief Open a converter.
 
-    This function is called by ::transcript_open_convertor, after locking the
-    internal mutex. This function is provided such that convertors can open
-    other convertors without causing a deadlock.
+    This function is called by ::transcript_open_converter, after locking the
+    internal mutex. This function is provided such that converters can open
+    other converters without causing a deadlock.
 */
-transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
-	transcript_name_desc_t *convertor;
+transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
+	transcript_name_desc_t *converter;
 	char normalized_name[NORMALIZE_NAME_MAX];
 
 	if (utf_type > TRANSCRIPT_UTF32LE || utf_type <= 0) {
@@ -187,15 +187,15 @@ transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_
 
 	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if ((convertor = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-		if (convertor->flags & NAME_DESC_FLAG_DISABLED) {
+	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
+		if (converter->flags & NAME_DESC_FLAG_DISABLED) {
 			if (error != NULL)
-				*error = TRANSCRIPT_CONVERTOR_DISABLED;
+				*error = TRANSCRIPT_CONVERTER_DISABLED;
 			return NULL;
 		}
-		return complete_convertor(open_convertor(convertor->name, convertor->real_name, flags, error), utf_type);
+		return complete_converter(open_converter(converter->name, converter->real_name, flags, error), utf_type);
 	}
-	return complete_convertor(open_convertor(normalized_name, name, flags, error), utf_type);
+	return complete_converter(open_converter(normalized_name, name, flags, error), utf_type);
 }
 
 /** Try to open a file from a database directory.

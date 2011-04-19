@@ -20,7 +20,7 @@
 
 #define TRANSCRIPT_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define TRANSCRIPT_UTF_INCOMPLETE UINT32_C(0xfffffffe)
-/* TRANSCRIPT_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 convertors, only
+/* TRANSCRIPT_UTF_INTERNAL_ERROR can _not_ be returned from the UTF-8/16/32 converters, only
    from UTF-7/GB-18030/SCSU/BOCU-1 decoders. */
 #define TRANSCRIPT_UTF_INTERNAL_ERROR UINT32_C(0xfffffffd)
 /* TRANSCRIPT_UTF_NO_VALUE is only used by the UTF-7 decoder, which may consume a '-'

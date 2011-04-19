@@ -1,10 +1,10 @@
 HIGH PRIORITY
 =============
-- proper testing of all the convertors!!! This means both correct and
+- proper testing of all the converters!!! This means both correct and
   incorrect input!
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
-- provide a Makefile for the ibm ucm files, which bunches similar convertors
+- provide a Makefile for the ibm ucm files, which bunches similar converters
   into a single file
 - provide pkg-config stuf for our own library
 
@@ -21,12 +21,12 @@ MEDIUM PRIORITY
   In both cases, we actually have to convert the bytes we find to a unicode
   character. To do this, we have to
   - figure out which starting state the target bytes use
-  - save the current convertor state.to
-  - set the convertor state.to to the required one for converting the target
+  - save the current converter state.to
+  - set the converter state.to to the required one for converting the target
   - convert the target to unicode
-  - restore the convertor state.to
+  - restore the converter state.to
   - return the found unicode state
-  However, we can also simply provide a short list in each convertor indicating
+  However, we can also simply provide a short list in each converter indicating
   which fallbacks there are. Then we can do a binary search on that and return
   that value. Those are the overrides only, because for the general ones we
   don't include anything.
@@ -39,11 +39,11 @@ MEDIUM PRIORITY
   /etc/transcript in the search path, but that would also mean we will try to
   load modules from there which is not what we want.
 - perhaps we could provide a flag to force consumption of BOMs/generation of
-  BOMs in the unicode convertor
+  BOMs in the unicode converter
 
 LOW PRIORITY
 ============
-- perhaps an iconv like A to B convertor with better semantics and better
+- perhaps an iconv like A to B converter with better semantics and better
   performance (through multiple conversions at a time) should be provided as
   well
 - should TRANSCRIPT_ALLOW_PRIVATE_USE impact the from_unicode conversion as well?

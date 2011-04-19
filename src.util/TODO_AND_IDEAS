@@ -1,7 +1,7 @@
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now. Maybe it's different for each number of
   bits saved. This is not a problem because it can be hard-coded in each of the
-  different routines in state_table_convertor.c
+  different routines in state_table_converter.c
 - check names in different UCM sets against each other for clashes
 - check names for normalization clashes
 

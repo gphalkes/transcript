@@ -385,21 +385,21 @@ not_compat:
 
 void Ucm::check_compatibility(Ucm *other) {
 	if (uconv_class != other->uconv_class)
-		fatal("%s: Convertor in %s has different uconv_class\n", name, other->name);
+		fatal("%s: Converter in %s has different uconv_class\n", name, other->name);
 	if (strcmp(tag_values[MB_MAX].str, other->tag_values[MB_MAX].str) != 0)
-		fatal("%s: Convertor in %s has different mb_cur_max\n", name, other->name);
+		fatal("%s: Converter in %s has different mb_cur_max\n", name, other->name);
 	if (strcmp(tag_values[MB_MIN].str, other->tag_values[MB_MIN].str) != 0)
-		fatal("%s: Convertor in %s has different mb_cur_min\n", name, other->name);
+		fatal("%s: Converter in %s has different mb_cur_min\n", name, other->name);
 	if ((flags & ~INTERNAL_TABLE) != (other->flags & ~INTERNAL_TABLE))
-		fatal("%s: Convertor in %s is incompatible\n", name, other->name);
+		fatal("%s: Converter in %s is incompatible\n", name, other->name);
 	if (strcmp(tag_values[SUBCHAR].str, other->tag_values[SUBCHAR].str) != 0)
-		fatal("%s: Convertor in %s has different subchar\n", name, other->name);
+		fatal("%s: Converter in %s has different subchar\n", name, other->name);
 	if (tag_values[SUBCHAR1].str == NULL) {
 		if (other->tag_values[SUBCHAR1].str != NULL)
-			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
+			fatal("%s: Converter in %s has different subchar1\n", name, other->name);
 	} else {
 		if (other->tag_values[SUBCHAR1].str == NULL || strcmp(tag_values[SUBCHAR1].str, other->tag_values[SUBCHAR1].str) != 0)
-			fatal("%s: Convertor in %s has different subchar1\n", name, other->name);
+			fatal("%s: Converter in %s has different subchar1\n", name, other->name);
 	}
 
 	check_state_machine(other, 0, 0);

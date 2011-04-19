@@ -29,10 +29,10 @@
 int option_verbose;
 bool option_internal_table, option_dump, option_allow_ibm_rotate;
 #ifdef DEBUG
-bool option_abort = true;
+bool option_abort;
 #endif
 const char *option_output_name;
-const char *option_convertor_name;
+const char *option_converter_name;
 extern FILE *yyin;
 
 static vector<Ucm *> completed_ucms;
@@ -97,9 +97,9 @@ static void print_usage(void) {
 	printf("  -i,--internal                 The ucm file is an internal use table\n");
 	printf("  -o<output>, --output=<output> Specify the output file name\n");
 	printf("  -v,--verbose                  Increase verbosity\n");
-	printf("  -n<name>,--name=<name>        Set convertor name to <name>\n");
-	printf("  -c,--concatenate              Concatenate the following convertors\n");
-	printf("       Use this to write multiple unrelated convertors to a single file\n");
+	printf("  -n<name>,--name=<name>        Set converter name to <name>\n");
+	printf("  -c,--concatenate              Concatenate the following converters\n");
+	printf("       Use this to write multiple unrelated converters to a single file\n");
 	printf("  -i,--allow-ibm-rotate         Allow IBM specific rotation of control chars\n");
 	exit(EXIT_SUCCESS);
 }
@@ -267,7 +267,7 @@ uint32_t map_charseq(vector<State *> &states, uint8_t *charseq, int length, int 
 
 	/* Some stateful converters are treated specially: single byte characters can not
 	   be part of a multi-byte sequence && must be defined in state 0. See
-	   process_header_part2() to see what conditions a convertor must satisfy for this
+	   process_header_part2() to see what conditions a converter must satisfy for this
 	   special treatment.
 
 	   The spec is really deficient in this respect: there is no way to know what initial
@@ -342,7 +342,7 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	if (ucms.size() > 1) {
 		if (option_output_name == NULL)
 			fatal("--output/-o is required when using multiple input files\n");
-		if (option_convertor_name != NULL)
+		if (option_converter_name != NULL)
 			fatal("--name/-n is only allowed with a single input file\n");
 	}
 
@@ -431,7 +431,7 @@ PARSE_FUNCTION(parse_options)
 			option_dump = true;
 		END_OPTION
 		OPTION('n', "name", REQUIRED_ARG)
-			option_convertor_name = optArg;
+			option_converter_name = optArg;
 		END_OPTION
 		OPTION('c', "concatenate", NO_ARG)
 			if (ucms.empty())
@@ -440,7 +440,7 @@ PARSE_FUNCTION(parse_options)
 				fatal("--output/-o is required with " OPTFMT "\n", OPTPRARG);
 			analyse_ucm_set(ucms);
 			option_internal_table = false;
-			option_convertor_name = NULL;
+			option_converter_name = NULL;
 		END_OPTION
 		OPTION('i', "allow-ibm-rotate", NO_ARG)
 			option_allow_ibm_rotate = true;

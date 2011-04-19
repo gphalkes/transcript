@@ -12,20 +12,20 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* This convertor implements the ISO-8859-1 and ASCII codepages. */
+/* This converter implements the ISO-8859-1 and ASCII codepages. */
 #include <string.h>
 #include <transcript/moduledefs.h>
 
-/** @struct convertor_state_t
-    @brief Struct holding the state for the ISO-8859-1/ASCII convertor.
+/** @struct converter_state_t
+    @brief Struct holding the state for the ISO-8859-1/ASCII converter.
 */
 typedef struct {
 	transcript_t common;
 	unsigned int charmax;
-} convertor_state_t;
+} converter_state_t;
 
-/** convert_to implementation for ISO-8859-1/ASCII convertors. */
-static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
+/** convert_to implementation for ISO-8859-1/ASCII converters. */
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -48,7 +48,7 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, char 
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** skip_to implementation for ISO-8859-1/ASCII convertors. */
+/** skip_to implementation for ISO-8859-1/ASCII converters. */
 static transcript_error_t to_unicode_skip(transcript_t*handle, char **inbuf, const char const *inbuflimit) {
 	(void) handle;
 
@@ -58,8 +58,8 @@ static transcript_error_t to_unicode_skip(transcript_t*handle, char **inbuf, con
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** convert_from implementation for ISO-8859-1/ASCII convertors. */
-static transcript_error_t from_unicode_conversion(convertor_state_t *handle, char **inbuf, const char const *inbuflimit,
+/** convert_from implementation for ISO-8859-1/ASCII converters. */
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
@@ -106,10 +106,10 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, cha
 }
 
 /** @internal
-    @brief Open an ISO-8859-1/ASCII convertor.
+    @brief Open an ISO-8859-1/ASCII converter.
 */
 static void *open_ascii(const char *name, int flags, transcript_error_t *error) {
-	convertor_state_t *retval;
+	converter_state_t *retval;
 
 	if (strcmp(name, "iso88591") != 0 && strcmp(name, "ascii") != 0) {
 		if (error != NULL)
@@ -117,7 +117,7 @@ static void *open_ascii(const char *name, int flags, transcript_error_t *error) 
 		return NULL;
 	}
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
+	if ((retval = malloc(sizeof(converter_state_t))) == 0) {
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;

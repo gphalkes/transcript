@@ -532,9 +532,9 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 
 void Ucm::write_interface(FILE *output, const char *normalized_name, int variant_nr) {
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_STATE_TABLE_V1; }\n", normalized_name);
-	fprintf(output, "TRANSCRIPT_EXPORT const convertor_tables_v1_t *transcript_get_table_%s(void) {\n", normalized_name);
-	fprintf(output, "\tstatic const convertor_tables_v1_t _convertor = {\n");
-	fprintf(output, "\t\t&convertor_%d, ", unique);
+	fprintf(output, "TRANSCRIPT_EXPORT const converter_tables_v1_t *transcript_get_table_%s(void) {\n", normalized_name);
+	fprintf(output, "\tstatic const converter_tables_v1_t _converter = {\n");
+	fprintf(output, "\t\t&converter_%d, ", unique);
 	if (variant_nr < 0)
 		fprintf(output, "NULL,\n");
 	else
@@ -552,7 +552,7 @@ void Ucm::write_interface(FILE *output, const char *normalized_name, int variant
 	}
 	fprintf(output, "%d\n\t};\n", (int) multi_mappings.size() +
 		(variant_nr < 0 ? 0 : (int) variants[variant_nr]->multi_mappings.size()));
-	fprintf(output, "\treturn &_convertor;\n}\n\n");
+	fprintf(output, "\treturn &_converter;\n}\n\n");
 }
 
 void Ucm::write_table(FILE *output) {
@@ -561,7 +561,7 @@ void Ucm::write_table(FILE *output) {
 	size_t i;
 	char normalized_name[160];
 
-	/* Make sure the variables for this convertor are unique */
+	/* Make sure the variables for this converter are unique */
 	unique++;
 
 	/* Write all entries into a single array. */
@@ -636,7 +636,7 @@ void Ucm::write_table(FILE *output) {
 	if (used_from_unicode_flags != 0)
 		write_from_unicode_flags(output);
 
-	fprintf(output, "static const convertor_v1_t convertor_%d = {\n", unique);
+	fprintf(output, "static const converter_v1_t converter_%d = {\n", unique);
 	fprintf(output, "\tcodepage_states_%d, unicode_states_%d, ", unique, unique);
 	if (shift_sequences.empty())
 		fprintf(output, "NULL, ");

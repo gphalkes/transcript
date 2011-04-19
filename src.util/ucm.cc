@@ -112,7 +112,7 @@ void UcmBase::add_mapping(Mapping *mapping) {
 	}
 }
 
-Ucm::Ucm(const char *_name) : variant(this, option_convertor_name == NULL ? _name : option_convertor_name),
+Ucm::Ucm(const char *_name) : variant(this, option_converter_name == NULL ? _name : option_converter_name),
 		name(_name), flags(option_internal_table ? INTERNAL_TABLE : 0), from_unicode_flags(0), to_unicode_flags(0)
 {
 	for (int i = 0; i < LAST_TAG; i++)
@@ -292,7 +292,7 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 
 	/* Some stateful converters are treated specially: single byte characters can not
 	   be part of a multi-byte sequence && must be defined in state 0. See
-	   process_header_part2() to see what conditions a convertor must satisfy for this
+	   process_header_part2() to see what conditions a converter must satisfy for this
 	   special treatment.
 
 	   The spec is really deficient in this respect: there is no way to know what initial
@@ -393,7 +393,7 @@ void Ucm::remove_private_use_fallbacks(void) {
 	/* The fallbacks from private-use codepoints are only useful if you have
 	   previously converted texts in which the private-use codepoints were actually
 	   saved, and then mostly if the use of private-use codepoints is standardized
-	   between all convertors. The first is something that should not occur because
+	   between all converters. The first is something that should not occur because
 	   private-use codepoints should not be used without context, and the second is
 	   unenforcable. If a unicode codepoint is finally assigned, it should be used
 	   in all relevant codepages. */

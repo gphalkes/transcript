@@ -43,11 +43,11 @@ extern "C" {
 #define TRANSCRIPT_VERSION 0
 
 /** @struct transcript_t
-    An opaque structure describing a convertor and its state.
+    An opaque structure describing a converter and its state.
 */
 typedef struct transcript_t transcript_t;
 
-/** Flags for convertors and conversions. */
+/** Flags for converters and conversions. */
 enum transcript_flags_t {
 	TRANSCRIPT_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
 	TRANSCRIPT_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
@@ -105,7 +105,7 @@ typedef enum {
 	TRANSCRIPT_WRONG_VERSION, /**< Conversion map is of an unsupported version. */
 	TRANSCRIPT_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
 	TRANSCRIPT_DLOPEN_FAILURE, /**< Opening if the plugin failed. */
-	TRANSCRIPT_CONVERTOR_DISABLED, /**< The convertor has been explicitly disabled. */
+	TRANSCRIPT_CONVERTER_DISABLED, /**< The converter has been explicitly disabled. */
 
 	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 
@@ -128,22 +128,22 @@ typedef enum {
 #endif
 
 /** @struct transcript_name_t
-    A structure holding a display name and availability information about a convertor.
+    A structure holding a display name and availability information about a converter.
 */
 typedef struct {
-	_TRANSCRIPT_CONST char *name; /**< The (display) name of the convertor. */
-	int available; /**< A boolean indicating whether the convertor is available.
+	_TRANSCRIPT_CONST char *name; /**< The (display) name of the converter. */
+	int available; /**< A boolean indicating whether the converter is available.
 
 	@note If availability is indicated, a load failure may still occur if the
 	conversion table is corrupt. */
 } transcript_name_t;
 
-/** Required size of a buffer for saving convertor state. */
+/** Required size of a buffer for saving converter state. */
 #define TRANSCRIPT_SAVE_STATE_SIZE 32
 
-TRANSCRIPT_API int transcript_probe_convertor(const char *name);
-TRANSCRIPT_API transcript_t *transcript_open_convertor(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
-TRANSCRIPT_API void transcript_close_convertor(transcript_t *handle);
+TRANSCRIPT_API int transcript_probe_converter(const char *name);
+TRANSCRIPT_API transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
+TRANSCRIPT_API void transcript_close_converter(transcript_t *handle);
 TRANSCRIPT_API int transcript_equal(const char *name_a, const char *name_b);
 TRANSCRIPT_API transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbuf,
 	const char *inbuflimit, char **outbuf, const char *outbuflimit, int flags);

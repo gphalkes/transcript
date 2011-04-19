@@ -43,7 +43,7 @@ static const gb_range_map_t gb_range_map[] = {
 /** @internal
     @brief Write a Unicode codepoint in GB-18030 encoding to a buffer.
 */
-int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
 #else
@@ -107,7 +107,7 @@ int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, 
 /** @internal
     @brief Read a Unicode codepoint in GB-18030 encoding from a buffer.
 */
-uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	char *codepoint_ptr;
 	size_t low, mid, high;
 	const uint8_t *_inbuf;
@@ -130,7 +130,7 @@ uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **in
 		/* TRANSCRIPT_FALLBACK - There should be no fallback mappings in the GB-18030 table.
 		   TRANSCRIPT_ILLEGAL_END - As we do not include the TRANSCRIPT_END_OF_TEXT flag, this should be impossible.
 		   TRANSCRIPT_INTERNAL_ERROR
-		   TRANSCRIPT_PRIVATE_USE - Should not happen because we told the convertor that private use mappings are alright.
+		   TRANSCRIPT_PRIVATE_USE - Should not happen because we told the converter that private use mappings are alright.
 		   TRANSCRIPT_NO_SPACE - We provided enough space for the single character. */
 		default:
 			return TRANSCRIPT_UTF_INTERNAL_ERROR;

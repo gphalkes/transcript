@@ -130,7 +130,7 @@ static const uint8_t value_to_base64[64] = {
 /** @internal
     @brief Write a unicode character to a buffer, using UTF-7 encoding.
 */
-int _transcript_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+int _transcript_put_utf7(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	uint_fast32_t low_surrogate = 0;
 
 next_surrogate:
@@ -165,9 +165,9 @@ next_surrogate:
 }
 
 /** @internal
-    @brief Flush the remaining state of the UTF-7 convertor to the output buffer.
+    @brief Flush the remaining state of the UTF-7 converter to the output buffer.
 */
-int _transcript_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
+int _transcript_from_unicode_flush_utf7(converter_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	switch (handle->state.utf7_put_mode) {
 		case UTF7_MODE_DIRECT:
 			break;
@@ -193,7 +193,7 @@ int _transcript_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf
 /** @internal
     @brief Read a codepoint from a UTF-7 encoded buffer.
 */
-uint_fast32_t _transcript_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	uint_fast32_t codepoint, high_surrogate = 0;
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t next_mode;

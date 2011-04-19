@@ -13,12 +13,12 @@
 */
 
 
-/* What do we need to know in the convertor:
+/* What do we need to know in the converter:
    - which sets correspond to GL and GR, and C0 and C1 (if these are actually switchable for any of the supported sets)
    - which sequence selects which set for G0 through G3
    per set:
    - #bytes per char
-   - state table convertor
+   - state table converter
 */
 #include <string.h>
 #include <search.h>
@@ -26,7 +26,7 @@
 #include <transcript/static_assert.h>
 #include <transcript/moduledefs.h>
 
-/** Flags for describing state table based convertors. */
+/** Flags for describing state table based converters. */
 enum {
 	STC_FLAG_WRITE = (1<<0),
 	STC_FLAG_ASCII = (1<<1),
@@ -35,7 +35,7 @@ enum {
 	STC_FLAG_LARGE_SET = (1<<7)
 };
 
-/** Shift types used in the ISO-2022 convertor. */
+/** Shift types used in the ISO-2022 converter. */
 enum {
 	LS0 = (1<<0),
 	LS1 = (1<<1),
@@ -45,7 +45,7 @@ enum {
 	SS3 = (1<<5),
 };
 
-/** Constants for the different implemented ISO-2022 convertors. */
+/** Constants for the different implemented ISO-2022 converters. */
 enum {
 	ISO2022_JP,
 	ISO2022_JP1,
@@ -59,7 +59,7 @@ enum {
 };
 
 /** @struct name_to_iso2022type
-    Struct holding the string to constant mapping for the different implemented ISO-2022 convertors. */
+    Struct holding the string to constant mapping for the different implemented ISO-2022 converters. */
 typedef struct {
 	const char *name;
 	int iso2022_type;
@@ -83,21 +83,21 @@ static const name_to_iso2022type map[] = {
 
 typedef struct _transcript_iso2022_stc_handle_t stc_handle_t;
 
-/** Struct holding a state table convertor and associated information. */
+/** Struct holding a state table converter and associated information. */
 struct _transcript_iso2022_stc_handle_t {
-	transcript_t *stc; /**< Handle for the table based convertor. */
+	transcript_t *stc; /**< Handle for the table based converter. */
 	uint_fast8_t bytes_per_char; /**< Bytes per character code. */
 	uint_fast8_t seq_len; /**< Length of the escape sequence used to shift. */
 	char escape_seq[7]; /**< The escape sequence itselft. */
 	uint_fast8_t high_bit; /**< Whether the stc has the high bit set for characters. */
-	uint_fast8_t flags; /**< Flags indicating how to use the state table convertor. */
+	uint_fast8_t flags; /**< Flags indicating how to use the state table converter. */
 	stc_handle_t *prev, *next; /**< Doubly-linked list ptrs. */
 };
 
 /*FIXME: change the references to single byte ints such the the state size can
   be reduced. */
 /** @struct state_t
-    Structure holding the shift state of an ISO-2022 convertor. */
+    Structure holding the shift state of an ISO-2022 converter. */
 typedef struct {
 	stc_handle_t *g_to[4]; /**< Shifted-in sets. */
 	stc_handle_t *g_from[4]; /**< Shifted-in sets. */
@@ -106,7 +106,7 @@ typedef struct {
 } state_t;
 
 /** @struct save_state_t
-    Structure holding the shift state of an ISO-2022 convertor for save/load purposes. */
+    Structure holding the shift state of an ISO-2022 converter for save/load purposes. */
 typedef struct {
 	uint8_t g_to[4]; /**< Shifted-in sets. */
 	uint8_t g_from[4]; /**< Shifted-in sets. */
@@ -118,16 +118,16 @@ typedef struct {
 /* Make sure that the saved state will fit in an allocated block. */
 static_assert(sizeof(save_state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
-typedef struct convertor_state_t convertor_state_t;
-typedef void (*reset_state_func_t)(convertor_state_t *handle);
+typedef struct converter_state_t converter_state_t;
+typedef void (*reset_state_func_t)(converter_state_t *handle);
 
-/** @struct convertor_state_t
-    Structure holding the data and the state of a state table convertor. */
-struct convertor_state_t {
+/** @struct converter_state_t
+    Structure holding the data and the state of a state table converter. */
+struct converter_state_t {
 	transcript_t common;
-	stc_handle_t *g_initial[4]; /**< Initial sets of the convertor (for resetting purposes). */
+	stc_handle_t *g_initial[4]; /**< Initial sets of the converter (for resetting purposes). */
 	stc_handle_t *g_sets[4]; /**< Linked lists of possible tables. */
-	stc_handle_t *ascii; /**< The ASCII convertor. */
+	stc_handle_t *ascii; /**< The ASCII converter. */
 	reset_state_func_t reset_state; /**< Function called after a NL character is encountered. */
 	state_t state;
 	int iso2022_type;
@@ -135,7 +135,7 @@ struct convertor_state_t {
 };
 
 /** @struct stc_descriptor_t
-    Structure holding the information needed to instantiate a state table convertor. */
+    Structure holding the information needed to instantiate a state table converter. */
 typedef struct {
 	const char *name;
 	uint_fast8_t bytes_per_char;
@@ -191,12 +191,12 @@ static stc_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };
 
 static const char *ls[] = { "\x0f", "\x0e", "\x1b\x6e", "\x1b\x6f", "\x1b\x4e", "\x1b\x4f" };
 
-static void to_unicode_reset(convertor_state_t *handle);
-static void from_unicode_reset(convertor_state_t *handle);
-static void close_convertor(convertor_state_t *handle);
+static void to_unicode_reset(converter_state_t *handle);
+static void from_unicode_reset(converter_state_t *handle);
+static void close_converter(converter_state_t *handle);
 
-/** Check an escape sequence for validity within this convertor. */
-static int check_escapes(convertor_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip) {
+/** Check an escape sequence for validity within this converter. */
+static int check_escapes(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip) {
 	stc_handle_t *ptr;
 	const uint8_t *_inbuf = (const uint8_t *) (*inbuf + 1);
 
@@ -255,8 +255,8 @@ sequence_found:
 		return result; \
 } while (0)
 
-/** convert_to implementation for ISO-2022 convertors. */
-static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_to implementation for ISO-2022 converters. */
+static int to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -331,7 +331,7 @@ static int to_unicode_conversion(convertor_state_t *handle, const char **inbuf, 
 			PUT_UNICODE(*_inbuf);
 			_inbuf++;
 		} else if (*_inbuf & 0x80) {
-			/* All ISO-2022 convertors implemented here are 7 bit only. */
+			/* All ISO-2022 converters implemented here are 7 bit only. */
 			return TRANSCRIPT_ILLEGAL;
 		} else {
 			char buffer[8]; /*FIXME: is this big enough?*/
@@ -376,8 +376,8 @@ incomplete_char:
 	return TRANSCRIPT_INCOMPLETE;
 }
 
-/** skip_to implementation for ISO-2022 convertors. */
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+/** skip_to implementation for ISO-2022 converters. */
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	uint_fast8_t state;
 
 	if ((*inbuf) == inbuflimit)
@@ -401,8 +401,8 @@ static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char 
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** reset_to implementation for ISO-2022 convertors. */
-static void to_unicode_reset(convertor_state_t *handle) {
+/** reset_to implementation for ISO-2022 converters. */
+static void to_unicode_reset(converter_state_t *handle) {
 	memcpy(handle->state.g_to, handle->g_initial, sizeof(handle->g_initial));
 	handle->state.to = 0;
 }
@@ -417,7 +417,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
 } while (0)
 
 /** Switch to named output set.
-    @param handle The current ISO-2022 convertor.
+    @param handle The current ISO-2022 converter.
     @param stc The output set to switch to.
     @param g The index of the set to switch.
     @param outbuf &nbsp;
@@ -426,7 +426,7 @@ static void to_unicode_reset(convertor_state_t *handle) {
     This function both updates the @a handle and write the associated sequence
     to the output.
 */
-static transcript_error_t switch_to_set(convertor_state_t *handle, stc_handle_t *stc, uint_fast8_t g,
+static transcript_error_t switch_to_set(converter_state_t *handle, stc_handle_t *stc, uint_fast8_t g,
 		char **outbuf, const char const *outbuflimit)
 {
 	if (handle->state.g_from[g] != stc) {
@@ -452,8 +452,8 @@ static transcript_error_t switch_to_set(convertor_state_t *handle, stc_handle_t 
 } while (0)
 
 
-/** convert_from implementation for ISO-2022 convertors. */
-static transcript_error_t from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_from implementation for ISO-2022 converters. */
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint32_t codepoint;
@@ -482,7 +482,7 @@ static transcript_error_t from_unicode_conversion(convertor_state_t *handle, con
 			case 0x0d:
 			case 0x0a:
 				/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
-				   This may be a bit too much, it is not wrong, and some convertors may
+				   This may be a bit too much, it is not wrong, and some converters may
 				   actually be expecting this. */
 				SWITCH_TO_SET(handle->ascii, 0);
 				handle->reset_state(handle);
@@ -590,20 +590,20 @@ next_codepoint:
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** flush_from implementation for ISO-2022 convertors. */
-static transcript_error_t from_unicode_flush(convertor_state_t *handle, char **outbuf, const char const *outbuflimit) {
+/** flush_from implementation for ISO-2022 converters. */
+static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf, const char const *outbuflimit) {
 	SWITCH_TO_SET(handle->ascii, 0);
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** reset_from implementation for ISO-2022 convertors. */
-static void from_unicode_reset(convertor_state_t *handle) {
+/** reset_from implementation for ISO-2022 converters. */
+static void from_unicode_reset(converter_state_t *handle) {
 	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
 	handle->state.from = 0;
 }
 
-/** save implementation for ISO-2022 convertors. */
-static void save_iso2022_state(convertor_state_t *handle, save_state_t *save) {
+/** save implementation for ISO-2022 converters. */
+static void save_iso2022_state(converter_state_t *handle, save_state_t *save) {
 	stc_handle_t *ptr;
 	int i;
 
@@ -626,8 +626,8 @@ static void save_iso2022_state(convertor_state_t *handle, save_state_t *save) {
 	}
 }
 
-/** load implementation for ISO-2022 convertors. */
-static void load_iso2022_state(convertor_state_t *handle, save_state_t *save) {
+/** load implementation for ISO-2022 converters. */
+static void load_iso2022_state(converter_state_t *handle, save_state_t *save) {
 	int i, j;
 	handle->state.to = save->to;
 	handle->state.from = save->from;
@@ -642,18 +642,18 @@ static void load_iso2022_state(convertor_state_t *handle, save_state_t *save) {
 	}
 }
 
-/** Do-nothing function for reset_state in ::convertor_state_t. */
-static void reset_state_nop(convertor_state_t *handle) { (void) handle; };
-/** Function which resets the states to the initial state for reset_state in ::convertor_state_t. */
-static void reset_state_cn(convertor_state_t *handle) {
+/** Do-nothing function for reset_state in ::converter_state_t. */
+static void reset_state_nop(converter_state_t *handle) { (void) handle; };
+/** Function which resets the states to the initial state for reset_state in ::converter_state_t. */
+static void reset_state_cn(converter_state_t *handle) {
 	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
 };
 
-/** Load a convertor (as oposed to probing for it).
+/** Load a converter (as oposed to probing for it).
 
-    Used internally to load the different convertors used by ISO-2022.
+    Used internally to load the different converters used by ISO-2022.
 */
-static bool real_load(convertor_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
+static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
 	stc_handle_t *stc_handle, *extra_handle;
 	transcript_t *ext_handle;
 	uint_fast8_t idx = 0;
@@ -664,15 +664,15 @@ static bool real_load(convertor_state_t *handle, stc_descriptor_t *desc, int g, 
 		return TRANSCRIPT_INTERNAL_ERROR;
 
 	if (desc->name == NULL)
-		ext_handle = transcript_open_convertor_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
+		ext_handle = transcript_open_converter_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
 	else
-		ext_handle = transcript_open_convertor_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
+		ext_handle = transcript_open_converter_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
 		return false;
 
 	if ((stc_handle = malloc(sizeof(stc_handle_t))) == NULL) {
-		transcript_close_convertor(ext_handle);
+		transcript_close_converter(ext_handle);
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return false;
@@ -693,12 +693,12 @@ static bool real_load(convertor_state_t *handle, stc_descriptor_t *desc, int g, 
 	stc_handle->next = handle->g_sets[g];
 	handle->g_sets[g] = stc_handle;
 
-	/* Some convertors have a short non-compliant sequence as well a strictly
+	/* Some converters have a short non-compliant sequence as well a strictly
 	   compliant escape sequence. Depending on the STC_FLAGS_SHORT_SEQ, either
 	   the short sequence or the long sequence is used for from-Unicode conversions. */
 	if (desc->final_byte < 0x43 && desc->bytes_per_char > 1) {
 		if ((extra_handle = malloc(sizeof(stc_handle_t))) == NULL) {
-			transcript_close_convertor(ext_handle);
+			transcript_close_converter(ext_handle);
 			free(stc_handle);
 			if (error != NULL)
 				*error = TRANSCRIPT_OUT_OF_MEMORY;
@@ -719,29 +719,29 @@ static bool real_load(convertor_state_t *handle, stc_descriptor_t *desc, int g, 
 	return true;
 }
 
-/** Probe the availability of a convertor. */
-static bool probe(convertor_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
+/** Probe the availability of a converter. */
+static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
 	(void) handle;
 	(void) g;
 	(void) error;
 	(void) flags;
 
 	if (desc->name == NULL)
-		return transcript_probe_convertor_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591");
+		return transcript_probe_converter_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591");
 	else
-		return transcript_probe_convertor_nolock(desc->name);
+		return transcript_probe_converter_nolock(desc->name);
 }
 
-/** Convenience macro which tries to load a convertor and exits the function if it is not available. */
+/** Convenience macro which tries to load a converter and exits the function if it is not available. */
 #define DO_LOAD(handle, desc, g, error, _write) do { \
 	if (!load((handle), (desc), (g), (error), (_write))) \
 		return false; \
 } while (0)
 
-typedef bool (*load_table_func)(convertor_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags);
+typedef bool (*load_table_func)(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags);
 
-/** Load the convertors required for a specific ISO-2022 convertor. */
-static bool do_load(load_table_func load, convertor_state_t *handle, int type, transcript_error_t *error) {
+/** Load the converters required for a specific ISO-2022 converter. */
+static bool do_load(load_table_func load, converter_state_t *handle, int type, transcript_error_t *error) {
 		switch (type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
 		   JIS X 0213 has two planes: the first plane which is a superset of
@@ -866,10 +866,10 @@ static int compare(const char *key, const name_to_iso2022type *ptr) {
 }
 
 /** @internal
-    @brief Open an ISO-2022 convertor.
+    @brief Open an ISO-2022 converter.
 */
 TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, transcript_error_t *error) {
-	convertor_state_t *retval;
+	converter_state_t *retval;
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
@@ -881,7 +881,7 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 		return NULL;
 	}
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == NULL) {
+	if ((retval = malloc(sizeof(converter_state_t))) == NULL) {
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
@@ -899,12 +899,12 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 	retval->reset_state = reset_state_nop;
 
 	if (!do_load(real_load, retval, ptr->iso2022_type, error)) {
-		close_convertor(retval);
+		close_converter(retval);
 		return NULL;
 	}
-	/* Load ASCII, which all convertors need. */
+	/* Load ASCII, which all converters need. */
 	if (!real_load(retval, &ascii, 0, error, true)) {
-		close_convertor(retval);
+		close_converter(retval);
 		return NULL;
 	}
 	retval->ascii = retval->g_sets[0];
@@ -917,7 +917,7 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 	retval->common.skip_to = (skip_func_t) to_unicode_skip;
 	retval->common.reset_to = (reset_func_t) to_unicode_reset;
 	retval->common.flags = flags;
-	retval->common.close = (close_func_t) close_convertor;
+	retval->common.close = (close_func_t) close_converter;
 	retval->common.save = (save_load_func_t) save_iso2022_state;
 	retval->common.load = (save_load_func_t) load_iso2022_state;
 
@@ -938,15 +938,15 @@ TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
 	return do_load(probe, NULL, ptr->iso2022_type, &error);
 }
 
-/** close implementation for ISO-2022 convertors. */
-static void close_convertor(convertor_state_t *handle) {
+/** close implementation for ISO-2022 converters. */
+static void close_converter(converter_state_t *handle) {
 	stc_handle_t *ptr, *next;
 	size_t i;
 
 	for (i = 0; i < 4; i++) {
 		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = next) {
 			if (!(ptr->flags & STC_FLAGS_DUPSTC))
-				transcript_close_convertor(ptr->stc);
+				transcript_close_converter(ptr->stc);
 			next = ptr->next;
 			free(ptr);
 		}

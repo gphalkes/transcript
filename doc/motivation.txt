@@ -21,7 +21,7 @@ iconv
 
 This is the most widely available interface. However, it suffers from several
 serious issues regarding control of the conversion. First of all, there is no
-standardized list of names which are accepted by a convertor. This would not be
+standardized list of names which are accepted by a converter. This would not be
 a problem if character sets had a unique name. However, many character sets go
 by different aliases. For example, even the well known ASCII character set is
 known by several names, such as ANSI_X3.4-1968, ISO646-US and others.
@@ -77,7 +77,7 @@ interface does allow great control over what should happen when characters are
 encountered which can not be converted precisely. However, the library has
 several drawbacks:
 
-* Several convertors have an IBM specific quirk: these ASCII based convertors
+* Several converters have an IBM specific quirk: these ASCII based converters
   map the Unicode codpoints 1A, 1C and 7F not to the same values in ASCII, but
   to 1C, 7F and 1A respectively. The cited reason is that IBM-PC operating
   systems use 1A as the end of file marker. However, this only holds for the
@@ -101,7 +101,7 @@ UTF-32/UCS-4.
 Conclusion
 ==========
 
-The currently available character-set convertors do not provide the required
+The currently available character-set converters do not provide the required
 control and flexibility I require for my purposes. Therefore, I created
 libtranscript which meets my requirements. Hopefully, this will be useful
 to others as well.

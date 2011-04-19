@@ -27,10 +27,10 @@ typedef void (*save_load_func_t)(transcript_t *handle, void *state);
 struct transcript_t {
 	conversion_func_t convert_to;
 	conversion_func_t convert_from;
-	/* flush_func_t flush_to; */ /* The same for all convertors! */
+	/* flush_func_t flush_to; */ /* The same for all converters! */
 	flush_func_t flush_from;
 	skip_func_t skip_to;
-	/* skip_func_t skip_from; */ /* The same for all convertors! */
+	/* skip_func_t skip_from; */ /* The same for all converters! */
 	put_unicode_func_t put_unicode;
 	get_unicode_func_t get_unicode;
 	reset_func_t reset_to;
@@ -43,7 +43,7 @@ struct transcript_t {
 };
 
 /* FIXME: rename! */
-TRANSCRIPT_API transcript_t *transcript_open_convertor_nolock(const char *name, transcript_utf_t utf_type,
+TRANSCRIPT_API transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_t utf_type,
 	int flags, transcript_error_t *error);
 
 #endif

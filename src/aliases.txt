@@ -1,23 +1,23 @@
 # Aliases for character sets, derived from the list distributed with ICU
 
 # The format of this file is as follows:
-# Each line contains a convertor, followed by a list of aliases. The preferred
+# Each line contains a converter, followed by a list of aliases. The preferred
 # names for display purposes are marked with a leading asterisk (*). If none of
-# the aliases is marked as display name, the name of the convertor is used.
+# the aliases is marked as display name, the name of the converter is used.
 # Note that names will be normalized, so for example the names IBM-1201 and
 # ibm1201 will be considered equal (see the libtranscript documentation for
-# details on normalization). The convertor name has to match the file-system
-# name of the convertor exactly though.
+# details on normalization). The converter name has to match the file-system
+# name of the converter exactly though.
 
-# Convertor names must start in column 1. Lines can be continued by indenting
+# Converter names must start in column 1. Lines can be continued by indenting
 # the second and later lines with any amount of white-space.
 
-# Some convertors need special handling. For this purpose, there are several
+# Some converters need special handling. For this purpose, there are several
 # special tags that may be used in the list of aliases. These are:
-# :disable        Disables this convertor. Note that this also prohibits any
-#                 other convertor with any of the names specified.
-# :probe_load     The convertor must be loaded and the probe routine of the
-#                 convertor must be called to establish its presence. Normal
+# :disable        Disables this converter. Note that this also prohibits any
+#                 other converter with any of the names specified.
+# :probe_load     The converter must be loaded and the probe routine of the
+#                 converter must be called to establish its presence. Normal
 #                 operation merely checks the presence of the .tct file.
 
 # Unicode encodings:
@@ -53,7 +53,7 @@
 *UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 
 # These special names force a particular endianess on output, but further are
-# equivalent to the UTF-16 and UTF-32 convertors.
+# equivalent to the UTF-16 and UTF-32 converters.
 *x-UTF-16BE-BOM *UnicodeBig
 *x-UTF-16LE-BOM *UnicodeLittle
 x-UTF-32BE-BOM

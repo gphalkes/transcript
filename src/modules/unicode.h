@@ -11,15 +11,15 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#ifndef UNICODE_CONVERTOR_H
-#define UNICODE_CONVERTOR_H
+#ifndef TRANSCRIPT_UNICODE_H
+#define TRANSCRIPT_UNICODE_H
 
 #include <transcript/moduledefs.h>
 
-typedef struct convertor_state_t convertor_state_t;
+typedef struct converter_state_t converter_state_t;
 
-typedef int (*put_func_t)(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-typedef uint_fast32_t (*get_func_t)(convertor_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip);
+typedef int (*put_func_t)(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+typedef uint_fast32_t (*get_func_t)(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip);
 
 typedef struct {
 	uint_fast32_t utf7_put_save;
@@ -27,7 +27,7 @@ typedef struct {
 	uint_fast8_t utf7_put_mode;
 } state_t;
 
-struct convertor_state_t {
+struct converter_state_t {
 	transcript_t common;
 	put_unicode_func_t from_unicode_put;
 	get_unicode_func_t to_unicode_get;
@@ -49,11 +49,11 @@ enum {
 	UTF7_MODE_BASE64_4
 };
 
-TRANSCRIPT_LOCAL int _transcript_put_utf7(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf7(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
-TRANSCRIPT_LOCAL int _transcript_from_unicode_flush_utf7(convertor_state_t *handle, char **outbuf, const char const *outbuflimit);
+TRANSCRIPT_LOCAL int _transcript_put_utf7(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL int _transcript_from_unicode_flush_utf7(converter_state_t *handle, char **outbuf, const char const *outbuflimit);
 
-TRANSCRIPT_LOCAL int _transcript_put_gb18030(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_gb18030(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
+TRANSCRIPT_LOCAL int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip);
 
 #endif

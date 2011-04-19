@@ -315,7 +315,7 @@ extern "C" void fatal(const char *fmt, ...);
 #define OOM() fatal("Out of memory\n")
 #define ASSERT(x) do { if (!(x)) PANIC(); } while (0)
 
-extern const char *option_convertor_name;
+extern const char *option_converter_name;
 extern int option_verbose;
 extern bool option_internal_table, option_allow_ibm_rotate;
 

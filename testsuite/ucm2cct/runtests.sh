@@ -7,6 +7,8 @@ if [ $? -eq 0 ] ; then
         mv -f testlog.txt "testlog_$LASTLOG_TIME.txt"
 fi
 
+make -C ../../src.util --no-print-directory ucm2ltc
+
 [ -d work ] || mkdir work
 
 (

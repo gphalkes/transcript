@@ -117,7 +117,7 @@ static void make_links(const char *name) {
 	}
 
 	if ((handle = lt_dlopen(base_name)) == NULL) {
-		fprintf(stderr, "%s: error loading convertor: %s\n", name, lt_dlerror());
+		fprintf(stderr, "%s: error loading converter: %s\n", name, lt_dlerror());
 		free(base_name);
 		return;
 	}
@@ -134,7 +134,7 @@ static void make_links(const char *name) {
 
 	if ((get_namelist = lt_dlsym(handle, sym_name)) == NULL) {
 		if (option_verbose)
-			fprintf(stderr, "%s: convertor does not provide a name list %s\n", name, sym_name);
+			fprintf(stderr, "%s: converter does not provide a name list %s\n", name, sym_name);
 		lt_dlclose(handle);
 		free(sym_name);
 		return;

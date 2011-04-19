@@ -12,7 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* This convertor is a wrapper around the functions in utf.c and other get/put
+/* This converter is a wrapper around the functions in utf.c and other get/put
    functions for unicode encodings, such as UTF-7 and GB-18030. */
 #include <string.h>
 #include <search.h>
@@ -24,7 +24,7 @@ static_assert(sizeof(state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
 /** @internal
     @struct name_to_utftype
-    @brief Struct to hold mappings from strings to numeric type description for Unicode convertors.
+    @brief Struct to hold mappings from strings to numeric type description for Unicode converters.
 */
 typedef struct {
 	const char *name;
@@ -50,22 +50,22 @@ static const name_to_utftype map[] = {
 	{ "xutf32lebom", _TRANSCRIPT_UTF32LE_BOM },
 };
 
-static void close_convertor(convertor_state_t *handle);
+static void close_converter(converter_state_t *handle);
 
 /** Wrapper routine for @c handle->common.put_unicode to provide a uniform interface across all @c put_xxx routines. */
-static int put_common(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static int put_common(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	return handle->common.put_unicode(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->common.get_unicode to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_common(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t get_common(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	return handle->common.get_unicode(inbuf, inbuflimit, skip);
 }
 /** Wrapper routine for @c handle->from_unicode_put to provide a uniform interface across all @c put_xxx routines. */
-static int put_from_unicode(convertor_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static int put_from_unicode(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
 	return handle->from_unicode_put(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->to_unicode_get to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_to_unicode(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
 	return handle->to_unicode_get(inbuf, inbuflimit, skip);
 }
 
@@ -81,7 +81,7 @@ static uint_fast32_t get_to_unicode(convertor_state_t *handle, const char **inbu
 
     This is used both for @c to_unicode and @c from_unicode.
 */
-static transcript_error_t unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static transcript_error_t unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags, get_func_t get_unicode, put_func_t put_unicode)
 {
 	uint_fast32_t codepoint;
@@ -135,8 +135,8 @@ static transcript_error_t unicode_conversion(convertor_state_t *handle, const ch
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** convert_to implementation for Unicode convertors. */
-static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_to implementation for Unicode converters. */
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
@@ -173,15 +173,15 @@ static transcript_error_t to_unicode_conversion(convertor_state_t *handle, const
 	return unicode_conversion(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags, handle->to_get, put_common);
 }
 
-/** skip_to implementation for Unicode convertors. */
-static transcript_error_t to_unicode_skip(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+/** skip_to implementation for Unicode converters. */
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
 	if (handle->to_unicode_get(inbuf, inbuflimit, true) == TRANSCRIPT_UTF_INCOMPLETE)
 		return TRANSCRIPT_INCOMPLETE;
 	return TRANSCRIPT_SUCCESS;
 }
 
-/** reset_to implementation for Unicode convertors. */
-static void to_unicode_reset(convertor_state_t *handle) {
+/** reset_to implementation for Unicode converters. */
+static void to_unicode_reset(converter_state_t *handle) {
 	switch (handle->utf_type) {
 		case TRANSCRIPT_UTF16:
 			handle->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
@@ -197,8 +197,8 @@ static void to_unicode_reset(convertor_state_t *handle) {
 	}
 }
 
-/** convert_from implementation for Unicode convertors. */
-static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf, const char const *inbuflimit,
+/** convert_from implementation for Unicode converters. */
+static int from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	if (inbuf == NULL || *inbuf == NULL)
@@ -213,21 +213,21 @@ static int from_unicode_conversion(convertor_state_t *handle, const char **inbuf
 		get_common, handle->from_put);
 }
 
-/** reset_from implementation for Unicode convertors. */
-static void from_unicode_reset(convertor_state_t *handle) {
+/** reset_from implementation for Unicode converters. */
+static void from_unicode_reset(converter_state_t *handle) {
 	if (handle->utf_type == _TRANSCRIPT_UTF7) {
 		handle->state.utf7_put_mode = UTF7_MODE_DIRECT;
 		handle->state.utf7_put_save = 0;
 	}
 }
 
-/** save implementation for Unicode convertors. */
-static void save_state(convertor_state_t *handle, void *state) {
+/** save implementation for Unicode converters. */
+static void save_state(converter_state_t *handle, void *state) {
 	memcpy(state, &handle->state, sizeof(state_t));
 }
 
-/** load implementation for Unicode convertors. */
-static void load_state(convertor_state_t *handle, void *state) {
+/** load implementation for Unicode converters. */
+static void load_state(converter_state_t *handle, void *state) {
 	memcpy(&handle->state, state, sizeof(state_t));
 }
 
@@ -237,13 +237,13 @@ static int compare(const char *key, const name_to_utftype *ptr) {
 }
 
 /** @internal
-    @brief Create a convertor handle for a Unicode convertor
-    @param name The name of the convertor.
-    @param flags Flags for the convertor.
+    @brief Create a converter handle for a Unicode converter
+    @param name The name of the converter.
+    @param flags Flags for the converter.
     @param error The location to store an error.
 */
 static transcript_t *open_unicode(const char *name, int flags, transcript_error_t *error) {
-	convertor_state_t *retval;
+	converter_state_t *retval;
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
@@ -255,7 +255,7 @@ static transcript_t *open_unicode(const char *name, int flags, transcript_error_
 		return NULL;
 	}
 
-	if ((retval = malloc(sizeof(convertor_state_t))) == 0) {
+	if ((retval = malloc(sizeof(converter_state_t))) == 0) {
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
@@ -317,11 +317,11 @@ static transcript_t *open_unicode(const char *name, int flags, transcript_error_
 
 	switch (retval->utf_type) {
 		case _TRANSCRIPT_GB18030:
-			if ((retval->gb18030_table_conv = transcript_open_convertor_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
+			if ((retval->gb18030_table_conv = transcript_open_converter_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
 				free(retval);
 				return NULL;
 			}
-			retval->common.close = (close_func_t) close_convertor;
+			retval->common.close = (close_func_t) close_converter;
 			retval->gb18030_table_conv->get_unicode = _transcript_get_get_unicode(_TRANSCRIPT_UTF32_NO_CHECK);
 			retval->to_get = _transcript_get_gb18030;
 			retval->from_put = _transcript_put_gb18030;
@@ -356,14 +356,14 @@ TRANSCRIPT_EXPORT bool transcript_probe_gb18030(const char *name) {
 		return false;
 
 	if (ptr->utf_type == _TRANSCRIPT_GB18030)
-		return transcript_probe_convertor_nolock("gb18030table");
+		return transcript_probe_converter_nolock("gb18030table");
 
 	return true;
 }
 
-/** close implementation for Unicode convertors. */
-static void close_convertor(convertor_state_t *handle) {
-	transcript_close_convertor(handle->gb18030_table_conv);
+/** close implementation for Unicode converters. */
+static void close_converter(converter_state_t *handle) {
+	transcript_close_converter(handle->gb18030_table_conv);
 }
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {

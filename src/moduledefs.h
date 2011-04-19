@@ -28,8 +28,8 @@ extern "C" {
 
 enum {
 	TRANSCRIPT_FULL_MODULE_V1 = 1, /* Provides all functions itself. */
-	TRANSCRIPT_STATE_TABLE_V1, /* Provides a set of state tables. See state_table_convertor for details. */
-	TRANSCRIPT_SBCS_TABLE_V1 /* Simple set of tables for SBCSs. See sbcs_convertor for details. */
+	TRANSCRIPT_STATE_TABLE_V1, /* Provides a set of state tables. See state_table_converter for details. */
+	TRANSCRIPT_SBCS_TABLE_V1 /* Simple set of tables for SBCSs. See sbcs_converter for details. */
 };
 
 enum {
@@ -103,15 +103,15 @@ typedef struct {
 	const uint8_t subchar1;
 	const uint8_t nr_shift_states;
 	const uint8_t single_size;
-} convertor_v1_t;
+} converter_v1_t;
 
 typedef struct {
-	const convertor_v1_t *convertor;
+	const converter_v1_t *converter;
 	const variant_v1_t *variant;
 	const multi_mapping_v1_t * const *codepage_sorted_multi_mappings;
 	const multi_mapping_v1_t * const *codepoint_sorted_multi_mappings;
 	uint32_t nr_multi_mappings;
-} convertor_tables_v1_t;
+} converter_tables_v1_t;
 
 typedef struct {
 	const uint8_t *codepoint_to_byte_flags;
@@ -122,12 +122,12 @@ typedef struct {
 	const uint16_t byte_to_codepoint_flags[32];
 	const uint8_t flags;
 	const uint8_t subchar;
-} sbcs_convertor_v1_t;
+} sbcs_converter_v1_t;
 
 TRANSCRIPT_API uint32_t transcript_get_generic_fallback(uint32_t codepoint);
 TRANSCRIPT_API transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
 		const char *outbuflimit, int flags);
-TRANSCRIPT_API int transcript_probe_convertor_nolock(const char *name);
+TRANSCRIPT_API int transcript_probe_converter_nolock(const char *name);
 
 #define HANDLE_UNASSIGNED(_code) \
 	switch (transcript_handle_unassigned((transcript_t *) handle, codepoint, outbuf, outbuflimit, flags)) { \

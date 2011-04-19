@@ -24,8 +24,8 @@ static void fatal(const char *fmt, ...) {
 }
 
 static void print_usage(void) {
-	printf("Usage: check_convertor [<options>] <convertor name>\n");
-	printf(" -t<name>,--transcript-name=<name>  Use <name> as convertor name for transcript\n");
+	printf("Usage: check_converter [<options>] <converter name>\n");
+	printf(" -t<name>,--transcript-name=<name>  Use <name> as converter name for transcript\n");
 	printf(" -u,--unicode                       Ignore surrogates and non-characters\n");
 	printf(" -p,--no-private-use                Ignore private-use mappings\n");
 	printf(" -f,--check-fallbacks               Compare fallbacks as well\n");
@@ -62,10 +62,10 @@ PARSE_FUNCTION(parse_options)
 		if (option_iconv_name == NULL)
 			option_iconv_name = optcurrent;
 		else
-			fatal("Only one convertor name allowed\n");
+			fatal("Only one converter name allowed\n");
 	END_OPTIONS
 	if (option_iconv_name == NULL)
-		fatal("No convertor specified\n");
+		fatal("No converter specified\n");
 	if (option_transcript_name == NULL)
 		option_transcript_name = option_iconv_name;
 END_FUNCTION
@@ -178,13 +178,13 @@ int main(int argc, char *argv[]) {
 	parse_options(argc, argv);
 
 	if ((iconv_handle = iconv_open(option_iconv_name, htons(1) == 1 ? "UTF-32BE" : "UTF-32LE")) == (iconv_t) -1)
-		fatal("Could not open iconv convertor %s\n", option_iconv_name);
+		fatal("Could not open iconv converter %s\n", option_iconv_name);
 	if ((iconv_revert_handle = iconv_open(htons(1) == 1 ? "UTF-32BE" : "UTF-32LE", option_iconv_name)) == (iconv_t) -1)
 		fatal("Could not open iconv revertor %s\n", option_iconv_name);
 
-	if ((transcript_handle = transcript_open_convertor(option_transcript_name,
+	if ((transcript_handle = transcript_open_converter(option_transcript_name,
 			htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0, NULL)) == NULL)
-		fatal("Could not open transcript convertor %s\n", option_transcript_name);
+		fatal("Could not open transcript converter %s\n", option_transcript_name);
 
 
 	for (i = option_start; i < 0x110000; i++) {

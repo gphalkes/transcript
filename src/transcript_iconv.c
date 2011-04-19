@@ -26,7 +26,7 @@
 /** @addtogroup transcript_iconv */
 /** @{ */
 
-/** Open a convertor (iconv compatibility interface).
+/** Open a converter (iconv compatibility interface).
     @param tocode Name of the character set to convert to.
     @param fromcode Name of the character set to convert from.
     @return A handle for the conversion state, or @c (transcript_iconv_t) @c -1 on error. On
@@ -42,7 +42,7 @@ transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcod
 	retval->from = NULL;
 	retval->to = NULL;
 
-	if ((retval->from = transcript_open_convertor(fromcode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
+	if ((retval->from = transcript_open_converter(fromcode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
 		if (error == TRANSCRIPT_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
 		else if (error == TRANSCRIPT_ERRNO)
@@ -50,7 +50,7 @@ transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcod
 		ERROR(EINVAL);
 	}
 
-	if ((retval->to = transcript_open_convertor(tocode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
+	if ((retval->to = transcript_open_converter(tocode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
 		if (error == TRANSCRIPT_OUT_OF_MEMORY)
 			ERROR(ENOMEM);
 		else if (error == TRANSCRIPT_ERRNO)
@@ -63,20 +63,20 @@ end_error:
 	if (retval == NULL)
 		return (transcript_iconv_t) -1;
 
-	transcript_close_convertor(retval->from);
-	transcript_close_convertor(retval->to);
+	transcript_close_converter(retval->from);
+	transcript_close_converter(retval->to);
 	return (transcript_iconv_t) -1;
 }
 
-/** Close a convertor (iconv compatibility interface).
+/** Close a converter (iconv compatibility interface).
     @param cd The conversion state handle to clean up.
     @return @c 0 on success, @c -1 on failure (sets @c errno).
 */
 int transcript_iconv_close(transcript_iconv_t cd) {
 	if (cd == NULL)
 		return 0;
-	transcript_close_convertor(cd->from);
-	transcript_close_convertor(cd->to);
+	transcript_close_converter(cd->from);
+	transcript_close_converter(cd->to);
 	free(cd);
 	return 0;
 }
@@ -97,8 +97,8 @@ int transcript_iconv_close(transcript_iconv_t cd) {
     if an illegal sequence is encoutered in @a inbuf, or @c EINVAL if the buffer
     ends with an incomplete sequence.
 
-    If @a inbuf is @c NULL, the convertor is reset to its initial state. If
-    @a outbuf is not @c NULL in this case, the convertor writes the finishing
+    If @a inbuf is @c NULL, the converter is reset to its initial state. If
+    @a outbuf is not @c NULL in this case, the converter writes the finishing
     bytes to the output to ensure a complete and legal conversion.
 */
 size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft, char **outbuf, size_t *outbytesleft) {
