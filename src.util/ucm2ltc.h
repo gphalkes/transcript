@@ -186,9 +186,14 @@ class Ucm : public UcmBase {
 			VARIANTS_AVAILABLE = (1<<6)
 		};
 
+		enum {
+			WHERE_MAIN = (1<<0),
+			WHERE_VARIANTS = (1<<1)
+		};
+
 		class StateMachineInfo {
 			protected:
-				deque<Variant *>::iterator variant_iter;
+				deque<Variant *>::const_iterator variant_iter;
 				Ucm &source;
 				bool iterating_simple_mappings;
 				size_t idx;
@@ -244,6 +249,10 @@ class Ucm : public UcmBase {
 		void remove_generic_fallbacks_internal(UcmBase *check, Variant *variant);
 		void remove_private_use_fallbacks_internal(UcmBase *check);
 		void check_base_mul_ranges(vector<State *> &states);
+
+		Mapping *find_mapping_by_codepoint(uint32_t codepoint, int where, int precision_types);
+		Mapping *find_mapping_by_codepoints(const vector<uint32_t> &codepoints, int where, int precision_types);
+		Mapping *find_mapping_by_codepage_bytes(const vector<uint8_t> &codepage_bytes, int where, int precision_types);
 
 		class CodepageBytesStateMachineInfo : public StateMachineInfo {
 			public:
@@ -307,7 +316,8 @@ extern "C" void fatal(const char *fmt, ...);
 #define ASSERT(x) do { if (!(x)) PANIC(); } while (0)
 
 extern const char *option_convertor_name;
-extern bool option_verbose, option_internal_table, option_allow_ibm_rotate;
+extern int option_verbose;
+extern bool option_internal_table, option_allow_ibm_rotate;
 
 Ucm::tag_t string_to_tag(const char *str);
 void parse_byte_sequence(char *charseq, vector<uint8_t> &store);

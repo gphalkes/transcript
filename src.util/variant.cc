@@ -70,10 +70,10 @@ void Variant::dump(void) {
 
 	printf("VARIANT %s\"%s\"\n", flags & Ucm::INTERNAL_TABLE ? "INTERNAL " : "", id);
 
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
 
-	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
+	for (vector<Mapping *>::const_iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
 
 	printf("END VARIANT\n");

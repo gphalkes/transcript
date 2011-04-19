@@ -61,9 +61,9 @@ static void write_word_data(FILE *output, uint16_t *data, size_t size, int inden
 void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &total_entries) {
 	int action_mask;
 
-	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
+	for (vector<State *>::const_iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		(*state_iter)->entries_start = total_entries;
-		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
+		for (vector<Entry>::const_iterator entry_iter = (*state_iter)->entries.begin();
 				entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
 			if (total_entries != 0)
@@ -81,10 +81,10 @@ void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &tot
 }
 
 void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) {
-	vector<Entry>::iterator entry_iter;
+	vector<Entry>::const_iterator entry_iter;
 
 	fprintf(output, "static const state_v1_t %s_states_%d[] = {\n", name, unique);
-	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
+	for (vector<State *>::const_iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		if (state_iter != states.begin())
 			fprintf(output, ",\n");
 		fprintf(output, "\t{ entries_%d + %d, UINT16_C(0x%08x), {\n", unique, (*state_iter)->entries_start, (*state_iter)->base);
@@ -109,12 +109,12 @@ void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) 
 }
 
 void Ucm::write_multi_mappings(FILE *output, vector<Mapping *> &mappings, unsigned int &mapping_idx) {
-	for (vector<Mapping *>::iterator mapping_iter = mappings.begin(); mapping_iter != mappings.end(); mapping_iter++) {
+	for (vector<Mapping *>::const_iterator mapping_iter = mappings.begin(); mapping_iter != mappings.end(); mapping_iter++) {
 		if (mapping_idx != 0)
 			fprintf(output, ",\n");
 		(*mapping_iter)->idx = mapping_idx++;
 		fprintf(output, "\t{{ ");
-		for (vector<uint32_t>::iterator codepoint_iter = (*mapping_iter)->codepoints.begin();
+		for (vector<uint32_t>::const_iterator codepoint_iter = (*mapping_iter)->codepoints.begin();
 				codepoint_iter != (*mapping_iter)->codepoints.end(); codepoint_iter++)
 		{
 			if (codepoint_iter != (*mapping_iter)->codepoints.begin())
@@ -128,7 +128,7 @@ void Ucm::write_multi_mappings(FILE *output, vector<Mapping *> &mappings, unsign
 			}
 		}
 		fprintf(output, " },\n\t\t{ ");
-		for (vector<uint8_t>::iterator byte_iter = (*mapping_iter)->codepage_bytes.begin();
+		for (vector<uint8_t>::const_iterator byte_iter = (*mapping_iter)->codepage_bytes.begin();
 				byte_iter != (*mapping_iter)->codepage_bytes.end(); byte_iter++)
 		{
 			if (byte_iter != (*mapping_iter)->codepage_bytes.begin())
@@ -158,7 +158,7 @@ static int compare_multi_mapping_codepoints(const Mapping **a, const Mapping **b
 typedef int (*compare_fn)(const void *, const void *);
 
 void Ucm::write_sorted_multi_mappings(FILE *output, int variant_nr) {
-	vector<Mapping *>::iterator mapping_iter;
+	vector<Mapping *>::const_iterator mapping_iter;
 	Mapping **sorted_multi_mappings;
 	unsigned int idx = 0, i;
 
@@ -240,7 +240,7 @@ void Ucm::write_to_unicode_table(FILE *output) {
 	codepoints = (uint16_t *) safe_malloc(codepage_range * sizeof(uint16_t));
 	memset(codepoints, 0xff, codepage_range * sizeof(uint16_t));
 
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		if ((*iter)->precision != 0 && (*iter)->precision != 3)
 			continue;
 
@@ -267,7 +267,7 @@ void Ucm::write_from_unicode_table(FILE *output) {
 	codepage_bytes = (uint8_t *) safe_malloc(unicode_range * single_bytes);
 	memset(codepage_bytes, 0x00, unicode_range * single_bytes);
 
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		if ((*iter)->precision != 0 && (*iter)->precision != 1)
 			continue;
 
@@ -285,11 +285,11 @@ void Ucm::write_from_unicode_table(FILE *output) {
 void Variant::write_simple_mappings(FILE *output, int variant_nr) {
 	sort_simple_mappings();
 	fprintf(output, "static const variant_mapping_v1_t variant%d_mappings_%d[] = {\n", variant_nr, unique);
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		if (iter != simple_mappings.begin())
 			fprintf(output, ",\n");
 		fprintf(output, "\t{ UINT32_C(0x%08x), { ", (*iter)->codepoints[0]);
-		for (vector<uint8_t>::iterator byte_iter = (*iter)->codepage_bytes.begin();
+		for (vector<uint8_t>::const_iterator byte_iter = (*iter)->codepage_bytes.begin();
 				byte_iter != (*iter)->codepage_bytes.end(); byte_iter++)
 		{
 			if (byte_iter != (*iter)->codepage_bytes.begin())
@@ -428,7 +428,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 	uint32_t idx;
 	uint8_t buffer[32];
 	uint8_t *save_flags;
-	vector<Mapping *>::iterator mapping_iter;
+	vector<Mapping *>::const_iterator mapping_iter;
 
 	save_flags = (uint8_t *) safe_malloc(codepage_range + BLOCKSIZE - 1);
 	memset(save_flags, 0, codepage_range + BLOCKSIZE - 1);
@@ -448,7 +448,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 		save_flags[idx] |= Mapping::TO_UNICODE_MULTI_START;
 	}
 
-	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
+	for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
 		for (mapping_iter = (*variant_iter)->simple_mappings.begin();
 				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 		{
@@ -479,7 +479,7 @@ void Ucm::write_to_unicode_flags(FILE *output) {
 void Ucm::write_from_unicode_flags(FILE *output) {
 	uint32_t idx, codepoint;
 	uint8_t *save_flags;
-	vector<Mapping *>::iterator mapping_iter;
+	vector<Mapping *>::const_iterator mapping_iter;
 
 	save_flags = (uint8_t *) safe_malloc(unicode_range + BLOCKSIZE - 1);
 	memset(save_flags, Mapping::FROM_UNICODE_NOT_AVAIL, unicode_range + BLOCKSIZE - 1);
@@ -500,7 +500,7 @@ void Ucm::write_from_unicode_flags(FILE *output) {
 		save_flags[idx] |= Mapping::FROM_UNICODE_MULTI_START;
 	}
 
-	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
+	for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++) {
 		for (mapping_iter = (*variant_iter)->simple_mappings.begin();
 				mapping_iter != (*variant_iter)->simple_mappings.end(); mapping_iter++)
 		{
@@ -556,7 +556,7 @@ void Ucm::write_interface(FILE *output, const char *normalized_name, int variant
 }
 
 void Ucm::write_table(FILE *output) {
-	deque<Variant *>::iterator variant_iter;
+	deque<Variant *>::const_iterator variant_iter;
 	unsigned int count;
 	size_t i;
 	char normalized_name[160];
@@ -578,7 +578,7 @@ void Ucm::write_table(FILE *output) {
 	/* Write shift sequences. */
 	if (shift_sequences.size() > 0) {
 		fprintf(output, "static const shift_state_v1_t shift_states_%d[] = {\n", unique);
-		for (vector<shift_sequence_t>::iterator shift_iter = shift_sequences.begin();
+		for (vector<shift_sequence_t>::const_iterator shift_iter = shift_sequences.begin();
 				shift_iter != shift_sequences.end(); shift_iter++)
 		{
 			if (shift_iter != shift_sequences.begin())

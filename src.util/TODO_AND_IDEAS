@@ -1,11 +1,9 @@
 - figure out what is the best block size for the flags trie. It may well be
-  different than what we have now.
-- if the subchar or subchar1 don't map to anything, they should be automatically
-  mapped to the replacement char (FFFD)
-- implement find_by_codepoint and find_by_codepage_bytes which should in some
-  cases also look in variants. Also a precision indicator must be added such
-  that only some precisions match (bitmap)
-- use equal in comparisons more often, instead of manual for loop.
+  different than what we have now. Maybe it's different for each number of
+  bits saved. This is not a problem because it can be hard-coded in each of the
+  different routines in state_table_convertor.c
+- check names in different UCM sets against each other for clashes
+- check names for normalization clashes
 
 - check out the following error:
 ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter than <mb_cur_min>

@@ -338,13 +338,13 @@ void Ucm::remove_generic_fallbacks(void) {
 		fprintf(stderr, "Removing generic fallbacks\n");
 
 	remove_generic_fallbacks_internal(this, NULL);
-	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+	for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
 		remove_generic_fallbacks_internal(*variant_iter, *variant_iter);
 }
 
 void Ucm::remove_generic_fallbacks_internal(UcmBase *check, Variant *current_variant) {
 	for (vector<Mapping *>::iterator iter = check->simple_mappings.begin(); iter != check->simple_mappings.end(); ) {
-		vector<Mapping *>::iterator search_iter;
+		vector<Mapping *>::const_iterator search_iter;
 		uint32_t search_for;
 
 		if ((*iter)->precision != 1 || (*iter)->codepoints.size() > 1 ||
@@ -400,7 +400,7 @@ void Ucm::remove_private_use_fallbacks(void) {
 	if (option_verbose)
 		fprintf(stderr, "Removing fallbacks from private-use codepoints\n");
 	remove_private_use_fallbacks_internal(this);
-	for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+	for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
 		remove_private_use_fallbacks_internal(*variant_iter);
 }
 
@@ -415,8 +415,8 @@ void Ucm::remove_private_use_fallbacks_internal(UcmBase *check) {
 }
 
 void Ucm::ensure_ascii_controls(void) {
-	vector<Mapping *>::iterator iter;
-	int mb_min, mb_max, seen = 0;
+	Mapping *mapping;
+	int mb_min, mb_max;
 
 	if (tag_values[CHARSET_FAMILY].str != NULL && strcmp(tag_values[CHARSET_FAMILY].str, "ASCII") != 0)
 		return;
@@ -432,31 +432,20 @@ void Ucm::ensure_ascii_controls(void) {
 		return;
 	}
 
-	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
-		switch ((*iter)->codepoints[0]) {
-			case 0x1a:
-				if ((*iter)->codepage_bytes[0] != 0x7f)
-					return;
-				seen |= 1;
-				break;
-			case 0x1c:
-				if ((*iter)->codepage_bytes[0] != 0x1a)
-					return;
-				seen |= 2;
-				break;
-			case 0x7f:
-				if ((*iter)->codepage_bytes[0] != 0x1c)
-					return;
-				seen |= 4;
-				break;
-			default:;
-		}
-	}
-	if (seen != 7)
+	if ((mapping = find_mapping_by_codepoint(0x1a, WHERE_MAIN | WHERE_VARIANTS, 1)) == 0 ||
+			mapping->codepage_bytes.size() != 1 || mapping->codepage_bytes[0] != 0x7f)
+		return;
+	if ((mapping = find_mapping_by_codepoint(0x1c, WHERE_MAIN | WHERE_VARIANTS, 1)) == 0 ||
+			mapping->codepage_bytes.size() != 1 || mapping->codepage_bytes[0] != 0x1a)
+		return;
+	if ((mapping = find_mapping_by_codepoint(0x7f, WHERE_MAIN | WHERE_VARIANTS, 1)) == 0 ||
+			mapping->codepage_bytes.size() != 1 || mapping->codepage_bytes[0] != 0x1c)
 		return;
 
 	fprintf(stderr, "%s: WARNING: correcting IBM specific control code mappings.\n", name);
-	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+		if ((*iter)->codepage_bytes.size() > 1)
+			continue;
 		switch ((*iter)->codepage_bytes[0]) {
 			case 0x1a:
 				(*iter)->codepage_bytes[0] = 0x1c;
@@ -487,7 +476,7 @@ const vector<State *> &Ucm::CodepageBytesStateMachineInfo::get_state_machine(voi
 }
 
 void Ucm::CodepageBytesStateMachineInfo::replace_state_machine(vector<State *> &states) {
-	for (vector<State *>::iterator iter = source.codepage_states.begin();
+	for (vector<State *>::const_iterator iter = source.codepage_states.begin();
 			iter != source.codepage_states.end(); iter++)
 		delete (*iter);
 
@@ -539,7 +528,7 @@ const vector<State *> &Ucm::UnicodeStateMachineInfo::get_state_machine(void) {
 }
 
 void Ucm::UnicodeStateMachineInfo::replace_state_machine(vector<State *> &states) {
-	for (vector<State *>::iterator iter = source.unicode_states.begin();
+	for (vector<State *>::const_iterator iter = source.unicode_states.begin();
 			iter != source.unicode_states.end(); iter++)
 		delete (*iter);
 
@@ -597,7 +586,7 @@ bool Ucm::UnicodeStateMachineInfo::unassigned_needs_flags(void) {
 }
 
 void Ucm::add_variant(Variant *_variant) {
-	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++)
+	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++)
 		if (_variant->id == (*iter)->id)
 			fatal("%s:%d: Multiple _variants with the same ID specified\n", file_name, line_number);
 	variants.push_back(_variant);
@@ -624,14 +613,14 @@ void Ucm::dump(void) {
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
 	sort(multi_mappings.begin(), multi_mappings.end(), compare_codepoints);
 	printf("\nCHARMAP\n");
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++)
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
 
-	for (vector<Mapping *>::iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
+	for (vector<Mapping *>::const_iterator iter = multi_mappings.begin(); iter != multi_mappings.end(); iter++)
 		printf("%s %s |%d\n", sprint_codepoints((*iter)->codepoints), sprint_sequence((*iter)->codepage_bytes), (*iter)->precision);
 	printf("END CHARMAP\n");
 
-	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		printf("\n");
 		(*iter)->dump();
 	}
@@ -641,34 +630,108 @@ void Ucm::write_namelist_entries(FILE *output) {
 	if (variants.empty()) {
 		fprintf(output, "\t\"%s\",\n", variant.id);
 	} else {
-		for (deque<Variant *>::iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+		for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
 			fprintf(output, "\t\"%s\",\n", (*variant_iter)->id);
 	}
 }
 
 void Ucm::ensure_subchar_mapping(void) {
-	vector<Mapping *>::iterator iter;
+	Mapping *mapping;
 	vector<uint8_t> subchar;
 
+	if (option_verbose)
+		fprintf(stderr, "Checking that subchar (and subchar1 if applicable) have round-trip mappings\n");
+
 	parse_byte_sequence(tag_values[SUBCHAR].str, subchar);
-	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
-		if ((*iter)->precision == 0 && subchar.size() == (*iter)->codepage_bytes.size() &&
-				equal(subchar.begin(), subchar.end(), (*iter)->codepage_bytes.begin()))
-			break;
+	if ((mapping = find_mapping_by_codepage_bytes(subchar, WHERE_MAIN, 1)) == NULL) {
+		if (find_mapping_by_codepage_bytes(subchar, WHERE_VARIANTS, 1) != NULL)
+			fatal("%s: Not all variants define the same round-trip mapping for <subchar>\n", name);
+		if (find_mapping_by_codepoint(UINT32_C(0xfffd), WHERE_MAIN | WHERE_VARIANTS, 1) != 0)
+			fatal("%s: No mapping defined for <subchar> but round-trip replacement character has a mapping defined\n", name);
+		if (option_verbose)
+			fprintf(stderr, "  Adding mapping from <subchar> to replacement char\n");
+		mapping = new Mapping();
+		mapping->codepage_bytes.reserve(subchar.size());
+		copy(subchar.begin(), subchar.end(), mapping->codepage_bytes.begin());
+		mapping->codepoints.push_back(UINT32_C(0xfffd));
 	}
-	if (iter == simple_mappings.end())
-		fprintf(stderr, "%s: WARNING: subchar does not map to a codepoint (normally FFFD would be a good choice)\n", name);
 
 	if (tag_values[SUBCHAR1].str == NULL)
 		return;
 
 	subchar.clear();
+
 	parse_byte_sequence(tag_values[SUBCHAR1].str, subchar);
-	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
-		if ((*iter)->precision == 0 && subchar.size() == (*iter)->codepage_bytes.size() &&
-				equal(subchar.begin(), subchar.end(), (*iter)->codepage_bytes.begin()))
-			break;
+	if ((mapping = find_mapping_by_codepage_bytes(subchar, WHERE_MAIN, 1)) == NULL) {
+		if (find_mapping_by_codepage_bytes(subchar, WHERE_VARIANTS, 1) != NULL)
+			fatal("%s: Not all variants define the same round-trip mapping for <subchar1>\n", name);
+		if (find_mapping_by_codepoint(UINT32_C(0xfffd), WHERE_MAIN | WHERE_VARIANTS, 1) != 0)
+			fatal("%s: No mapping defined for <subchar1> but replacement character has a round-trip mapping defined\n", name);
+		if (option_verbose)
+			fprintf(stderr, "  Adding mapping from <subchar1> to replacement char\n");
+		mapping = new Mapping();
+		mapping->codepage_bytes.reserve(subchar.size());
+		copy(subchar.begin(), subchar.end(), mapping->codepage_bytes.begin());
+		mapping->codepoints.push_back(UINT32_C(0xfffd));
 	}
-	if (iter == simple_mappings.end())
-		fprintf(stderr, "%s: WARNING: subchar1 does not map to a codepoint (normally FFFD would be a good choice)\n", name);
+}
+
+static Mapping *find_mapping_by_codepoint_internal(const vector<Mapping *> &mappings,
+		const vector<uint32_t> &codepoints, int precision_types)
+{
+	for (vector<Mapping *>::const_iterator iter = mappings.begin(); iter != mappings.end(); iter++) {
+		if (((1 << (*iter)->precision) & precision_types) && codepoints.size() == (*iter)->codepoints.size() &&
+				equal(codepoints.begin(), codepoints.end(), (*iter)->codepoints.begin()))
+			return *iter;
+	}
+	return NULL;
+}
+
+Mapping *Ucm::find_mapping_by_codepoints(const vector<uint32_t> &codepoints, int where, int precision_types) {
+	Mapping *result;
+	if (where & WHERE_MAIN) {
+		if ((result = find_mapping_by_codepoint_internal(simple_mappings, codepoints, precision_types)) != NULL)
+			return result;
+	}
+
+	if (where & WHERE_VARIANTS) {
+		for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+			if ((result = find_mapping_by_codepoint_internal((*variant_iter)->simple_mappings,
+					codepoints, precision_types)) != NULL)
+				return result;
+	}
+	return NULL;
+}
+
+Mapping *Ucm::find_mapping_by_codepoint(uint32_t codepoint, int where, int precision_types) {
+	vector<uint32_t> codepoints;
+	codepoints.push_back(codepoint);
+	return find_mapping_by_codepoints(codepoints, where, precision_types);
+}
+
+static Mapping *find_mapping_by_codepage_bytes_internal(const vector<Mapping *> &mappings,
+		const vector<uint8_t> &codepage_bytes, int precision_types)
+{
+	for (vector<Mapping *>::const_iterator iter = mappings.begin(); iter != mappings.end(); iter++) {
+		if (((1 << (*iter)->precision) & precision_types) && codepage_bytes.size() == (*iter)->codepage_bytes.size() &&
+				equal(codepage_bytes.begin(), codepage_bytes.end(), (*iter)->codepage_bytes.begin()))
+			return *iter;
+	}
+	return NULL;
+}
+
+Mapping *Ucm::find_mapping_by_codepage_bytes(const vector<uint8_t> &codepage_bytes, int where, int precision_types) {
+	Mapping *result;
+	if (where & WHERE_MAIN) {
+		if ((result = find_mapping_by_codepage_bytes_internal(simple_mappings, codepage_bytes, precision_types)) != NULL)
+			return result;
+	}
+
+	if (where & WHERE_VARIANTS) {
+		for (deque<Variant *>::const_iterator variant_iter = variants.begin(); variant_iter != variants.end(); variant_iter++)
+			if ((result = find_mapping_by_codepage_bytes_internal((*variant_iter)->simple_mappings,
+					codepage_bytes, precision_types)) != NULL)
+				return result;
+	}
+	return NULL;
 }

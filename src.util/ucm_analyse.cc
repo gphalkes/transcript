@@ -153,7 +153,7 @@ bool compare_codepoints(Mapping *a, Mapping *b) {
 }
 
 void Ucm::check_duplicates(vector<Mapping *> &mappings, const char *variant_name) {
-	vector<Mapping *>::iterator iter;
+	vector<Mapping *>::const_iterator iter;
 	if (mappings.size() != 0) {
 		sort(mappings.begin(), mappings.end(), compare_codepoints);
 		for (iter = mappings.begin() + 1; iter != mappings.end(); iter++) {
@@ -191,14 +191,14 @@ void Ucm::check_duplicates(void) {
 		fprintf(stderr, "Checking for duplicate mappings\n");
 	check_duplicates(simple_mappings, NULL);
 	check_duplicates(multi_mappings, NULL);
-	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		check_variant_duplicates(simple_mappings, (*iter)->simple_mappings, (*iter)->id);
 		check_variant_duplicates(multi_mappings, (*iter)->multi_mappings, (*iter)->id);
 	}
 }
 
 void Ucm::find_used_flags(vector<Mapping *> &mappings, int *length_counts) {
-	for (vector<Mapping *>::iterator iter = mappings.begin(); iter != mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = mappings.begin(); iter != mappings.end(); iter++) {
 		uint8_t change = from_unicode_flags ^ (*iter)->from_unicode_flags;
 		if ((*iter)->from_unicode_flags & Mapping::FROM_UNICODE_SUBCHAR1)
 			change &= ~Mapping::FROM_UNICODE_LENGTH_MASK;
@@ -220,7 +220,7 @@ void Ucm::calculate_item_costs(void) {
 	int length_counts[4] = { 0, 0, 0, 0 };
 
 	find_used_flags(simple_mappings, length_counts);
-	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		if ((*iter)->simple_mappings.size() > 0) {
 			used_from_unicode_flags |= Mapping::FROM_UNICODE_VARIANT;
 			used_to_unicode_flags |= Mapping::TO_UNICODE_VARIANT;
@@ -304,7 +304,7 @@ void Ucm::trace_back(size_t idx, shift_sequence_t &shift_sequence) {
 	}
 
 	for (size_t i = 0; i != codepage_states.size(); i++) {
-		for (vector<Entry>::iterator entry_iter = codepage_states[i]->entries.begin();
+		for (vector<Entry>::const_iterator entry_iter = codepage_states[i]->entries.begin();
 				entry_iter != codepage_states[i]->entries.end(); entry_iter++)
 		{
 			if (entry_iter->action == ACTION_VALID && entry_iter->next_state == (int) idx) {
@@ -321,7 +321,7 @@ void Ucm::find_shift_sequences(void) {
 		return;
 
 	for (size_t i = 0; i != codepage_states.size(); i++) {
-		for (vector<Entry>::iterator entry_iter = codepage_states[i]->entries.begin();
+		for (vector<Entry>::const_iterator entry_iter = codepage_states[i]->entries.begin();
 				entry_iter != codepage_states[i]->entries.end(); entry_iter++)
 		{
 			if (entry_iter->action == ACTION_SHIFT) {
@@ -335,8 +335,8 @@ void Ucm::find_shift_sequences(void) {
 }
 
 void Ucm::check_state_machine(Ucm *other, int this_state, int other_state) {
-	vector<Entry>::iterator this_iter = codepage_states[this_state]->entries.begin();
-	vector<Entry>::iterator other_iter = other->codepage_states[other_state]->entries.begin();
+	vector<Entry>::const_iterator this_iter = codepage_states[this_state]->entries.begin();
+	vector<Entry>::const_iterator other_iter = other->codepage_states[other_state]->entries.begin();
 
 	while (this_iter != codepage_states[this_state]->entries.end() &&
 			other_iter != other->codepage_states[other_state]->entries.end())
@@ -429,7 +429,7 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 {
 	int bytes_result, codepoints_result;
 	vector<Mapping *>::iterator this_iter = this_mappings.begin();
-	vector<Mapping *>::iterator other_iter = other_mappings.begin();
+	vector<Mapping *>::const_iterator other_iter = other_mappings.begin();
 
 	while (this_iter != this_mappings.end() && other_iter != other_mappings.end()) {
 		bytes_result = compare_codepage_bytes_simple(*this_iter, *other_iter);
@@ -463,7 +463,7 @@ void Ucm::subtract(Ucm *other) {
 }
 
 void Ucm::fixup_variants(void) {
-	for (deque<Variant *>::iterator iter = variants.begin(); iter != variants.end(); iter++) {
+	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++) {
 		(*iter)->simple_mappings.insert((*iter)->simple_mappings.end(), variant.simple_mappings.begin(), variant.simple_mappings.end());
 		(*iter)->multi_mappings.insert((*iter)->multi_mappings.end(), variant.multi_mappings.begin(), variant.multi_mappings.end());
 	}
@@ -491,10 +491,10 @@ void Ucm::variants_done(void) {
 }
 
 void Ucm::check_base_mul_ranges(vector<State *> &states) {
-	for (vector<State *>::iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
+	for (vector<State *>::const_iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		if ((*state_iter)->base > 0xffff)
 			fatal("%s: Calculated state table too large\n", name);
-		for (vector<Entry>::iterator entry_iter = (*state_iter)->entries.begin();
+		for (vector<Entry>::const_iterator entry_iter = (*state_iter)->entries.begin();
 				entry_iter != (*state_iter)->entries.end(); entry_iter++)
 		{
 			if (entry_iter->base > 0xffff || entry_iter->mul > 0xffff)
@@ -525,7 +525,7 @@ bool Ucm::is_simple_table(void) {
 			codepage_states.front()->entries.front().action != ACTION_FINAL)
 		return false;
 
-	for (vector<Mapping *>::iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
+	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
 		if ((*iter)->codepoints[0] > 0xffff)
 			return false;
 		if ((*iter)->codepage_bytes[0] == 0 && (*iter)->codepoints[0] != 0)

@@ -57,7 +57,7 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 	uint8_t level1_indices[64][32];
 	int level0_map_used, level1_map_used;
 	int i, j;
-	vector<Mapping *>::iterator iter;
+	vector<Mapping *>::const_iterator iter;
 
 	map = (uint8_t (*)[32]) safe_malloc(65536);
 	level0_indices = (uint8_t *) safe_malloc(64);
@@ -145,7 +145,7 @@ uint8_t *Ucm::write_simple_from_unicode(FILE *output) {
 void Ucm::write_simple(FILE *output) {
 	uint16_t byte_to_codepoint[256];
 	uint8_t *level0_indices;
-	vector<Mapping *>::iterator iter;
+	vector<Mapping *>::const_iterator iter;
 	char normalized_name[160];
 
 	unique++;

@@ -26,7 +26,8 @@
 
 #warning FIXME: check names in different UCM sets against each other for clashes
 
-bool option_verbose, option_internal_table, option_dump, option_allow_ibm_rotate;
+int option_verbose;
+bool option_internal_table, option_dump, option_allow_ibm_rotate;
 #ifdef DEBUG
 bool option_abort = true;
 #endif
@@ -347,15 +348,15 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 
 	ucm = ucms.front();
 	if (ucms.size() > 1) {
-		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
+		for (vector<Ucm *>::const_iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
 			ucm->check_compatibility(*iter);
 
-		for (vector<Ucm *>::iterator iter = ucms.begin(); iter != ucms.end(); iter++)
+		for (vector<Ucm *>::const_iterator iter = ucms.begin(); iter != ucms.end(); iter++)
 			(*iter)->prepare_subtract();
 
 		/* Remove from ucm all the mappings that are different from mappings in other
 		   Ucms or that are only present in ucm. */
-		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
+		for (vector<Ucm *>::const_iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++)
 			ucm->subtract(*iter);
 		ucm->fixup_variants();
 		/* If there is only a single map defined in the .ucm file, add it to the list of
@@ -364,13 +365,12 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 		/* ucm now contains the largest common set. Now we must make sure that all other
 		   sets are properly split such that their base sets contain nothing but the
 		   largest common set. */
-		for (vector<Ucm *>::iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++) {
+		for (vector<Ucm *>::const_iterator iter = ucms.begin() + 1; iter != ucms.end(); iter++) {
 			(*iter)->subtract(ucm);
 			(*iter)->fixup_variants();
 			ucm->merge_variants(*iter);
 		}
 	}
-
 	ucm->calculate_item_costs();
 
 	if (option_dump) {
@@ -386,7 +386,7 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 
 	ucm->minimize_state_machines();
 
-	if (option_verbose) {
+	if (option_verbose > 1) {
 		printf("Codepage state machine\n");
 		print_state_machine(ucm->codepage_states);
 		printf("Unicode state machine\n");
@@ -425,7 +425,7 @@ PARSE_FUNCTION(parse_options)
 			option_output_name = optArg;
 		END_OPTION
 		OPTION('v', "verbose", NO_ARG)
-			option_verbose = true;
+			option_verbose++;
 		END_OPTION
 		OPTION('D', "dump", NO_ARG)
 			option_dump = true;
@@ -485,7 +485,7 @@ END_FUNCTION
 
 int main(int argc, char *argv[]) {
 	FILE *output;
-	vector<Ucm *>::iterator iter;
+	vector<Ucm *>::const_iterator iter;
 	char normalized_output_name[160];
 	char *output_name, *base_name;
 
