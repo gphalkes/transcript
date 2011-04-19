@@ -455,6 +455,13 @@ void Ucm::subtract(vector<Mapping *> &this_mappings, vector<Mapping *> &other_ma
 			other_iter++;
 		}
 	}
+
+	if (other_iter == other_mappings.end()) {
+		while (this_iter != this_mappings.end()) {
+			this_variant_mappings.push_back(*this_iter);
+			this_iter = this_mappings.erase(this_iter);
+		}
+	}
 }
 
 void Ucm::subtract(Ucm *other) {
