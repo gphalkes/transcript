@@ -59,6 +59,10 @@
 x-UTF-32BE-BOM
 x-UTF-32LE-BOM
 
+# To allow reading from/writing to UTF-8 files which happen to have a BOM
+# encoded as their first character:
+x-UTF-8-BOM
+
 # FIXME: add platform endian variants, default is without BOM (if you want platform
 # endian, you want it for communicating with a program that expects it in that ordering).
 #*UTF-16PE UTF-16_PlatformEndian

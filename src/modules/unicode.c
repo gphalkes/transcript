@@ -48,6 +48,7 @@ static const name_to_utftype map[] = {
 	{ "xutf16lebom", _TRANSCRIPT_UTF16LE_BOM },
 	{ "xutf32bebom", _TRANSCRIPT_UTF32BE_BOM },
 	{ "xutf32lebom", _TRANSCRIPT_UTF32LE_BOM },
+	{ "xutf8bom", _TRANSCRIPT_UTF8_BOM }
 };
 
 static void close_converter(converter_state_t *handle);
@@ -139,35 +140,40 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
-	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
-		uint_fast32_t codepoint = 0;
+	if (flags & TRANSCRIPT_FILE_START) {
 		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
-		get_unicode_func_t get_le, get_be;
+		if (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16) {
+			uint_fast32_t codepoint = 0;
+			get_unicode_func_t get_le, get_be;
 
-		if (handle->utf_type == TRANSCRIPT_UTF32) {
-			get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
-			get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF32LE);
-		} else {
-			get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
-			get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF16LE);
-		}
+			if (handle->utf_type == TRANSCRIPT_UTF32) {
+				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF32BE);
+				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF32LE);
+			} else {
+				get_be = _transcript_get_get_unicode(TRANSCRIPT_UTF16BE);
+				get_le = _transcript_get_get_unicode(TRANSCRIPT_UTF16LE);
+			}
 
-		/* Set to Big Endian first, as that is what should be assumed if no BOM
-		   is present. */
-		handle->to_unicode_get = get_be;
+			/* Set to Big Endian first, as that is what should be assumed if no BOM
+			   is present. */
+			handle->to_unicode_get = get_be;
 
-		codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
-		/* If the input is Little Endian, it will look like 0xfffe (or 0xfffe0000) if read in
-		   Big Endian, which will result in a TRANSCRIPT_UTF_ILLEGAL result. */
-		if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
-			codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
+			codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
+			/* If the input is Little Endian, it will look like 0xfffe (or 0xfffe0000) if read in
+			   Big Endian, which will result in a TRANSCRIPT_UTF_ILLEGAL result. */
+			if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
+				codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
+				if (codepoint == UINT32_C(0xFEFF))
+					handle->to_unicode_get = get_le;
+			}
+			/* Anything, including bad input, will simply not cause a pointer update,
+			   meaning that only the BOM will be ignored. */
 			if (codepoint == UINT32_C(0xFEFF))
-				handle->to_unicode_get = get_le;
+				*inbuf = (const char *) _inbuf;
+		} else if (handle->utf_type == _TRANSCRIPT_UTF8_BOM) {
+			if (handle->to_unicode_get((const char **) &_inbuf, inbuflimit, false) == UINT32_C(0xFEFF))
+				*inbuf = (const char *) _inbuf;
 		}
-		/* Anything, including bad input, will simply not cause a pointer update,
-		   meaning that only the BOM will be ignored. */
-		if (codepoint == UINT32_C(0xFEFF))
-			*inbuf = (const char *) _inbuf;
 	}
 
 	return unicode_conversion(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags, handle->to_get, put_common);
@@ -204,7 +210,8 @@ static int from_unicode_conversion(converter_state_t *handle, const char **inbuf
 	if (inbuf == NULL || *inbuf == NULL)
 		return TRANSCRIPT_SUCCESS;
 
-	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16)) {
+	if ((flags & TRANSCRIPT_FILE_START) && (handle->utf_type == TRANSCRIPT_UTF32 || handle->utf_type == TRANSCRIPT_UTF16
+			|| handle->utf_type == _TRANSCRIPT_UTF8_BOM)) {
 		if (handle->from_unicode_put(UINT32_C(0xFEFF), outbuf, outbuflimit) == TRANSCRIPT_NO_SPACE)
 			return TRANSCRIPT_NO_SPACE;
 	}
@@ -309,6 +316,10 @@ static transcript_t *open_unicode(const char *name, int flags, transcript_error_
 			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF32LE);
 			retval->utf_type = TRANSCRIPT_UTF32;
 			break;
+		case _TRANSCRIPT_UTF8_BOM:
+			retval->to_unicode_get = _transcript_get_get_unicode(TRANSCRIPT_UTF8);
+			retval->from_unicode_put = _transcript_get_put_unicode(TRANSCRIPT_UTF8);
+			break;
 		default:
 			retval->to_unicode_get = _transcript_get_get_unicode(retval->utf_type);
 			retval->from_unicode_put = _transcript_get_put_unicode(retval->utf_type);
@@ -394,3 +405,4 @@ DEFINE_INTERFACE(xutf16bebom)
 DEFINE_INTERFACE(xutf16lebom)
 DEFINE_INTERFACE(xutf32bebom)
 DEFINE_INTERFACE(xutf32lebom)
+DEFINE_INTERFACE(xutf8bom)

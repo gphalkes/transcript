@@ -37,7 +37,8 @@ enum {
 	_TRANSCRIPT_UTF16BE_BOM,
 	_TRANSCRIPT_UTF16LE_BOM,
 	_TRANSCRIPT_UTF32BE_BOM,
-	_TRANSCRIPT_UTF32LE_BOM
+	_TRANSCRIPT_UTF32LE_BOM,
+	_TRANSCRIPT_UTF8_BOM
 };
 /* FIXME: rename! */
 TRANSCRIPT_API put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type);
