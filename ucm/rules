@@ -1,0 +1,8 @@
+jis-x-0208: other/jis-x-0208-1978.ucm other/jis-x-0208-1983.ucm other/jis-x-0208-1990.ucm
+
+gb18030table: ibm/gb18030.ucm
+
+iso-8859: ibm/iso-8859_10-1998.ucm -c ibm/iso-8859_11-2001.ucm -c ibm/iso-8859_14-1998.ucm -c ibm/iso-8859_16-2001.ucm \
+	-c ibm/iso-8859_2-1999.ucm -c ibm/ibm-913_P100-2000.ucm -c ibm/ibm-914_P100-1995.ucm -c ibm/ibm-915_P100-1995.ucm \
+	-c ibm/ibm-1089_P100-1995.ucm -c ibm/ibm-9005_X110-2007.ucm -c ibm/ibm-813_P100-1995.ucm -c ibm/ibm-916_P100-1995.ucm \
+	-c ibm/ibm-920_P100-1995.ucm -c ibm/ibm-921_P100-1995.ucm -c ibm/ibm-923_P100-1998.ucm

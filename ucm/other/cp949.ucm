@@ -1,4 +1,4 @@
-# UCM based on KSC5601.TXT from tp://unicode.org/MAPPINGS/OBSOLETE/EASTASIA/KSC/
+# UCM based on KSC5601.TXT from ftp://unicode.org/MAPPINGS/OBSOLETE/EASTASIA/KSC/
 # Added mappings for \xA2\xE6 and \xA2\xE7 and private use mappings for the
 # ranges \xC9\xA1 - \xC9\xFE and \xFE\xA1 - \xFE\xFE.
 
@@ -7,7 +7,7 @@
 <uconv_class>        "MBCS"
 <subchar>            \x1A
 <icu:state>          0-80, 81-fe:1
-<icu:state>          81-fe
+<icu:state>          41-7e, 81-fe
 
 CHARMAP
 <U0000> \x00 |0

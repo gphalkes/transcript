@@ -8,10 +8,14 @@
 # File created by rptp2ucm (compiled on Jan 14 2004)
 # from source files 44B00490.RPMAP100 and 049044B0.TPMAP100
 #
+
+# NOTE: Gertjan Halkes 21-4-2011: Added <subchar>
+
 <code_set_name>               "ibm-1168_P100-2002"
 <char_name_mask>              "AXXXX"
 <mb_cur_max>                  1
 <mb_cur_min>                  1
+<subchar>                     \x1A
 <uconv_class>                 "SBCS"
 <icu:charsetFamily>           "ASCII"
 <icu:alias>                   "ibm-1168_STD"
