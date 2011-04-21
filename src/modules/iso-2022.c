@@ -148,13 +148,13 @@ static stc_descriptor_t ascii = { NULL, 1, '\x42', false, STC_FLAG_ASCII };
 static stc_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, STC_FLAG_LARGE_SET };
 static stc_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
 static stc_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, 0 };
-static stc_descriptor_t jis_x_0208_1978 = { "ibm-955_P110-1997", 2, '\x40', false, 0 };
+static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', false, 0 };
 /* This is the 1990 version, not the 1983 version, which includes two extra characters. */
 /* FIXME: gconv simply uses the extra two characters. On the other hand, for JP-3, it
    does use the 2004 version for characters only in the new version... The proper version
    appears to be 13240, but that seems to be missing one character (based on the
    number of characters that IBM says is in there). */
-static stc_descriptor_t jis_x_0208_1983 = { "ibm-5048_P100-1995", 2, '\x42', true, 0 };
+static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', true, 0 };
 static stc_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, 0 };
 
 /*FIXME: use the correct codepage names and check the high_bit flag*/
@@ -163,7 +163,10 @@ static stc_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', tr
 static stc_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
 static stc_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, 0 };
-static stc_descriptor_t gb2312_1980 = { "GB2312-1980", 2, '\x41', true, 0 };
+
+/* Use the two-byte part of EUC-CN, which (apart from the high bit) is the same
+   as the GB2312-1980 set we need. */
+static stc_descriptor_t gb2312_1980 = { "euc-cn", 2, '\x41', true, 0 };
 
 static stc_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, 0 };
 static stc_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, 0 };
