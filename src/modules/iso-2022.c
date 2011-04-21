@@ -350,6 +350,7 @@ static int to_unicode_conversion(converter_state_t *handle, const char **inbuf, 
 			for (i = 0; i < handle->state.g_to[state]->bytes_per_char; i++)
 				buffer[i] = _inbuf[i] | (handle->state.g_to[state]->high_bit << 7);
 
+			/*FIXME: check which flags should be passed through! */
 			if ((result = handle->state.g_to[state]->stc->convert_to(handle->state.g_to[state]->stc, &buffer_ptr,
 					buffer + handle->state.g_to[state]->bytes_per_char, &codepoint_ptr, codepoint_ptr + 4, 0)) != TRANSCRIPT_SUCCESS)
 				return result;
@@ -501,6 +502,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 		ptr = handle->state.g_from[state];
 		codepoint_ptr = (const char *) &codepoint;
 		buffer_ptr = buffer;
+		/*FIXME: check which flags should be passed through! */
 		switch (ptr->stc->convert_from(ptr->stc, &codepoint_ptr, (const char *) &codepoint + 4, &buffer_ptr, buffer + 4, 0)) {
 			case TRANSCRIPT_SUCCESS:
 				PUT_BYTES(buffer_ptr - buffer, buffer);
@@ -529,6 +531,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				codepoint_ptr = (char *) &codepoint;
 				buffer_ptr = buffer;
 
+				/*FIXME: check which flags should be passed through! */
 				switch (ptr->stc->convert_from(ptr->stc, &codepoint_ptr, (const char *) &codepoint + 4,
 						&buffer_ptr, buffer + 4, 0))
 				{

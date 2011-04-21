@@ -328,7 +328,9 @@ static transcript_t *open_unicode(const char *name, int flags, transcript_error_
 
 	switch (retval->utf_type) {
 		case _TRANSCRIPT_GB18030:
-			if ((retval->gb18030_table_conv = transcript_open_converter_nolock("gb18030table", TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL) {
+			if ((retval->gb18030_table_conv = transcript_open_converter_nolock("gb18030table",
+					TRANSCRIPT_UTF32, flags | TRANSCRIPT_INTERNAL, error)) == NULL)
+			{
 				free(retval);
 				return NULL;
 			}

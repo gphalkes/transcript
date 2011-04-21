@@ -35,7 +35,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, char 
 		/* This is the only difference for ISO-8859-1 and ASCII: the value of charmax. */
 		if (codepoint > handle->charmax) {
 			if (flags & TRANSCRIPT_SUBST_ILLEGAL)
-				codepoint = 0x1a;
+				codepoint = UINT32_C(0xfffd);
 			else
 				return TRANSCRIPT_ILLEGAL;
 		}
