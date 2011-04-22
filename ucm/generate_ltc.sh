@@ -29,9 +29,9 @@ while read TARGET FILES ; do
 		HANDLED="$HANDLED$f"$'\n'
 	done
 done < <(sed -r -n '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}' rules | \
-	sed -r '/^[[:space:]]*$/d')
+	sed -r 's/#.*//;/^[[:space:]]*$/d')
 
-for f in `{ echo "$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
+for f in `{ echo "$HANDLED$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
 	out="${f##*/}"
 	echo "Generating ../src/tables/${out%.ucm}.c"
 	../src.util/ucm2ltc -o "../src/tables/${out%.ucm}.c" $f

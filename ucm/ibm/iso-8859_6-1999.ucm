@@ -1,22 +1,54 @@
-# ***************************************************************************
-# *
-# *   Copyright (C) 1995-2002, International Business Machines
-# *   Corporation and others.  All Rights Reserved.
-# *
-# ***************************************************************************
+# NOTE Gertjan Halkes 22-4-2011: Added fallback mappings from ibm-1089_P100-1995.ucm
+
 #
-# File created by rptp2ucm (compiled on Dec  3 2002)
-# from source files 34B00441.RPMAP100 and 044134B0.TPMAP100
+#	Name:             ISO 8859-6:1999 to Unicode
+#	Unicode version:  3.0
+#	Table version:    1.0
+#	Table format:     Format A
+#	Date:             1999 July 27
+#	Authors:          Ken Whistler <kenw@sybase.com>
 #
-<code_set_name>               "ibm-1089_P100-1995"
-<char_name_mask>              "AXXXX"
+#	Copyright (c) 1991-1999 Unicode, Inc.  All Rights reserved.
+#
+#	This file is provided as-is by Unicode, Inc. (The Unicode Consortium).
+#	No claims are made as to fitness for any particular purpose.  No
+#	warranties of any kind are expressed or implied.  The recipient
+#	agrees to determine applicability of information provided.  If this
+#	file has been provided on optical media by Unicode, Inc., the sole
+#	remedy for any claim will be exchange of defective media within 90
+#	days of receipt.
+#
+#	Unicode, Inc. hereby grants the right to freely use the information
+#	supplied in this file in the creation of products supporting the
+#	Unicode Standard, and to make copies of this file in any form for
+#	internal or external distribution as long as this notice remains
+#	attached.
+#
+#	General notes:
+#
+#	This table contains the data the Unicode Consortium has on how
+#       ISO/IEC 8859-6:1999 characters map into Unicode.
+#
+#	Format:  The ICU UCM format
+#
+#	Version history
+#	1.0 version updates 0.1 version by adding mappings for all
+#	control characters.
+#	0x30..0x39 remapped to the ASCII digits (U+0030..U+0039) instead
+#	of the Arabic digits (U+0660..U+0669).
+#
+#	Updated versions of this file may be found in:
+#		<ftp://ftp.unicode.org/Public/MAPPINGS/>
+#
+#	Any comments or problems, contact <errata@unicode.org>
+#	Please note that <errata@unicode.org> is an archival address;
+#	notices will be checked, but do not expect an immediate response.
+#
+<code_set_name>               "iso-8859_6-1999"
 <mb_cur_max>                  1
 <mb_cur_min>                  1
 <uconv_class>                 "SBCS"
 <subchar>                     \x1A
-<icu:charsetFamily>           "ASCII"
-<icu:alias>                   "ibm-1089_STD"
-
 CHARMAP
 <U0000> \x00 |0
 <U0001> \x01 |0
@@ -229,6 +261,7 @@ CHARMAP
 <U0650> \xF0 |0
 <U0651> \xF1 |0
 <U0652> \xF2 |0
+
 <U0660> \x30 |1
 <U0661> \x31 |1
 <U0662> \x32 |1
@@ -239,10 +272,6 @@ CHARMAP
 <U0667> \x37 |1
 <U0668> \x38 |1
 <U0669> \x39 |1
-<U066A> \x25 |1
-<U066B> \x2C |1
-<U066C> \x2E |1
-<U066D> \x2A |1
 <UFE70> \xEB |1
 <UFE71> \xEB |1
 <UFE72> \xEC |1
@@ -253,219 +282,82 @@ CHARMAP
 <UFE79> \xEF |1
 <UFE7A> \xF0 |1
 <UFE7B> \xF0 |1
-<UFE7C> \xF1 |1
 <UFE7D> \xF1 |1
 <UFE7E> \xF2 |1
 <UFE7F> \xF2 |1
-<UFE80> \xC1 |1
-<UFE81> \xC2 |1
 <UFE82> \xC2 |1
-<UFE83> \xC3 |1
 <UFE84> \xC3 |1
-<UFE85> \xC4 |1
 <UFE86> \xC4 |1
 <UFE87> \xC5 |1
 <UFE88> \xC5 |1
 <UFE89> \xC6 |1
 <UFE8A> \xC6 |1
-<UFE8B> \xC6 |1
 <UFE8C> \xC6 |1
-<UFE8D> \xC7 |1
 <UFE8E> \xC7 |1
-<UFE8F> \xC8 |1
 <UFE90> \xC8 |1
 <UFE91> \xC8 |1
 <UFE92> \xC8 |1
-<UFE93> \xC9 |1
-<UFE94> \xC9 |1
-<UFE95> \xCA |1
 <UFE96> \xCA |1
 <UFE97> \xCA |1
 <UFE98> \xCA |1
-<UFE99> \xCB |1
 <UFE9A> \xCB |1
 <UFE9B> \xCB |1
 <UFE9C> \xCB |1
-<UFE9D> \xCC |1
 <UFE9E> \xCC |1
 <UFE9F> \xCC |1
 <UFEA0> \xCC |1
-<UFEA1> \xCD |1
 <UFEA2> \xCD |1
 <UFEA3> \xCD |1
 <UFEA4> \xCD |1
-<UFEA5> \xCE |1
 <UFEA6> \xCE |1
 <UFEA7> \xCE |1
 <UFEA8> \xCE |1
-<UFEA9> \xCF |1
 <UFEAA> \xCF |1
-<UFEAB> \xD0 |1
 <UFEAC> \xD0 |1
-<UFEAD> \xD1 |1
 <UFEAE> \xD1 |1
-<UFEAF> \xD2 |1
 <UFEB0> \xD2 |1
-<UFEB1> \xD3 |1
 <UFEB2> \xD3 |1
 <UFEB3> \xD3 |1
 <UFEB4> \xD3 |1
-<UFEB5> \xD4 |1
 <UFEB6> \xD4 |1
 <UFEB7> \xD4 |1
 <UFEB8> \xD4 |1
-<UFEB9> \xD5 |1
 <UFEBA> \xD5 |1
 <UFEBB> \xD5 |1
 <UFEBC> \xD5 |1
-<UFEBD> \xD6 |1
 <UFEBE> \xD6 |1
 <UFEBF> \xD6 |1
 <UFEC0> \xD6 |1
-<UFEC1> \xD7 |1
-<UFEC2> \xD7 |1
-<UFEC3> \xD7 |1
 <UFEC4> \xD7 |1
-<UFEC5> \xD8 |1
-<UFEC6> \xD8 |1
-<UFEC7> \xD8 |1
 <UFEC8> \xD8 |1
-<UFEC9> \xD9 |1
 <UFECA> \xD9 |1
 <UFECB> \xD9 |1
 <UFECC> \xD9 |1
-<UFECD> \xDA |1
 <UFECE> \xDA |1
 <UFECF> \xDA |1
 <UFED0> \xDA |1
-<UFED1> \xE1 |1
 <UFED2> \xE1 |1
 <UFED3> \xE1 |1
 <UFED4> \xE1 |1
-<UFED5> \xE2 |1
 <UFED6> \xE2 |1
 <UFED7> \xE2 |1
 <UFED8> \xE2 |1
-<UFED9> \xE3 |1
-<UFEDA> \xE3 |1
 <UFEDB> \xE3 |1
 <UFEDC> \xE3 |1
-<UFEDD> \xE4 |1
 <UFEDE> \xE4 |1
 <UFEDF> \xE4 |1
 <UFEE0> \xE4 |1
-<UFEE1> \xE5 |1
 <UFEE2> \xE5 |1
 <UFEE3> \xE5 |1
 <UFEE4> \xE5 |1
-<UFEE5> \xE6 |1
 <UFEE6> \xE6 |1
 <UFEE7> \xE6 |1
 <UFEE8> \xE6 |1
-<UFEE9> \xE7 |1
-<UFEEA> \xE7 |1
 <UFEEB> \xE7 |1
 <UFEEC> \xE7 |1
-<UFEED> \xE8 |1
 <UFEEE> \xE8 |1
-<UFEEF> \xE9 |1
 <UFEF0> \xE9 |1
-<UFEF1> \xEA |1
 <UFEF2> \xEA |1
 <UFEF3> \xEA |1
 <UFEF4> \xEA |1
-<UFF01> \x21 |1
-<UFF02> \x22 |1
-<UFF03> \x23 |1
-<UFF04> \x24 |1
-<UFF05> \x25 |1
-<UFF06> \x26 |1
-<UFF07> \x27 |1
-<UFF08> \x28 |1
-<UFF09> \x29 |1
-<UFF0A> \x2A |1
-<UFF0B> \x2B |1
-<UFF0C> \x2C |1
-<UFF0D> \x2D |1
-<UFF0E> \x2E |1
-<UFF0F> \x2F |1
-<UFF10> \x30 |1
-<UFF11> \x31 |1
-<UFF12> \x32 |1
-<UFF13> \x33 |1
-<UFF14> \x34 |1
-<UFF15> \x35 |1
-<UFF16> \x36 |1
-<UFF17> \x37 |1
-<UFF18> \x38 |1
-<UFF19> \x39 |1
-<UFF1A> \x3A |1
-<UFF1B> \x3B |1
-<UFF1C> \x3C |1
-<UFF1D> \x3D |1
-<UFF1E> \x3E |1
-<UFF1F> \x3F |1
-<UFF20> \x40 |1
-<UFF21> \x41 |1
-<UFF22> \x42 |1
-<UFF23> \x43 |1
-<UFF24> \x44 |1
-<UFF25> \x45 |1
-<UFF26> \x46 |1
-<UFF27> \x47 |1
-<UFF28> \x48 |1
-<UFF29> \x49 |1
-<UFF2A> \x4A |1
-<UFF2B> \x4B |1
-<UFF2C> \x4C |1
-<UFF2D> \x4D |1
-<UFF2E> \x4E |1
-<UFF2F> \x4F |1
-<UFF30> \x50 |1
-<UFF31> \x51 |1
-<UFF32> \x52 |1
-<UFF33> \x53 |1
-<UFF34> \x54 |1
-<UFF35> \x55 |1
-<UFF36> \x56 |1
-<UFF37> \x57 |1
-<UFF38> \x58 |1
-<UFF39> \x59 |1
-<UFF3A> \x5A |1
-<UFF3B> \x5B |1
-<UFF3C> \x5C |1
-<UFF3D> \x5D |1
-<UFF3E> \x5E |1
-<UFF3F> \x5F |1
-<UFF40> \x60 |1
-<UFF41> \x61 |1
-<UFF42> \x62 |1
-<UFF43> \x63 |1
-<UFF44> \x64 |1
-<UFF45> \x65 |1
-<UFF46> \x66 |1
-<UFF47> \x67 |1
-<UFF48> \x68 |1
-<UFF49> \x69 |1
-<UFF4A> \x6A |1
-<UFF4B> \x6B |1
-<UFF4C> \x6C |1
-<UFF4D> \x6D |1
-<UFF4E> \x6E |1
-<UFF4F> \x6F |1
-<UFF50> \x70 |1
-<UFF51> \x71 |1
-<UFF52> \x72 |1
-<UFF53> \x73 |1
-<UFF54> \x74 |1
-<UFF55> \x75 |1
-<UFF56> \x76 |1
-<UFF57> \x77 |1
-<UFF58> \x78 |1
-<UFF59> \x79 |1
-<UFF5A> \x7A |1
-<UFF5B> \x7B |1
-<UFF5C> \x7C |1
-<UFF5D> \x7D |1
-<UFF5E> \x7E |1
 END CHARMAP

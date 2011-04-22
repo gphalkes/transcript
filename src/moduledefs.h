@@ -55,7 +55,7 @@ typedef struct {
 
 typedef struct {
 	const uint32_t codepoint;
-	const char codepage_bytes[4];
+	const char codepage_bytes[MAX_CHAR_BYTES_V1];
 	const uint16_t sort_idx;
 	const uint8_t from_unicode_flags;
 	const uint8_t to_unicode_flags;
