@@ -260,15 +260,15 @@ ibm-1133_P100-1997 *IBM-1133
 # aliases for some of the ISO-2022-JP* encodings, this is actually not true. The
 # JIS_Encoding does use the ISO-2022 scheme. However, the JIS_Encoding has more
 # character sets.
-*ISO-2022-JP csISO2022JP
-*ISO-2022-JP-1 IBM-5054
-*ISO-2022-JP-2 csISO2022JP2
-ISO-2022-JP-3
-ISO-2022-JP-2004
-*ISO-2022-KR csISO2022KR
+*ISO-2022-JP :probe_load csISO2022JP
+*ISO-2022-JP-1 :probe_load IBM-5054
+*ISO-2022-JP-2 :probe_load csISO2022JP2
+ISO-2022-JP-3 :probe_load
+ISO-2022-JP-2004 :probe_load
+*ISO-2022-KR :probe_load csISO2022KR
 # TODO: IBM-25546 is supposedly a variant of ISO-2022-KR
-*ISO-2022-CN csISO2022CN
-ISO-2022-CN-EXT
+*ISO-2022-CN :probe_load csISO2022CN
+ISO-2022-CN-EXT :probe_load
 #FIXME: what to do with these, i.e. what are these different versions?
 #~ HZ HZ-GB-2312
 #~ ISCII,version=0 x-iscii-de Windows-57002 iscii-dev IBM-4902
