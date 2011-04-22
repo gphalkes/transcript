@@ -17,8 +17,8 @@
 #	specifically excludes the right to re-distribute this file directly
 #	to third parties or other organizations whether for profit or not.
 
-<mb_cur_max>           1
-<mb_cur_min>           1
+<mb_cur_max>           2
+<mb_cur_min>           2
 <uconv_class>          "DBCS"
 # Subchar is defined, but shouldn't be used
 <subchar>              \x7E\x7E

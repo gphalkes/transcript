@@ -1,5 +1,10 @@
 #!/bin/bash
 
+unset REGENERATE
+if [ "$1" = "-r" ] ; then
+	REGENERATE=1
+fi
+
 # The script below uses the following sed script:
 # '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}'
 # Unwrap lines with a trailing backslash. This works as follows:
@@ -20,8 +25,10 @@
 
 unset HANDLED
 while read TARGET FILES ; do
-	echo "Generating ../src/tables/${TARGET%:}.c"
-	../src.util/ucm2ltc -o "../src/tables/${TARGET%:}.c" $FILES
+	if [ -n "$REGENERATE" ] || ! [ -e "../src/tables/${TARGET%:}.c" ] ; then
+		echo "Generating ../src/tables/${TARGET%:}.c"
+		../src.util/ucm2ltc -o "../src/tables/${TARGET%:}.c" $FILES
+	fi
 	for f in $FILES ; do
 		if [ "x${f#-}" != "x$f" ] ; then
 			continue
@@ -33,6 +40,8 @@ done < <(sed -r -n '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:
 
 for f in `{ echo "$HANDLED$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
 	out="${f##*/}"
-	echo "Generating ../src/tables/${out%.ucm}.c"
-	../src.util/ucm2ltc -o "../src/tables/${out%.ucm}.c" $f
+	if [ -n "$REGENERATE" ] || ! [ -e "../src/tables/${out%.ucm}.c" ] ; then
+		echo "Generating ../src/tables/${out%.ucm}.c"
+		../src.util/ucm2ltc -o "../src/tables/${out%.ucm}.c" $f
+	fi
 done
