@@ -178,12 +178,17 @@ void Ucm::process_header(void) {
 		fatal("%s: <mb_cur_max> unspecified\n", name);
 	if (tag_values[MB_MIN].str == NULL)
 		fatal("%s: <mb_cur_min> unspecified\n", name);
-	if (tag_values[SUBCHAR].str == NULL)
-		fatal("%s: <subchar> unspecified\n", name);
 
-	if (tag_values[_INTERNAL].str != NULL) {
+	if (tag_values[INTERNAL].str != NULL) {
 		flags |= INTERNAL_TABLE;
 		variant.flags |= INTERNAL_TABLE;
+
+		if (tag_values[SUBCHAR1].str != NULL && tag_values[SUBCHAR].str == NULL)
+			fatal("%s: internal table specifies <subchar1>, but not <subchar>\n");
+	} else {
+		/* Internal tables don't need subchars */
+		if (tag_values[SUBCHAR].str == NULL)
+			fatal("%s: <subchar> unspecified\n", name);
 	}
 
 	if (tag_values[SUBCHAR1].str != NULL)
@@ -427,10 +432,8 @@ void Ucm::ensure_ascii_controls(void) {
 	mb_max = atoi(tag_values[MB_MAX].str);
 	mb_min = atoi(tag_values[MB_MIN].str);
 
-	if (mb_min != 1 || mb_max != 1) {
-		fprintf(stderr, "Check this page!\n");
+	if (mb_min != 1 || mb_max != 1)
 		return;
-	}
 
 	if ((mapping = find_mapping_by_codepoint(0x1a, WHERE_MAIN | WHERE_VARIANTS, 1)) == 0 ||
 			mapping->codepage_bytes.size() != 1 || mapping->codepage_bytes[0] != 0x7f)
@@ -607,8 +610,8 @@ void Ucm::dump(void) {
 		printf("<mb_cur_min>\t\"%s\"\n", tag_values[MB_MIN].str);
 	if (tag_values[CHARSET_FAMILY].str != NULL)
 		printf("<charset_family>\t\"%s\"\n", tag_values[CHARSET_FAMILY].str);
-	if (tag_values[_INTERNAL].str != NULL && variants.size() < 2)
-		printf("<ltc:internal>\t\"%s\"\n", tag_values[_INTERNAL].str);
+	if (tag_values[INTERNAL].str != NULL && variants.size() < 2)
+		printf("<ltc:internal>\t\"%s\"\n", tag_values[INTERNAL].str);
 
 	sort(simple_mappings.begin(), simple_mappings.end(), compare_codepoints);
 	sort(multi_mappings.begin(), multi_mappings.end(), compare_codepoints);
@@ -641,6 +644,10 @@ void Ucm::ensure_subchar_mapping(void) {
 
 	if (option_verbose)
 		fprintf(stderr, "Checking that subchar (and subchar1 if applicable) have round-trip mappings\n");
+
+	// This can only happen if the table is an internal table
+	if (tag_values[SUBCHAR].str == NULL)
+		return;
 
 	parse_byte_sequence(tag_values[SUBCHAR].str, subchar);
 	if ((mapping = find_mapping_by_codepage_bytes(subchar, WHERE_MAIN, 1)) == NULL) {

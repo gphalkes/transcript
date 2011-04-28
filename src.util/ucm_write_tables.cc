@@ -647,7 +647,10 @@ void Ucm::write_table(FILE *output) {
 	fprintf(output, "\t%s,\n", from_unicode_flags_initializer == NULL ? "{ NULL }" : from_unicode_flags_initializer);
 	fprintf(output, "\t{ ");
 	vector<uint8_t> subchar;
-	parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
+	if (tag_values[Ucm::SUBCHAR].str == NULL)
+		subchar.push_back(0);
+	else
+		parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
 	for (i = 0; i < subchar.size(); i++) {
 		if (i != 0)
 			fprintf(output, ", ");

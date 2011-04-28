@@ -69,8 +69,8 @@ Ucm::tag_t string_to_tag(const char *str) {
 		return UcmBase::MB_MIN;
 	if (strcmp(str, "<icu:charsetFamily>") == 0)
 		return UcmBase::CHARSET_FAMILY;
-	if (strcmp(str, "<ltc:internal>") == 0)
-		return UcmBase::_INTERNAL;
+	if (strcmp(str, "<transcript:internal>") == 0)
+		return UcmBase::INTERNAL;
 	return Ucm::IGNORED;
 }
 
@@ -100,7 +100,7 @@ static void print_usage(void) {
 	printf("  -n<name>,--name=<name>        Set converter name to <name>\n");
 	printf("  -c,--concatenate              Concatenate the following converters\n");
 	printf("       Use this to write multiple unrelated converters to a single file\n");
-	printf("  -i,--allow-ibm-rotate         Allow IBM specific rotation of control chars\n");
+	printf("  -I,--allow-ibm-rotate         Allow IBM specific rotation of control chars\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -442,7 +442,7 @@ PARSE_FUNCTION(parse_options)
 			option_internal_table = false;
 			option_converter_name = NULL;
 		END_OPTION
-		OPTION('i', "allow-ibm-rotate", NO_ARG)
+		OPTION('I', "allow-ibm-rotate", NO_ARG)
 			option_allow_ibm_rotate = true;
 		END_OPTION
 #ifdef DEBUG

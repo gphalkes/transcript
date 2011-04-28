@@ -183,7 +183,10 @@ void Ucm::write_simple(FILE *output) {
 		fprintf(output, "0");
 	}
 	vector<uint8_t> subchar;
-	parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
+	if (tag_values[Ucm::SUBCHAR].str == NULL)
+		subchar.push_back(0);
+	else
+		parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
 	fprintf(output, " },\n\t0x%02x, 0x%02x\n};\n\n", !!(flags & INTERNAL_TABLE), subchar[0]);
 
 	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_SBCS_TABLE_V1; }\n", normalized_name);

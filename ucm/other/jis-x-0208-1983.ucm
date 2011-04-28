@@ -1,5 +1,4 @@
 # UCM based on JIS0208.TXT from ftp://unicode.org/MAPPINGS/OBSOLETE/EASTASIA/JIS/
-# State machine and subchar taken from ibm-955_P110-1997.ucm from ICU.
 
 # Copyright notice from JIS0208.TXT
 #	Copyright (c) 1991-1994 Unicode, Inc.  All Rights reserved.
@@ -18,13 +17,10 @@
 #	specifically excludes the right to re-distribute this file directly
 #	to third parties or other organizations whether for profit or not.
 
-<code_set_name>        "jis-x-0208-1990"
-<char_name_mask>       "AXXXX"
 <mb_cur_max>           2
 <mb_cur_min>           2
 <uconv_class>          "DBCS"
-<subchar>              \x74\x7E
-
+<transcript:internal>
 <icu:state>            0-20:2, 21-7e:1, 7f-ff:2
 <icu:state>            21-7e
 <icu:state>

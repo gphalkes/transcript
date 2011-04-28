@@ -126,7 +126,7 @@ class UcmBase {
 			MB_MAX,
 			MB_MIN,
 			CHARSET_FAMILY,
-			_INTERNAL,
+			INTERNAL,
 
 			/* All tags must be defined before this value. */
 			LAST_TAG

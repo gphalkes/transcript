@@ -16,7 +16,7 @@
 %options "generate-symbol-table lowercase-symbols generate-lexer-wrapper reentrant";
 %label CHARMAP, "CHARMAP";
 %label VARIANT, "VARIANT";
-%label INTERNAL, "INTERNAL";
+%label _INTERNAL, "INTERNAL";
 %label END, "END";
 %label HEXNUM, "hexadecimal number";
 %label CHARSEQ, "character sequence";
@@ -99,7 +99,7 @@ ucm<void *> {
 			[
 				VARIANT
 				[
-					INTERNAL
+					_INTERNAL
 					{ internal = true; }
 				]?
 				STRING
@@ -126,8 +126,12 @@ header_line(Ucm *ucm) {
 } :
 	TAG
 	{ tag = string_to_tag(yytext); }
-	value
-	{ ucm->set_tag_value(tag, yytext); }
+	[
+		value
+		{ ucm->set_tag_value(tag, yytext); }
+	|
+		{ ucm->set_tag_value(tag, ""); }
+	]
 |
 	_STATE
 	state(ucm)

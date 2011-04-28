@@ -20,10 +20,10 @@
 <mb_cur_max>           2
 <mb_cur_min>           2
 <uconv_class>          "DBCS"
-# Subchar is defined, but shouldn't be used
-<subchar>              \x7E\x7E
-<icu:state>            21-7e:1
+<transcript:internal>
+<icu:state>            0-20:2, 21-7e:1, 7f-ff:2
 <icu:state>            21-7e
+<icu:state>
 
 CHARMAP
 <U02D8> \x22\x2F |0
