@@ -17,13 +17,14 @@
 #	specifically excludes the right to re-distribute this file directly
 #	to third parties or other organizations whether for profit or not.
 
+# This converter is required by the ISO-2022-JP(-[12]) converters
+
 <mb_cur_max>           2
 <mb_cur_min>           2
 <uconv_class>          "DBCS"
 <transcript:internal>
-<icu:state>            0-20:2, 21-7e:1, 7f-ff:2
+<icu:state>            21-7e:1
 <icu:state>            21-7e
-<icu:state>
 
 CHARMAP
 <U005C> \x21\x40 |0

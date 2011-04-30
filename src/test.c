@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
 
 		fill -= inbuf_ptr - inbuf;
 		if (!option_dump) {
-			printf("fill: %ld, outleft: %ld\n", fill, outbuf + 1024 - outbuf_ptr);
+			printf("fill: %zu, outleft: %zu\n", fill, outbuf + 1024 - outbuf_ptr);
 			for (i = 0; i < (size_t) (outbuf_ptr - outbuf); i++)
 				printf("\\x%02X", (uint8_t) outbuf[i]);
 			putchar('\n');

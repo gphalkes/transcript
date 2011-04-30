@@ -12,6 +12,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#warning FIXME: converters write and read in UTF-32!!!!!
 
 /* What do we need to know in the converter:
    - which sets correspond to GL and GR, and C0 and C1 (if these are actually switchable for any of the supported sets)
@@ -74,9 +75,11 @@ static const name_to_iso2022type map[] = {
 	{ "iso2022kr", ISO2022_KR },
 	{ "iso2022cn", ISO2022_CN },
 	{ "iso2022cnext", ISO2022_CNEXT }
+#if 0
 #ifdef DEBUG
 #warning using ISO-2022-TEST
 	, { "iso2022test", ISO2022_TEST }
+#endif
 #endif
 };
 
@@ -144,25 +147,22 @@ typedef struct {
 	uint_fast8_t flags;
 } stc_descriptor_t;
 
+//FIXME: remove high_bit stuff
+#warning FIXME: we need sets without the control characters, even for ascii
 static stc_descriptor_t ascii = { NULL, 1, '\x42', false, STC_FLAG_ASCII };
 static stc_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, STC_FLAG_LARGE_SET };
 static stc_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
 static stc_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, 0 };
 static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', false, 0 };
-/* This is the 1990 version, not the 1983 version, which includes two extra characters. */
-/* FIXME: gconv simply uses the extra two characters. On the other hand, for JP-3, it
-   does use the 2004 version for characters only in the new version... The proper version
-   appears to be 13240, but that seems to be missing one character (based on the
-   number of characters that IBM says is in there). */
 static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', true, 0 };
-static stc_descriptor_t jis_x_0212_1990 = { "ibm-5049_P100-1995", 2, '\x44', true, 0 };
+static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', true, 0 };
 
 /*FIXME: use the correct codepage names and check the high_bit flag*/
 static stc_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
 static stc_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
 static stc_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
 static stc_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, STC_FLAG_LARGE_SET };
-static stc_descriptor_t ksc5601_1987 = { "KSC5601-1987", 2, '\x43', true, 0 };
+static stc_descriptor_t ksc5601_1987 = { "ksc5601-1987", 2, '\x43', true, 0 };
 
 /* Use the two-byte part of EUC-CN, which (apart from the high bit) is the same
    as the GB2312-1980 set we need. */
@@ -199,16 +199,16 @@ static void from_unicode_reset(converter_state_t *handle);
 static void close_converter(converter_state_t *handle);
 
 /** Check an escape sequence for validity within this converter. */
-static int check_escapes(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool skip) {
+static int check_escapes(converter_state_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit, bool skip) {
 	stc_handle_t *ptr;
-	const uint8_t *_inbuf = (const uint8_t *) (*inbuf + 1);
+	const uint8_t *_inbuf = *inbuf + 1;
 
 	/* Limit the number of bytes to check to 5. No sequence that large has been
 	   assigned yet, so that won't be a problem. */
 	if (inbuflimit > (*inbuf) + 5)
 		inbuflimit = (*inbuf) + 5;
 
-	for (; (const char *) _inbuf < inbuflimit; _inbuf++) {
+	for (; _inbuf < inbuflimit; _inbuf++) {
 		if (*_inbuf >= 0x20 && *_inbuf <= 0x2f)
 			continue;
 		if (*_inbuf >= 0x40 && *_inbuf <= 0x7f) {
@@ -216,11 +216,11 @@ static int check_escapes(converter_state_t *handle, const char **inbuf, const ch
 			goto sequence_found;
 		}
 		if (skip)
-			*inbuf = (const char *) _inbuf - 1;
+			*inbuf = _inbuf - 1;
 		return TRANSCRIPT_ILLEGAL;
 	}
 
-	if ((const char *) _inbuf == inbuflimit && inbuflimit == (*inbuf) + 5) {
+	if (_inbuf == inbuflimit && inbuflimit == (*inbuf) + 5) {
 		if (skip)
 			*inbuf += 5;
 		return TRANSCRIPT_ILLEGAL;
@@ -232,7 +232,7 @@ sequence_found:
 	if (!skip) {
 		size_t i, len;
 
-		len = (const char *) _inbuf - (*inbuf);
+		len = _inbuf - (*inbuf);
 		for (i = 0; i < 3; i++) {
 			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
 				if (len != ptr->seq_len)
@@ -242,12 +242,12 @@ sequence_found:
 					continue;
 
 				handle->state.g_to[i] = ptr;
-				*inbuf = (const char *) _inbuf;
+				*inbuf = _inbuf;
 				return TRANSCRIPT_SUCCESS;
 			}
 		}
 	} else {
-		*inbuf = (const char *) _inbuf;
+		*inbuf = _inbuf;
 	}
 	return TRANSCRIPT_ILLEGAL;
 }
@@ -259,25 +259,24 @@ sequence_found:
 } while (0)
 
 /** convert_to implementation for ISO-2022 converters. */
-static int to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
-	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state;
 	int result;
 
 	while (*inbuf < inbuflimit) {
 		/* We accept shift sequences even in non-locking shift states. This
 		   follows the 'be liberal in what you accept' policy. */
-		if (*_inbuf < 32) {
+		if (**inbuf < 32) {
 			/* Control characters. */
-			if (*_inbuf == 0x1b) {
+			if (**inbuf == 0x1b) {
 				/* Escape sequence. */
 				if ((*inbuf) + 1 == inbuflimit)
 					goto incomplete_char;
 
 				/* _inbytesleft at least 2 at this point. */
-				switch (_inbuf[1]) {
+				switch ((*inbuf)[1]) {
 					case 0x6e:
 						state = 2;
 						goto state_shift_done;
@@ -296,7 +295,7 @@ static int to_unicode_conversion(converter_state_t *handle, const char **inbuf, 
 							return TRANSCRIPT_ILLEGAL;
 						handle->state.to = state;
 
-						_inbuf = (const uint8_t *) ((*inbuf) += 2);
+						(*inbuf) += 2;
 						continue;
 
 					default:
@@ -309,60 +308,65 @@ static int to_unicode_conversion(converter_state_t *handle, const char **inbuf, 
 					case TRANSCRIPT_ILLEGAL:
 						return TRANSCRIPT_ILLEGAL;
 					case TRANSCRIPT_SUCCESS:
-						_inbuf = (const uint8_t *) *inbuf;
 						continue;
 					default:
 						return TRANSCRIPT_INTERNAL_ERROR;
 				}
-			} else if (*_inbuf == 0xe) {
+			} else if (**inbuf == 0xe) {
 				/* Shift out. */
 				if (handle->state.g_to[1] == NULL)
 					return TRANSCRIPT_ILLEGAL;
 				handle->state.to = 1;
-				_inbuf = (const uint8_t *) ++(*inbuf);
+				(*inbuf)++;
 				continue;
-			} else if (*_inbuf == 0xf) {
+			} else if (**inbuf == 0xf) {
 				/* Shift in. */
 				handle->state.to = 0;
-				_inbuf = (const uint8_t *) ++(*inbuf);
+				(*inbuf)++;
 				continue;
+			} else {
+				/* Other control.
+
+				   We don't care if the current character set is a mulit byte character set, in
+				   which case the standard says the control characters are not allowed. There
+				   may be broken convertors which don't switch to ASCII/SBCS before the
+				   control characters and for decoding correct input this will not happen.
+
+				   Note that we don't issue a reset of the state after CRNL. Eventhough the state
+				   should be re-initialised after CRNL, this doesn't mean we should ignore all
+				   previous state. The input may not conform the the standard that well... */
+				PUT_UNICODE(**inbuf);
+				(*inbuf)++;
 			}
-			/* Other control.
-			   Note that we don't issue a reset of the state after CRNL. Eventhough the state
-			   should be re-initialised after CRNL, this doesn't mean we should ignore all
-			   previous state. The input may not conform the the standard that well... */
-			PUT_UNICODE(*_inbuf);
-			_inbuf++;
-		} else if (*_inbuf & 0x80) {
+		} else if (**inbuf & 0x80) {
 			/* All ISO-2022 converters implemented here are 7 bit only. */
 			return TRANSCRIPT_ILLEGAL;
 		} else {
-			char buffer[8]; /*FIXME: is this big enough?*/
-			const char *buffer_ptr = buffer;
-			uint32_t codepoint;
-			char *codepoint_ptr = (char *) &codepoint;
-			int i;
+			int internal_flags = flags & ~(TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED);
 
 			state = handle->state.to;
-			if (state > 3)
+			if (state > 3) {
 				state >>= 2;
+				internal_flags |= TRANSCRIPT_SINGLE_CONVERSION;
+			}
 
-			if ((const char *) _inbuf + handle->state.g_to[state]->bytes_per_char > inbuflimit)
-				goto incomplete_char;
-
-			for (i = 0; i < handle->state.g_to[state]->bytes_per_char; i++)
-				buffer[i] = _inbuf[i] | (handle->state.g_to[state]->high_bit << 7);
-
-			/*FIXME: check which flags should be passed through! */
-			if ((result = handle->state.g_to[state]->stc->convert_to(handle->state.g_to[state]->stc, &buffer_ptr,
-					buffer + handle->state.g_to[state]->bytes_per_char, &codepoint_ptr, codepoint_ptr + 4, 0)) != TRANSCRIPT_SUCCESS)
-				return result;
-			PUT_UNICODE(codepoint);
-			_inbuf += handle->state.g_to[state]->bytes_per_char;
+			if ((result = handle->state.g_to[state]->stc->convert_to(handle->state.g_to[state]->stc, (const char **) inbuf,
+					(const char *) inbuflimit, outbuf, outbuflimit, internal_flags)) != TRANSCRIPT_SUCCESS)
+			{
+				if (result == TRANSCRIPT_ILLEGAL && **inbuf < 32) {
+					continue;
+				} else if (result == TRANSCRIPT_ILLEGAL_END || result == TRANSCRIPT_INCOMPLETE) {
+					goto incomplete_char;
+				} if (result == TRANSCRIPT_UNASSIGNED && (flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+					PUT_UNICODE(0xfffd);
+					(*inbuf) += handle->state.g_to[state]->bytes_per_char;
+				} else {
+					return result;
+				}
+			}
 		}
 
 		handle->state.to &= 3;
-		*inbuf = (const char *) _inbuf;
 		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
 			return TRANSCRIPT_SUCCESS;
 	}
@@ -381,15 +385,20 @@ incomplete_char:
 }
 
 /** skip_to implementation for ISO-2022 converters. */
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit) {
 	uint_fast8_t state;
 
-	if ((*inbuf) == inbuflimit)
+	if (*inbuf == inbuflimit)
 		return TRANSCRIPT_INCOMPLETE;
 
 	if (**inbuf == 0x1b)
 		return check_escapes(handle, inbuf, inbuflimit, true) == TRANSCRIPT_INCOMPLETE ?
 			TRANSCRIPT_INCOMPLETE : TRANSCRIPT_SUCCESS;
+
+	if (**inbuf < 32) {
+		(*inbuf)++;
+		return TRANSCRIPT_SUCCESS;
+	}
 
 	state = handle->state.to;
 	if (state > 3)
@@ -460,130 +469,129 @@ static transcript_error_t switch_to_set(converter_state_t *handle, stc_handle_t 
 static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
-	uint32_t codepoint;
-	const char *codepoint_ptr;
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	stc_handle_t *ptr;
-	char buffer[4], *buffer_ptr;
+	char buffer[32], *buffer_ptr;
 	struct { stc_handle_t *stc; uint_fast8_t state; } fallback = { NULL, 0 };
 	uint_fast8_t state;
-	int i;
+	transcript_error_t result;
+	int i, internal_flags;
 
 	while ((const char *) _inbuf < inbuflimit) {
-		switch (codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false)) {
-			case TRANSCRIPT_UTF_ILLEGAL:
-				return TRANSCRIPT_ILLEGAL;
-			case TRANSCRIPT_UTF_INCOMPLETE:
-				if (flags & TRANSCRIPT_END_OF_TEXT) {
-					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
-						return TRANSCRIPT_ILLEGAL_END;
-					SWITCH_TO_SET(handle->ascii, 0);
-					buffer[0] = 0x1a;
-					PUT_BYTES(1, buffer);
-					return TRANSCRIPT_SUCCESS;
-				}
-				return TRANSCRIPT_INCOMPLETE;
-			case 0x0d:
-			case 0x0a:
-				/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
-				   This may be a bit too much, it is not wrong, and some converters may
-				   actually be expecting this. */
-				SWITCH_TO_SET(handle->ascii, 0);
-				handle->reset_state(handle);
-				break;
-			default:
-				break;
-		}
-
 		fallback.stc = NULL;
 		/* Assume that most codepoints will come from the same character set, so just try to
 		   convert using that. If it succeeds, we're done. Otherwise, we need to search for
 		   the first set that does encode the character. */
+		internal_flags = flags & ~(TRANSCRIPT_ALLOW_FALLBACK | TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED);
 		state = handle->state.from;
-		if (state > 3)
+		if (state > 3) {
 			state >>= 2;
+			internal_flags |= TRANSCRIPT_SINGLE_CONVERSION;
+		}
 		ptr = handle->state.g_from[state];
-		codepoint_ptr = (const char *) &codepoint;
-		buffer_ptr = buffer;
-		/*FIXME: check which flags should be passed through! */
-		switch (ptr->stc->convert_from(ptr->stc, &codepoint_ptr, (const char *) &codepoint + 4, &buffer_ptr, buffer + 4, 0)) {
+		switch ((result = ptr->stc->convert_from(ptr->stc, inbuf, inbuflimit, outbuf, outbuflimit, internal_flags))) {
 			case TRANSCRIPT_SUCCESS:
-				PUT_BYTES(buffer_ptr - buffer, buffer);
-				*inbuf = (const char *) _inbuf;
-				handle->state.from &= 3;
-				continue;
-			case TRANSCRIPT_NO_SPACE:
-				return TRANSCRIPT_NO_SPACE;
+				break;
 			case TRANSCRIPT_FALLBACK:
 				fallback.stc = ptr;
 				fallback.state = state;
 				break;
-			case TRANSCRIPT_UNASSIGNED:
+			case TRANSCRIPT_UNASSIGNED: {
+				/* We may have encountered a control character, in which case we
+				   should switch to ASCII and continue. */
+
+				uint32_t codepoint;
+				codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
+				if (codepoint < 32) {
+					SWITCH_TO_SET(handle->ascii, 0);
+					if (codepoint == 0x0a || codepoint == 0x0d) {
+						/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
+						   This may be a bit too much, it is not wrong, and some converters may
+						   actually be expecting this. */
+						handle->reset_state(handle);
+					}
+					buffer[0] = codepoint;
+					PUT_BYTES(1, buffer);
+					/* Make sure we skip looking for a matching converter. */
+					result = TRANSCRIPT_SUCCESS;
+				}
 				break;
+			}
+			case TRANSCRIPT_ILLEGAL:
+			case TRANSCRIPT_ILLEGAL_END:
+				if (flags & TRANSCRIPT_SUBST_ILLEGAL) {
+					SWITCH_TO_SET(handle->ascii, 0);
+					buffer[0] = 0x1a;
+					PUT_BYTES(1, buffer);
+					result = TRANSCRIPT_SUCCESS;
+					break;
+				}
+				/* FALLTHROUGH */
 			default:
-				return TRANSCRIPT_INTERNAL_ERROR;
+				return result;
 		}
 
-		/* Search for a suitable character set. Note that if the conversion succeeded
-		   with the previously used character set, we never reach this point. */
-		for (i = 0; i < 4; i++) {
-			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-				if (!(ptr->flags & STC_FLAG_WRITE))
-					continue;
+		if (result != TRANSCRIPT_SUCCESS) {
+			const char *tmp_inbuf;
+			/* Search for a suitable character set. Note that if the conversion succeeded
+			   with the previously used character set, we never reach this point. */
+			internal_flags = (flags & ~(TRANSCRIPT_ALLOW_FALLBACK | TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED)) |
+				TRANSCRIPT_SINGLE_CONVERSION;
+			for (i = 0; i < 4; i++) {
+				for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
+					if (!(ptr->flags & STC_FLAG_WRITE))
+						continue;
 
-				codepoint_ptr = (char *) &codepoint;
-				buffer_ptr = buffer;
+					tmp_inbuf = *inbuf;
+					buffer_ptr = buffer;
 
-				/*FIXME: check which flags should be passed through! */
-				switch (ptr->stc->convert_from(ptr->stc, &codepoint_ptr, (const char *) &codepoint + 4,
-						&buffer_ptr, buffer + 4, 0))
+					switch (ptr->stc->convert_from(ptr->stc, &tmp_inbuf, inbuflimit,
+							&buffer_ptr, buffer + 32, internal_flags))
+					{
+						case TRANSCRIPT_SUCCESS:
+							SWITCH_TO_SET(ptr, i);
+							PUT_BYTES(buffer_ptr - buffer, buffer);
+							continue;
+						case TRANSCRIPT_UNASSIGNED:
+							break;
+						case TRANSCRIPT_FALLBACK:
+							if (fallback.stc != NULL) {
+								fallback.stc = ptr;
+								fallback.state = i;
+							}
+							break;
+						case TRANSCRIPT_INCOMPLETE:
+							return TRANSCRIPT_INCOMPLETE;
+						default:
+							return TRANSCRIPT_INTERNAL_ERROR;
+					}
+				}
+			}
+
+			if (fallback.stc == NULL) {
+				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+					return TRANSCRIPT_UNASSIGNED;
+				SWITCH_TO_SET(handle->ascii, 0);
+				buffer[0] = 0x1a;
+				PUT_BYTES(1, buffer);
+			} else {
+				/* Fallback */
+				if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
+					return TRANSCRIPT_FALLBACK;
+				SWITCH_TO_SET(fallback.stc, fallback.state);
+				switch (fallback.stc->stc->convert_from(fallback.stc->stc, (const char **) &_inbuf, inbuflimit, outbuf, outbuflimit,
+					flags | TRANSCRIPT_ALLOW_FALLBACK | TRANSCRIPT_SINGLE_CONVERSION))
 				{
+					case TRANSCRIPT_NO_SPACE:
+						return TRANSCRIPT_NO_SPACE;
 					case TRANSCRIPT_SUCCESS:
-						SWITCH_TO_SET(ptr, i);
-						PUT_BYTES(buffer_ptr - buffer, buffer);
-						goto next_codepoint;
-					case TRANSCRIPT_UNASSIGNED:
-						break;
-					case TRANSCRIPT_FALLBACK:
-						if (fallback.stc != NULL) {
-							fallback.stc = ptr;
-							fallback.state = i;
-						}
 						break;
 					default:
 						return TRANSCRIPT_INTERNAL_ERROR;
 				}
 			}
 		}
-		if (fallback.stc == NULL) {
-			/* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
-			   uses the code in parentheses when even that doesn't result in a mapping. */
-			HANDLE_UNASSIGNED(
-				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
-					return TRANSCRIPT_UNASSIGNED;
-				SWITCH_TO_SET(handle->ascii, 0);
-				buffer[0] = 0x1a;
-				PUT_BYTES(1, buffer);
-			)
-		} else {
-			/* Fallback */
-			if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
-				return TRANSCRIPT_FALLBACK;
-			SWITCH_TO_SET(fallback.stc, fallback.state);
-			codepoint_ptr = (char *) &codepoint;
-			switch (fallback.stc->stc->convert_from(fallback.stc->stc, &codepoint_ptr, (const char *) &codepoint + 4,
-					outbuf, outbuflimit, TRANSCRIPT_ALLOW_FALLBACK))
-			{
-				case TRANSCRIPT_NO_SPACE:
-					return TRANSCRIPT_NO_SPACE;
-				case TRANSCRIPT_SUCCESS:
-					break;
-				default:
-					return TRANSCRIPT_INTERNAL_ERROR;
-			}
-		}
 
-next_codepoint:
 		*inbuf = (const char *) _inbuf;
 		handle->state.from &= 3;
 
@@ -650,10 +658,16 @@ static void load_iso2022_state(converter_state_t *handle, save_state_t *save) {
 
 /** Do-nothing function for reset_state in ::converter_state_t. */
 static void reset_state_nop(converter_state_t *handle) { (void) handle; };
+
 /** Function which resets the states to the initial state for reset_state in ::converter_state_t. */
 static void reset_state_cn(converter_state_t *handle) {
 	memcpy(handle->state.g_from, handle->g_initial, sizeof(handle->g_initial));
 };
+
+/** Function which resets the G2 state to the initial state for reset_state in ::converter_state_t. */
+static void reset_state_jp2(converter_state_t *handle) {
+	handle->state.g_from[2] = NULL;
+}
 
 /** Load a converter (as oposed to probing for it).
 
@@ -770,8 +784,8 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 
 		   The best approach in this case would be to make a distinction between
 		   character sets which are understood for reading, and those which are
-		   used for writing (according to the be conservative in what you send;
-		   be liberal in what you accept philosophy.
+		   used for writing (according to the "be conservative in what you send;
+		   be liberal in what you accept" philosophy.
 
 		   Also note that, to make things slightly worse, in the attempts to
 		   register the ISO-2022-JP-2004 character set with IANA, the following
@@ -814,6 +828,8 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 			DO_LOAD(handle, &iso8859_7, 2, error, STC_FLAG_WRITE);
 			DO_LOAD(handle, &ksc5601_1987, 0, error, STC_FLAG_WRITE);
 			DO_LOAD(handle, &gb2312_1980, 0, error, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			if (handle != NULL)
+				handle->reset_state = reset_state_jp2;
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
 			DO_LOAD(handle, &jis_x_0212_1990, 0, error, STC_FLAG_WRITE);
