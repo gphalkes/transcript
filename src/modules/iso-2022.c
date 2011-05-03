@@ -146,13 +146,12 @@ static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x
 static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', 0 };
 static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', 0 };
 static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', 0 };
-static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', 0 };
+static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0212-1990", 2, '\x44', 0 };
 
-/*FIXME: use the correct codepage names */
 static stc_descriptor_t jis_x_0213_2000_1 = { "jis-x-0213-2000-1", 2, '\x4f', 0 };
 static stc_descriptor_t jis_x_0213_2000_2 = { "jis-x-0213-2000-2", 2, '\x50', 0 };
 static stc_descriptor_t jis_x_0213_2004_1 = { "jis-x-0213-2004-1", 2, '\x51', 0 };
-static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', STC_FLAG_LARGE_SET };
+static stc_descriptor_t iso8859_7 = { "iso-2022-88597", 1, '\x4f', STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "iso-2022-ksc5601", 2, '\x43', 0 };
 
 static stc_descriptor_t gb2312_1980 = { "gb2312-1980", 2, '\x41', 0 };
@@ -486,7 +485,8 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				if (codepoint < 32) {
 					/* ESC, SHIFT-IN and SHIFT-OUT can not be encoded in the output, as they
 					   are used as character-set control characters. */
-					if (codepoint == 0x1b || codepoint == 0x0e || codepoint == 0x0d) {
+					/*FIXME: we could make the SHIFT-IN/OUT stuf dependent on whether the converter actually uses them*/
+					if (codepoint == 0x1b || codepoint == 0x0e || codepoint == 0x0f) {
 						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
 							return TRANSCRIPT_ILLEGAL;
 						SWITCH_TO_SET(handle->ascii, 0);
@@ -762,8 +762,9 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		   present in the 2000 version.
 
 		   ISO-2022-JP-2004 is the completely new and revised version, which
-		   _should_ only contain ASCII and JIS X 0213 (2004). Note that plane 2
-		   of JIS-X-0213 was never revised.
+		   contains ASCII and JIS X 0213 (2004). Note that plane 2 of JIS X 0213
+		   was never revised. For compatibility, JIS X 0208-1983 and
+		   JIS X 0213-2000 can be used as well.
 
 		   ISO-2022-JP-3 is the same as ISO-2022-JP-2004, but based on the
 		   original JIS X 0213. For plane 1 of JIS X 0213 a different escape
@@ -773,10 +774,14 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		   ISO-2022-JP-2 extends ISO-2022-JP-1, which in turn extends ISO-2022-JP
 		   standard by adding more character sets.
 
-		   The best approach in this case would be to make a distinction between
-		   character sets which are understood for reading, and those which are
-		   used for writing (according to the "be conservative in what you send;
-		   be liberal in what you accept" philosophy.
+		   The problem is that not everyone has the same idea of what the
+		   ISO-2022-JP-* are. For example, according to the JIS X 0213 standard
+		   (Annex 2, Section 4) the only supported sets for ISO-2022-JP-3 are
+		   ASCII, JIS X 0213-2000 plane 1 and 2, and JIS X 0208 1983. However,
+		   several implementations simply add the JIS X 0213 planes to the
+		   ISO-2022-JP-2 sets. To some extent this makes sense, because the
+		   JIS X 0213 sets don't cover all characters in the ISO-2022-JP-2
+		   repertoire.
 
 		   Also note that, to make things slightly worse, in the attempts to
 		   register the ISO-2022-JP-2004 character set with IANA, the following
@@ -786,31 +791,21 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		   ISO-2022-JP-2003
 
 		   It is unclear what part JIS X 0201 has to play in this. It does encode
-		   characters that do not appear to be in JIS X 0213...
+		   characters that are not in JIS X 0213...
 		*/
+		#warning FIXME: do we want to include the JP-2 sets in JP-3 and JP-2004?
 		case ISO2022_JP2004:
-			/* Load the JP and JP-3 sets, but only for reading. */
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, 0);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, 0);
-			DO_LOAD(handle, &jis_x_0208_1978, 0, 0);
-			DO_LOAD(handle, &jis_x_0213_2000_1, 0, 0);
-
-			/* I'm not very sure about this one. Different sources seem to say different things */
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &jis_x_0213_2004_1, 0, STC_FLAG_WRITE);
-			handle->shift_types = 0;
+			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			if (handle != NULL)
+				handle->shift_types = 0;
 			break;
 		case ISO2022_JP3:
-			/* Load the JP sets, but only for reading. */
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, 0);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, 0);
-			DO_LOAD(handle, &jis_x_0208_1978, 0, 0);
-
-			/* I'm not very sure about this one. Different sources seem to say different things */
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
 			if (handle != NULL)
 				handle->shift_types = 0;
 			break;
