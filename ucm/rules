@@ -1,5 +1,7 @@
 jis-x-0208: other/jis-x-0208-1978.ucm other/jis-x-0208-1983.ucm other/jis-x-0208-1990.ucm
 
+jis-x-0213: other/jis-x-0213-2000-1.ucm other/jis-x-0213-2004-1.ucm -c other/jis-x-0213-2000-2.ucm
+
 gb18030table: ibm/gb18030.ucm
 
 # Combine all ISO-8859 convertors into a single package

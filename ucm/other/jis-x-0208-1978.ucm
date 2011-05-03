@@ -18,6 +18,7 @@
 #	to third parties or other organizations whether for profit or not.
 
 # This converter is required by the ISO-2022-JP(-[12])? converters
+# Mapping for 2140 is changed to UFF3C (full width version)
 
 <mb_cur_max>           2
 <mb_cur_min>           2
@@ -27,7 +28,6 @@
 <icu:state>            21-7e
 
 CHARMAP
-<U005C> \x21\x40 |0
 <U00A2> \x21\x71 |0
 <U00A3> \x21\x72 |0
 <U00A7> \x21\x78 |0
@@ -6794,6 +6794,7 @@ CHARMAP
 <UFF39> \x23\x59 |0
 <UFF3A> \x23\x5A |0
 <UFF3B> \x21\x4E |0
+<UFF3C> \x21\x40 |0
 <UFF3D> \x21\x4F |0
 <UFF3E> \x21\x30 |0
 <UFF3F> \x21\x32 |0

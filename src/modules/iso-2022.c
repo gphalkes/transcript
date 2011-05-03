@@ -149,9 +149,9 @@ static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', 0 };
 static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', 0 };
 
 /*FIXME: use the correct codepage names */
-static stc_descriptor_t jis_x_0213_2000_1 = { "jis-X-0213-2000-1", 2, '\x4f', 0 };
-static stc_descriptor_t jis_x_0213_2000_2 = { "jis-X-0213-2000-2", 2, '\x50', 0 };
-static stc_descriptor_t jis_x_0213_2004_1 = { "jis-X-0213-2004-1", 2, '\x51', 0 };
+static stc_descriptor_t jis_x_0213_2000_1 = { "jis-x-0213-2000-1", 2, '\x4f', 0 };
+static stc_descriptor_t jis_x_0213_2000_2 = { "jis-x-0213-2000-2", 2, '\x50', 0 };
+static stc_descriptor_t jis_x_0213_2004_1 = { "jis-x-0213-2004-1", 2, '\x51', 0 };
 static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "iso-2022-ksc5601", 2, '\x43', 0 };
 
