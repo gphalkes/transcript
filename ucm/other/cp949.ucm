@@ -17375,4 +17375,7 @@ CHARMAP
 <UFFE3> \xA3\xFE |0
 <UFFE5> \xA1\xCD |0
 <UFFE6> \xA3\xDC |0
+
+# Half-width Won sign to full-width fallback
+<U20A9> \xA3\xDC |1
 END CHARMAP

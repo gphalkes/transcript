@@ -178,7 +178,7 @@ ibm-949_P110-1999 *IBM-949 cp949 949 IBM-949_VASCII_VSUB_VPUA
 ibm-949_P11A-1999 CP949C IBM-949_VSUB_VPUA
 
 # EUC-KR and similar. Java KSC names are ignored in favor of IANA ones
-ibm-970_P110_P110-2006_U2 IBM-970 *EUC-KR Windows-51949 csEUCKR IBM-eucKR
+euc-kr *EUC-KR ibm-970_P110_P110-2006_U2 IBM-970 Windows-51949 csEUCKR IBM-eucKR
 	cp970 970 IBM-970_VPUA
 ibm-971_P100-1995 *IBM-971 IBM-971_VPUA
 
@@ -186,7 +186,7 @@ ibm-1363_P11B-1998 KS_C_5601-1987 KS_C_5601-1989 *KSC_5601 csKSC56011987
 	korean iso-ir-149 cp1363 5601 ksc ibm-1363_VSUB_VPUA
 
 ibm-1363_P110-1997 *IBM-1363 IBM-1363_VASCII_VSUB_VPUA
-# Windows KSC-5601 variant. KSC names ignored in favor of IANA ones
+# Windows EUC-KR variant. KSC names ignored in favor of IANA ones
 windows-949-2000 *Windows-949 ms949
 
 windows-874-2000 *Windows-874 MS874

@@ -8249,4 +8249,12 @@ CHARMAP
 <U7A00> \x7D\x7C |0
 <U7FB2> \x7D\x7D |0
 <U8A70> \x7D\x7E |0
+
+# Euro sign and registered sign have been added in 1997/1998 revision, and
+# the Postal code mark in the 2002 revision.
+<U00AE> \x22\x67 |0
+<U20AC> \x22\x66 |0
+<U327E> \x22\x68 |0
+# Half-width Won sign to full-width fallback
+<U20A9> \x23\x5C |1
 END CHARMAP

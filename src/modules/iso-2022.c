@@ -153,7 +153,7 @@ static stc_descriptor_t jis_x_0213_2000_1 = { "jis-X-0213-2000-1", 2, '\x4f', 0 
 static stc_descriptor_t jis_x_0213_2000_2 = { "jis-X-0213-2000-2", 2, '\x50', 0 };
 static stc_descriptor_t jis_x_0213_2004_1 = { "jis-X-0213-2004-1", 2, '\x51', 0 };
 static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', STC_FLAG_LARGE_SET };
-static stc_descriptor_t ksc5601_1987 = { "ksc5601-1987", 2, '\x43', 0 };
+static stc_descriptor_t ksc5601_1987 = { "iso-2022-ksc5601", 2, '\x43', 0 };
 
 static stc_descriptor_t gb2312_1980 = { "gb2312-1980", 2, '\x41', 0 };
 
@@ -449,6 +449,14 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 	uint_fast8_t state;
 	transcript_error_t result;
 	int i, internal_flags;
+
+	if (flags & TRANSCRIPT_FILE_START) {
+		/* RFC1557 specifies a text should start by loading KSC5601 as G1. */
+		if (handle->iso2022_type == ISO2022_KR) {
+			PUT_BYTES(4, "\x1b\x24\x29\x43");
+			handle->state.g_from[1] = handle->g_sets[1];
+		}
+	}
 
 	while ((const char *) _inbuf < inbuflimit) {
 		fallback.stc = NULL;

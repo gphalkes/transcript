@@ -11,7 +11,7 @@
 #include "optionMacros.h"
 
 static const char *option_transcript_name, *option_iconv_name;
-static int option_unicode, option_no_private_use, option_check_fallbacks;
+static int option_unicode, option_no_private_use, option_check_fallbacks, option_ignore_tag;
 static uint32_t option_start;
 
 static void fatal(const char *fmt, ...) {
@@ -30,6 +30,7 @@ static void print_usage(void) {
 	printf(" -p,--no-private-use                Ignore private-use mappings\n");
 	printf(" -f,--check-fallbacks               Compare fallbacks as well\n");
 	printf(" -s<start>,--start=<start>          Start iteration from <start>\n");
+	printf(" -T,--ignore-tag                    Ignore tag-character mappings\n");
 	exit(EXIT_SUCCESS);
 }
 
@@ -52,6 +53,9 @@ PARSE_FUNCTION(parse_options)
 		END_OPTION
 		OPTION('s', "start", REQUIRED_ARG)
 			option_start = strtol(optArg, NULL, 16);
+		END_OPTION
+		OPTION('T', "ignore-tag", NO_ARG)
+			option_ignore_tag = 1;
 		END_OPTION
 		DOUBLE_DASH
 			NO_MORE_OPTIONS;
@@ -200,7 +204,7 @@ int main(int argc, char *argv[]) {
 				iconv_fallback != transcript_fallback)
 		{
 			/* Filter out tag mappings. These can not be mapped, but glibc iconv sometimes simply discards them. */
-			if (i >= 0xe0000 && i < 0xe0100 && iconv_result_length == 0 && transcript_result_length == -1)
+			if (i >= 0xe0000 && i < 0xe0100 && (option_ignore_tag || iconv_result_length == 0) && transcript_result_length == -1)
 				continue;
 			/* For unicode: ignore surrogates and non-character mappings */
 			if (option_unicode && ((i >= 0xd800 && i < 0xe000) || (i & 0xfffe) == 0xfffe || (i >= 0xfdd0 && i < 0xfdf0)))
