@@ -438,7 +438,6 @@ static transcript_error_t switch_to_set(converter_state_t *handle, stc_handle_t 
 		return TRANSCRIPT_NO_SPACE; \
 } while (0)
 
-
 /** convert_from implementation for ISO-2022 converters. */
 static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
@@ -463,7 +462,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 			internal_flags |= TRANSCRIPT_SINGLE_CONVERSION;
 		}
 		ptr = handle->state.g_from[state];
-		switch ((result = ptr->stc->convert_from(ptr->stc, inbuf, inbuflimit, outbuf, outbuflimit, internal_flags))) {
+		switch ((result = ptr->stc->convert_from(ptr->stc, (const char **) &_inbuf, inbuflimit, outbuf, outbuflimit, internal_flags))) {
 			case TRANSCRIPT_SUCCESS:
 				break;
 			case TRANSCRIPT_FALLBACK:
@@ -477,17 +476,27 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				uint32_t codepoint;
 				codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
 				if (codepoint < 32) {
-					SWITCH_TO_SET(handle->ascii, 0);
-					if (codepoint == 0x0a || codepoint == 0x0d) {
-						/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
-						   This may be a bit too much, it is not wrong, and some converters may
-						   actually be expecting this. */
-						handle->reset_state(handle);
+					/* ESC, SHIFT-IN and SHIFT-OUT can not be encoded in the output, as they
+					   are used as character-set control characters. */
+					if (codepoint == 0x1b || codepoint == 0x0e || codepoint == 0x0d) {
+						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+							return TRANSCRIPT_ILLEGAL;
+						SWITCH_TO_SET(handle->ascii, 0);
+						buffer[0] = 0x1a;
+						PUT_BYTES(1, buffer);
+					} else {
+						SWITCH_TO_SET(handle->ascii, 0);
+						if (codepoint == 0x0a || codepoint == 0x0d) {
+							/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
+							   This may be a bit too much, it is not wrong, and some converters may
+							   actually be expecting this. */
+							handle->reset_state(handle);
+						}
+						buffer[0] = codepoint;
+						PUT_BYTES(1, buffer);
+						/* Make sure we skip looking for a matching converter. */
+						result = TRANSCRIPT_SUCCESS;
 					}
-					buffer[0] = codepoint;
-					PUT_BYTES(1, buffer);
-					/* Make sure we skip looking for a matching converter. */
-					result = TRANSCRIPT_SUCCESS;
 				}
 				break;
 			}
@@ -525,7 +534,8 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 						case TRANSCRIPT_SUCCESS:
 							SWITCH_TO_SET(ptr, i);
 							PUT_BYTES(buffer_ptr - buffer, buffer);
-							continue;
+							_inbuf = (const uint8_t *) tmp_inbuf;
+							goto converter_found;
 						case TRANSCRIPT_UNASSIGNED:
 							break;
 						case TRANSCRIPT_FALLBACK:
@@ -565,7 +575,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				}
 			}
 		}
-
+converter_found:
 		*inbuf = (const char *) _inbuf;
 		handle->state.from &= 3;
 
@@ -863,7 +873,7 @@ static int compare(const char *key, const name_to_iso2022type *ptr) {
 /** @internal
     @brief Open an ISO-2022 converter.
 */
-TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
+static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_state_t *retval;
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
@@ -921,7 +931,7 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, transcript_utf
 	return retval;
 }
 
-TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
+static bool probe_iso2022(const char *name) {
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 	transcript_error_t error;
@@ -948,7 +958,6 @@ static void close_converter(converter_state_t *handle) {
 	}
 }
 
-TRANSCRIPT_EXPORT int transcript_get_iface_iso2022(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_iso2022(void) {
 	static const char * const namelist[] = {
 		"ISO-2022-JP", "ISO-2022-JP-1", "ISO-2022-JP-2", "ISO-2022-JP-3",
@@ -957,3 +966,17 @@ TRANSCRIPT_EXPORT const char * const *transcript_namelist_iso2022(void) {
 	};
 	return namelist;
 }
+
+#define DEFINE_INTERFACE(name) \
+TRANSCRIPT_ALIAS_OPEN(open_iso2022, name) \
+TRANSCRIPT_ALIAS_PROBE(probe_iso2022, name) \
+TRANSCRIPT_EXPORT int transcript_get_iface_##name(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+
+DEFINE_INTERFACE(iso2022jp)
+DEFINE_INTERFACE(iso2022jp1)
+DEFINE_INTERFACE(iso2022jp2)
+DEFINE_INTERFACE(iso2022jp3)
+DEFINE_INTERFACE(iso2022jp2004)
+DEFINE_INTERFACE(iso2022kr)
+DEFINE_INTERFACE(iso2022cn)
+DEFINE_INTERFACE(iso2022cnext)

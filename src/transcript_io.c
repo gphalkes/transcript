@@ -149,6 +149,7 @@ static transcript_t *open_converter(const char *normalized_name, const char *rea
 				return result;
 			}
 			break;
+		}
 		case TRANSCRIPT_SBCS_TABLE_V1: {
 			const sbcs_converter_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
@@ -158,7 +159,6 @@ static transcript_t *open_converter(const char *normalized_name, const char *rea
 				return result;
 			}
 			break;
-		}
 		}
 		default:
 			ERROR(TRANSCRIPT_INVALID_FORMAT);

@@ -174,6 +174,7 @@ int main(int argc, char *argv[]) {
 	transcript_t *transcript_handle;
 	uint32_t i, reverted;
 	int result = EXIT_SUCCESS;
+	transcript_error_t error;
 
 	parse_options(argc, argv);
 
@@ -183,8 +184,8 @@ int main(int argc, char *argv[]) {
 		fatal("Could not open iconv revertor %s\n", option_iconv_name);
 
 	if ((transcript_handle = transcript_open_converter(option_transcript_name,
-			htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0, NULL)) == NULL)
-		fatal("Could not open transcript converter %s\n", option_transcript_name);
+			htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0, &error)) == NULL)
+		fatal("Could not open transcript converter %s: %s\n", option_transcript_name, transcript_strerror(error));
 
 
 	for (i = option_start; i < 0x110000; i++) {
