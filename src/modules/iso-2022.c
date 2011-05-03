@@ -91,7 +91,6 @@ struct _transcript_iso2022_stc_handle_t {
 	uint_fast8_t bytes_per_char; /**< Bytes per character code. */
 	uint_fast8_t seq_len; /**< Length of the escape sequence used to shift. */
 	char escape_seq[7]; /**< The escape sequence itselft. */
-	uint_fast8_t high_bit; /**< Whether the stc has the high bit set for characters. */
 	uint_fast8_t flags; /**< Flags indicating how to use the state table converter. */
 	stc_handle_t *prev, *next; /**< Doubly-linked list ptrs. */
 };
@@ -140,54 +139,34 @@ typedef struct {
 	const char *name;
 	uint_fast8_t bytes_per_char;
 	char final_byte;
-	bool high_bit;
 	uint_fast8_t flags;
 } stc_descriptor_t;
 
-//FIXME: remove high_bit stuff
-#warning FIXME: we need sets without the control characters, even for ascii
-static stc_descriptor_t ascii = { "iso-2022-ascii", 1, '\x42', false, 0 };
-static stc_descriptor_t iso8859_1 = { "iso-2022-88591", 1, '\x41', true, STC_FLAG_LARGE_SET };
-static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x49', true, 0 };
-static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', false, 0 };
-static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', false, 0 };
-static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', true, 0 };
-static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', true, 0 };
+static stc_descriptor_t ascii = { "iso-2022-ascii", 1, '\x42', 0 };
+static stc_descriptor_t iso8859_1 = { "iso-2022-88591", 1, '\x41', STC_FLAG_LARGE_SET };
+static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x49', 0 };
+static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', 0 };
+static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', 0 };
+static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', 0 };
+static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', 0 };
 
-/*FIXME: use the correct codepage names and check the high_bit flag*/
-static stc_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
-static stc_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
-static stc_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
-static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', true, STC_FLAG_LARGE_SET };
-static stc_descriptor_t ksc5601_1987 = { "ksc5601-1987", 2, '\x43', true, 0 };
+/*FIXME: use the correct codepage names */
+static stc_descriptor_t jis_x_0213_2000_1 = { "jis-X-0213-2000-1", 2, '\x4f', 0 };
+static stc_descriptor_t jis_x_0213_2000_2 = { "jis-X-0213-2000-2", 2, '\x50', 0 };
+static stc_descriptor_t jis_x_0213_2004_1 = { "jis-X-0213-2004-1", 2, '\x51', 0 };
+static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', STC_FLAG_LARGE_SET };
+static stc_descriptor_t ksc5601_1987 = { "ksc5601-1987", 2, '\x43', 0 };
 
-/* Use the two-byte part of EUC-CN, which (apart from the high bit) is the same
-   as the GB2312-1980 set we need. */
-static stc_descriptor_t gb2312_1980 = { "euc-cn", 2, '\x41', true, 0 };
+static stc_descriptor_t gb2312_1980 = { "gb2312-1980", 2, '\x41', 0 };
 
-static stc_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', true, 0 };
-static stc_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', true, 0 };
-static stc_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', true, 0 };
-static stc_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', true, 0 };
-static stc_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', true, 0 };
-static stc_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', true, 0 };
-static stc_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', true, 0 };
-static stc_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', true, 0 };
-
-/* FIXME: M:N conversions are sometimes also available!!! Check which ones are and convert multiple codepoints if necessary!!
-   For ISO-2022-JP2004 the maximum number of codepoints is 2.
-
-	Checked (need 1):
-	ASCII
-	ISO-8859-1
-	ibm-897_P100-1995
-	ibm-955_P110-1997
-	ibm-5048_P100-1995
-	ibm-5049_P100-1995
-	ibm-813_P100-1995
-	CNS-11643-1992-[1-7]
-*/
-
+static stc_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', 0 };
+static stc_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', 0 };
+static stc_descriptor_t cns_11643_1992_3 = { "CNS-11643-1992-3", 2, '\x49', 0 };
+static stc_descriptor_t cns_11643_1992_4 = { "CNS-11643-1992-4", 2, '\x4a', 0 };
+static stc_descriptor_t cns_11643_1992_5 = { "CNS-11643-1992-5", 2, '\x4b', 0 };
+static stc_descriptor_t cns_11643_1992_6 = { "CNS-11643-1992-6", 2, '\x4c', 0 };
+static stc_descriptor_t cns_11643_1992_7 = { "CNS-11643-1992-7", 2, '\x4d', 0 };
+static stc_descriptor_t iso_ir_165 = { "ISO-IR-165", 2, '\x45', 0 };
 
 static const char *ls[] = { "\x0f", "\x0e", "\x1b\x6e", "\x1b\x6f", "\x1b\x4e", "\x1b\x4f" };
 
@@ -701,7 +680,6 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 	stc_handle->escape_seq[idx++] = desc->final_byte;
 	stc_handle->seq_len = idx;
 
-	stc_handle->high_bit = desc->high_bit;
 	stc_handle->flags = flags;
 	stc_handle->prev = NULL;
 	stc_handle->next = handle->g_sets[g];
@@ -740,10 +718,7 @@ static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, tran
 	(void) error;
 	(void) flags;
 
-	if (desc->name == NULL)
-		return transcript_probe_converter_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591");
-	else
-		return transcript_probe_converter_nolock(desc->name);
+	return transcript_probe_converter_nolock(desc->name);
 }
 
 /** Convenience macro which tries to load a converter and exits the function if it is not available. */

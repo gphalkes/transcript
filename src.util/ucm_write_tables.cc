@@ -643,8 +643,8 @@ void Ucm::write_table(FILE *output) {
 	else
 		fprintf(output, "shift_states_%d, ", unique);
 	fprintf(output, "codepage_mappings_%d, unicode_mappings_%d,\n", unique, unique);
-	fprintf(output, "\t%s,\n", to_unicode_flags_initializer == NULL ? "{ NULL }" : to_unicode_flags_initializer);
-	fprintf(output, "\t%s,\n", from_unicode_flags_initializer == NULL ? "{ NULL }" : from_unicode_flags_initializer);
+	fprintf(output, "\t%s,\n", to_unicode_flags_initializer == NULL ? "{ NULL, NULL, 0, 0 }" : to_unicode_flags_initializer);
+	fprintf(output, "\t%s,\n", from_unicode_flags_initializer == NULL ? "{ NULL, NULL, 0, 0 }" : from_unicode_flags_initializer);
 	fprintf(output, "\t{ ");
 	vector<uint8_t> subchar;
 	if (tag_values[Ucm::SUBCHAR].str == NULL)
