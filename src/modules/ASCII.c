@@ -108,8 +108,10 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, cha
 /** @internal
     @brief Open an ISO-8859-1/ASCII converter.
 */
-static void *open_ascii(const char *name, int flags, transcript_error_t *error) {
+static void *open_ascii(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_state_t *retval;
+
+	(void) utf_type;
 
 	if (strcmp(name, "iso88591") != 0 && strcmp(name, "ascii") != 0) {
 		if (error != NULL)

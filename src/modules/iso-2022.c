@@ -12,8 +12,6 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#warning FIXME: converters write and read in UTF-32!!!!!
-
 /* What do we need to know in the converter:
    - which sets correspond to GL and GR, and C0 and C1 (if these are actually switchable for any of the supported sets)
    - which sequence selects which set for G0 through G3
@@ -649,7 +647,9 @@ static void reset_state_jp2(converter_state_t *handle) {
 
     Used internally to load the different converters used by ISO-2022.
 */
-static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
+static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+		transcript_utf_t utf_type, uint_fast8_t flags)
+{
 	stc_handle_t *stc_handle, *extra_handle;
 	transcript_t *ext_handle;
 	uint_fast8_t idx = 0;
@@ -659,7 +659,7 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 	if ((flags & STC_FLAG_LARGE_SET) && g == 0)
 		return TRANSCRIPT_INTERNAL_ERROR;
 
-	ext_handle = transcript_open_converter_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
+	ext_handle = transcript_open_converter_nolock(desc->name, utf_type, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
 		return false;
@@ -712,25 +712,29 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 }
 
 /** Probe the availability of a converter. */
-static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags) {
+static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+		transcript_utf_t utf_type, uint_fast8_t flags)
+{
 	(void) handle;
 	(void) g;
 	(void) error;
+	(void) utf_type;
 	(void) flags;
 
 	return transcript_probe_converter_nolock(desc->name);
 }
 
 /** Convenience macro which tries to load a converter and exits the function if it is not available. */
-#define DO_LOAD(handle, desc, g, error, _write) do { \
-	if (!load((handle), (desc), (g), (error), (_write))) \
+#define DO_LOAD(handle, desc, g, _write) do { \
+	if (!load((handle), (desc), (g), error, utf_type, (_write))) \
 		return false; \
 } while (0)
 
-typedef bool (*load_table_func)(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error, uint_fast8_t flags);
+typedef bool (*load_table_func)(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+	transcript_utf_t utf_type, uint_fast8_t flags);
 
 /** Load the converters required for a specific ISO-2022 converter. */
-static bool do_load(load_table_func load, converter_state_t *handle, int type, transcript_error_t *error) {
+static bool do_load(load_table_func load, converter_state_t *handle, int type, transcript_utf_t utf_type, transcript_error_t *error) {
 		switch (type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
 		   JIS X 0213 has two planes: the first plane which is a superset of
@@ -768,51 +772,51 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		*/
 		case ISO2022_JP2004:
 			/* Load the JP and JP-3 sets, but only for reading. */
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, 0);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, error, 0);
-			DO_LOAD(handle, &jis_x_0208_1978, 0, error, 0);
-			DO_LOAD(handle, &jis_x_0213_2000_1, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, 0);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, 0);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, 0);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_2, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2004_1, 0, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2004_1, 0, STC_FLAG_WRITE);
 			handle->shift_types = 0;
 			break;
 		case ISO2022_JP3:
 			/* Load the JP sets, but only for reading. */
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, 0);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, error, 0);
-			DO_LOAD(handle, &jis_x_0208_1978, 0, error, 0);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, 0);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, 0);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, 0);
 
 			/* I'm not very sure about this one. Different sources seem to say different things */
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_1, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_2, 0, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
 			if (handle != NULL)
 				handle->shift_types = 0;
 			break;
 		case ISO2022_JP2:
-			DO_LOAD(handle, &iso8859_1, 2, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &iso8859_7, 2, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &ksc5601_1987, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &gb2312_1980, 0, error, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			DO_LOAD(handle, &iso8859_1, 2, STC_FLAG_WRITE);
+			DO_LOAD(handle, &iso8859_7, 2, STC_FLAG_WRITE);
+			DO_LOAD(handle, &ksc5601_1987, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &gb2312_1980, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
 			if (handle != NULL)
 				handle->reset_state = reset_state_jp2;
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
-			DO_LOAD(handle, &jis_x_0212_1990, 0, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0212_1990, 0, STC_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_JP:
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0208_1978, 0, error, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, error, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0208_1978, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
 			if (handle != NULL)
 				handle->shift_types = 0;
 			break;
 		case ISO2022_KR:
-			DO_LOAD(handle, &ksc5601_1987, 1, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &ascii, 0, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &ksc5601_1987, 1, STC_FLAG_WRITE);
+			DO_LOAD(handle, &ascii, 0, STC_FLAG_WRITE);
 			if (handle != NULL)
 				handle->shift_types = LS0 | LS1;
 			break;
@@ -820,26 +824,26 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 			/* The RFC (1922) lists several more character sets, but only under the assumption
 			   that a final character would be assigned to them. To the best of my knowledge,
 			   this hasn't happened yet, so we don't include them. */
-			DO_LOAD(handle, &iso_ir_165, 1, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_3, 3, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_4, 3, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_5, 3, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_6, 3, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_7, 3, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &iso_ir_165, 1, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_3, 3, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_4, 3, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_5, 3, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_6, 3, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_7, 3, STC_FLAG_WRITE);
 			/* FALLTHROUGH */
 		case ISO2022_CN:
-			DO_LOAD(handle, &gb2312_1980, 1, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_1, 1, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &cns_11643_1992_2, 2, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &gb2312_1980, 1, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_1, 1, STC_FLAG_WRITE);
+			DO_LOAD(handle, &cns_11643_1992_2, 2, STC_FLAG_WRITE);
 			if (handle != NULL) {
 				handle->shift_types = LS0 | LS1 | SS2 | (handle->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
 				handle->reset_state = reset_state_cn;
 			}
 			break;
 		case ISO2022_TEST:
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, error, STC_FLAG_WRITE);
-			DO_LOAD(handle, &iso8859_1, 2, error, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
+			DO_LOAD(handle, &iso8859_1, 2, STC_FLAG_WRITE);
 			if (handle != NULL)
 				handle->shift_types = 0;
 			break;
@@ -859,7 +863,7 @@ static int compare(const char *key, const name_to_iso2022type *ptr) {
 /** @internal
     @brief Open an ISO-2022 converter.
 */
-TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, transcript_error_t *error) {
+TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_state_t *retval;
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
@@ -889,12 +893,12 @@ TRANSCRIPT_EXPORT void *transcript_open_iso2022(const char *name, int flags, tra
 	retval->iso2022_type = ptr->iso2022_type;
 	retval->reset_state = reset_state_nop;
 
-	if (!do_load(real_load, retval, ptr->iso2022_type, error)) {
+	if (!do_load(real_load, retval, ptr->iso2022_type, utf_type, error)) {
 		close_converter(retval);
 		return NULL;
 	}
 	/* Load ASCII, which all converters need. */
-	if (!real_load(retval, &ascii, 0, error, true)) {
+	if (!real_load(retval, &ascii, 0, error, utf_type, true)) {
 		close_converter(retval);
 		return NULL;
 	}
@@ -926,7 +930,7 @@ TRANSCRIPT_EXPORT bool transcript_probe_iso2022(const char *name) {
 			(int (*)(const void *, const void *)) compare)) == NULL)
 		return false;
 
-	return do_load(probe, NULL, ptr->iso2022_type, &error);
+	return do_load(probe, NULL, ptr->iso2022_type, 0, &error);
 }
 
 /** close implementation for ISO-2022 converters. */

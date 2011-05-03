@@ -249,10 +249,12 @@ static int compare(const char *key, const name_to_utftype *ptr) {
     @param flags Flags for the converter.
     @param error The location to store an error.
 */
-static transcript_t *open_unicode(const char *name, int flags, transcript_error_t *error) {
+static transcript_t *open_unicode(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_state_t *retval;
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
+
+	(void) utf_type;
 
 	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)

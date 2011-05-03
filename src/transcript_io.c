@@ -110,7 +110,9 @@ static transcript_t *complete_converter(transcript_t *handle, transcript_utf_t u
 }
 
 /** Open a converter plugin. */
-static transcript_t *open_converter(const char *normalized_name, const char *real_name, int flags, transcript_error_t *error) {
+static transcript_t *open_converter(const char *normalized_name, const char *real_name, transcript_utf_t utf_type,
+		int flags, transcript_error_t *error)
+{
 	lt_dlhandle handle = NULL;
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
@@ -139,10 +141,10 @@ static transcript_t *open_converter(const char *normalized_name, const char *rea
 			break;
 		}
 		case TRANSCRIPT_FULL_MODULE_V1: {
-			transcript_t *(*open_converter)(const char *, int flags, transcript_error_t *);
+			transcript_t *(*open_converter)(const char *, transcript_utf_t, int flags, transcript_error_t *);
 			if ((open_converter = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
 				ERROR(TRANSCRIPT_INVALID_FORMAT);
-			if ((result = open_converter(normalized_name, flags, error)) != NULL) {
+			if ((result = open_converter(normalized_name, utf_type, flags, error)) != NULL) {
 				result->library_handle = handle;
 				return result;
 			}
@@ -193,9 +195,9 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
 				*error = TRANSCRIPT_CONVERTER_DISABLED;
 			return NULL;
 		}
-		return complete_converter(open_converter(converter->name, converter->real_name, flags, error), utf_type);
+		return complete_converter(open_converter(converter->name, converter->real_name, utf_type, flags, error), utf_type);
 	}
-	return complete_converter(open_converter(normalized_name, name, flags, error), utf_type);
+	return complete_converter(open_converter(normalized_name, name, utf_type, flags, error), utf_type);
 }
 
 /** Try to open a file from a database directory.
