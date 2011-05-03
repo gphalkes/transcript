@@ -8,3 +8,7 @@ iso-8859: ibm/iso-8859_10-1998.ucm -c ibm/iso-8859_16-2001.ucm -c ibm/iso-8859_6
 	ibm/iso-8859_13-1998.ucm -c ibm/iso-8859_3-1999.ucm -c ibm/iso-8859_7-2003.ucm -c \
 	ibm/iso-8859_14-1998.ucm -c ibm/iso-8859_4-1998.ucm -c ibm/iso-8859_8-1999.ucm -c \
 	ibm/iso-8859_15-1999.ucm -c ibm/iso-8859_5-1999.ucm -c ibm/iso-8859_9-1999.ucm
+
+# Combine iso-2022 SBCS into a single package
+iso-2022-sbcs: -i other/iso-2022-ascii.ucm -c -i other/iso-2022-88591.ucm -c -i other/iso-2022-88597.ucm -c \
+	-i other/iso-2022-jisx0201kana.ucm -c -i other/iso-2022-jisx0201roman.ucm

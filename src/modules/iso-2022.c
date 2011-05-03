@@ -29,11 +29,10 @@
 
 /** Flags for describing state table based converters. */
 enum {
-	STC_FLAG_WRITE = (1<<0),
-	STC_FLAG_ASCII = (1<<1),
-	STC_FLAGS_DUPSTC = (1<<5),
-	STC_FLAGS_SHORT_SEQ = (1<<6),
-	STC_FLAG_LARGE_SET = (1<<7)
+	STC_FLAG_WRITE = (1<<0), /**< Set can be used for output. */
+	STC_FLAGS_DUPSTC = (1<<5), /**< This STC descriptor is a duplicate for one with a pre-2022 sequence. */
+	STC_FLAGS_SHORT_SEQ = (1<<6), /**< Set uses pre-2022 sequence. */
+	STC_FLAG_LARGE_SET = (1<<7) /**< 96 characters instead of 94 in the set. */
 };
 
 /** Shift types used in the ISO-2022 converter. */
@@ -97,8 +96,6 @@ struct _transcript_iso2022_stc_handle_t {
 	stc_handle_t *prev, *next; /**< Doubly-linked list ptrs. */
 };
 
-/*FIXME: change the references to single byte ints such the the state size can
-  be reduced. */
 /** @struct state_t
     Structure holding the shift state of an ISO-2022 converter. */
 typedef struct {
@@ -149,10 +146,10 @@ typedef struct {
 
 //FIXME: remove high_bit stuff
 #warning FIXME: we need sets without the control characters, even for ascii
-static stc_descriptor_t ascii = { NULL, 1, '\x42', false, STC_FLAG_ASCII };
-static stc_descriptor_t iso8859_1 = { NULL, 1, '\x41', true, STC_FLAG_LARGE_SET };
-static stc_descriptor_t jis_x_0201_1976_kana = { "ibm-897_P100-1995", 1, '\x49', true, 0 };
-static stc_descriptor_t jis_x_0201_1976_roman = { "ibm-897_P100-1995", 1, '\x4a', false, 0 };
+static stc_descriptor_t ascii = { "iso-2022-ascii", 1, '\x42', false, 0 };
+static stc_descriptor_t iso8859_1 = { "iso-2022-88591", 1, '\x41', true, STC_FLAG_LARGE_SET };
+static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x49', true, 0 };
+static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', false, 0 };
 static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', false, 0 };
 static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', true, 0 };
 static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', true, 0 };
@@ -161,7 +158,7 @@ static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0208-1990", 2, '\x44', true, 
 static stc_descriptor_t jis_x_0213_2000_1 = { "JIS-X-0213-2000-1", 2, '\x4f', true, 0 };
 static stc_descriptor_t jis_x_0213_2000_2 = { "JIS-X-0213-2000-2", 2, '\x50', true, 0 };
 static stc_descriptor_t jis_x_0213_2004_1 = { "JIS-X-0213-2004-1", 2, '\x51', true, 0 };
-static stc_descriptor_t iso8859_7 = { "ibm-813_P100-1995", 1, '\x4f', true, STC_FLAG_LARGE_SET };
+static stc_descriptor_t iso8859_7 = { "iso-2022-88591", 1, '\x4f', true, STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "ksc5601-1987", 2, '\x43', true, 0 };
 
 /* Use the two-byte part of EUC-CN, which (apart from the high bit) is the same
@@ -683,10 +680,7 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 	if ((flags & STC_FLAG_LARGE_SET) && g == 0)
 		return TRANSCRIPT_INTERNAL_ERROR;
 
-	if (desc->name == NULL)
-		ext_handle = transcript_open_converter_nolock(flags & STC_FLAG_ASCII ? "ascii" : "iso88591", TRANSCRIPT_UTF32, 0, error);
-	else
-		ext_handle = transcript_open_converter_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
+	ext_handle = transcript_open_converter_nolock(desc->name, TRANSCRIPT_UTF32, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
 		return false;

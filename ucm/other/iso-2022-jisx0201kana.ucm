@@ -1,0 +1,89 @@
+# UCM based on JIS0201.TXT from ftp://unicode.org/MAPPINGS/OBSOLETE/EASTASIA/JIS/
+
+# Copyright notice from JIS0201.TXT
+#	Copyright (c) 1991-1994 Unicode, Inc.  All Rights reserved.
+#
+#	This file is provided as-is by Unicode, Inc. (The Unicode Consortium).
+#	No claims are made as to fitness for any particular purpose.  No
+#	warranties of any kind are expressed or implied.  The recipient
+#	agrees to determine applicability of information provided.  If this
+#	file has been provided on magnetic media by Unicode, Inc., the sole
+#	remedy for any claim will be exchange of defective media within 90
+#	days of receipt.
+#
+#	Recipient is granted the right to make copies in any form for
+#	internal distribution and to freely use the information supplied
+#	in the creation of products supporting Unicode.  Unicode, Inc.
+#	specifically excludes the right to re-distribute this file directly
+#	to third parties or other organizations whether for profit or not.
+
+<mb_cur_max>      1
+<mb_cur_min>      1
+<uconv_class>     "SBCS"
+<icu:state>       21-7e
+
+CHARMAP
+<UFF61> \x21 |0
+<UFF62> \x22 |0
+<UFF63> \x23 |0
+<UFF64> \x24 |0
+<UFF65> \x25 |0
+<UFF66> \x26 |0
+<UFF67> \x27 |0
+<UFF68> \x28 |0
+<UFF69> \x29 |0
+<UFF6A> \x2A |0
+<UFF6B> \x2B |0
+<UFF6C> \x2C |0
+<UFF6D> \x2D |0
+<UFF6E> \x2E |0
+<UFF6F> \x2F |0
+<UFF70> \x30 |0
+<UFF71> \x31 |0
+<UFF72> \x32 |0
+<UFF73> \x33 |0
+<UFF74> \x34 |0
+<UFF75> \x35 |0
+<UFF76> \x36 |0
+<UFF77> \x37 |0
+<UFF78> \x38 |0
+<UFF79> \x39 |0
+<UFF7A> \x3A |0
+<UFF7B> \x3B |0
+<UFF7C> \x3C |0
+<UFF7D> \x3D |0
+<UFF7E> \x3E |0
+<UFF7F> \x3F |0
+<UFF80> \x40 |0
+<UFF81> \x41 |0
+<UFF82> \x42 |0
+<UFF83> \x43 |0
+<UFF84> \x44 |0
+<UFF85> \x45 |0
+<UFF86> \x46 |0
+<UFF87> \x47 |0
+<UFF88> \x48 |0
+<UFF89> \x49 |0
+<UFF8A> \x4A |0
+<UFF8B> \x4B |0
+<UFF8C> \x4C |0
+<UFF8D> \x4D |0
+<UFF8E> \x4E |0
+<UFF8F> \x4F |0
+<UFF90> \x50 |0
+<UFF91> \x51 |0
+<UFF92> \x52 |0
+<UFF93> \x53 |0
+<UFF94> \x54 |0
+<UFF95> \x55 |0
+<UFF96> \x56 |0
+<UFF97> \x57 |0
+<UFF98> \x58 |0
+<UFF99> \x59 |0
+<UFF9A> \x5A |0
+<UFF9B> \x5B |0
+<UFF9C> \x5C |0
+<UFF9D> \x5D |0
+<UFF9E> \x5E |0
+<UFF9F> \x5F |0
+END CHARMAP

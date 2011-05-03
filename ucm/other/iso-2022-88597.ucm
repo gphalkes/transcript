@@ -1,0 +1,120 @@
+# ISO-8859-7 map for the ISO-2022 converter. Generated from
+# ftp://unicode.org/MAPPINGS/ISO8859/8859-7.TXT
+
+# Copyright notice from 8859-7.TXT
+#	Copyright (c) 1991-2003 Unicode, Inc.  All Rights reserved.
+#
+#	This file is provided as-is by Unicode, Inc. (The Unicode Consortium).
+#	No claims are made as to fitness for any particular purpose.  No
+#	warranties of any kind are expressed or implied.  The recipient
+#	agrees to determine applicability of information provided.  If this
+#	file has been provided on optical media by Unicode, Inc., the sole
+#	remedy for any claim will be exchange of defective media within 90
+#	days of receipt.
+#
+#	Unicode, Inc. hereby grants the right to freely use the information
+#	supplied in this file in the creation of products supporting the
+#	Unicode Standard, and to make copies of this file in any form for
+#	internal or external distribution as long as this notice remains
+#	attached.
+
+<mb_cur_max>         1
+<mb_cur_min>         1
+<uconv_class>        "SBCS"
+<icu:state>          20-7f
+
+CHARMAP
+<U00A0> \x20 |0
+<U2018> \x21 |0
+<U2019> \x22 |0
+<U00A3> \x23 |0
+# 2003 version only: <U20AC> \x24 |0
+# 2003 version only: <U20AF> \x25 |0
+<U00A6> \x26 |0
+<U00A7> \x27 |0
+<U00A8> \x28 |0
+<U00A9> \x29 |0
+# 2003 version only: <U037A> \x2A |0
+<U00AB> \x2B |0
+<U00AC> \x2C |0
+<U00AD> \x2D |0
+<U2015> \x2F |0
+<U00B0> \x30 |0
+<U00B1> \x31 |0
+<U00B2> \x32 |0
+<U00B3> \x33 |0
+<U0384> \x34 |0
+<U0385> \x35 |0
+<U0386> \x36 |0
+<U00B7> \x37 |0
+<U0388> \x38 |0
+<U0389> \x39 |0
+<U038A> \x3A |0
+<U00BB> \x3B |0
+<U038C> \x3C |0
+<U00BD> \x3D |0
+<U038E> \x3E |0
+<U038F> \x3F |0
+<U0390> \x40 |0
+<U0391> \x41 |0
+<U0392> \x42 |0
+<U0393> \x43 |0
+<U0394> \x44 |0
+<U0395> \x45 |0
+<U0396> \x46 |0
+<U0397> \x47 |0
+<U0398> \x48 |0
+<U0399> \x49 |0
+<U039A> \x4A |0
+<U039B> \x4B |0
+<U039C> \x4C |0
+<U039D> \x4D |0
+<U039E> \x4E |0
+<U039F> \x4F |0
+<U03A0> \x50 |0
+<U03A1> \x51 |0
+<U03A3> \x53 |0
+<U03A4> \x54 |0
+<U03A5> \x55 |0
+<U03A6> \x56 |0
+<U03A7> \x57 |0
+<U03A8> \x58 |0
+<U03A9> \x59 |0
+<U03AA> \x5A |0
+<U03AB> \x5B |0
+<U03AC> \x5C |0
+<U03AD> \x5D |0
+<U03AE> \x5E |0
+<U03AF> \x5F |0
+<U03B0> \x60 |0
+<U03B1> \x61 |0
+<U03B2> \x62 |0
+<U03B3> \x63 |0
+<U03B4> \x64 |0
+<U03B5> \x65 |0
+<U03B6> \x66 |0
+<U03B7> \x67 |0
+<U03B8> \x68 |0
+<U03B9> \x69 |0
+<U03BA> \x6A |0
+<U03BB> \x6B |0
+<U03BC> \x6C |0
+<U03BD> \x6D |0
+<U03BE> \x6E |0
+<U03BF> \x6F |0
+<U03C0> \x70 |0
+<U03C1> \x71 |0
+<U03C2> \x72 |0
+<U03C3> \x73 |0
+<U03C4> \x74 |0
+<U03C5> \x75 |0
+<U03C6> \x76 |0
+<U03C7> \x77 |0
+<U03C8> \x78 |0
+<U03C9> \x79 |0
+<U03CA> \x7A |0
+<U03CB> \x7B |0
+<U03CC> \x7C |0
+<U03CD> \x7D |0
+<U03CE> \x7E |0
+END CHARMAP

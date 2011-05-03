@@ -182,7 +182,9 @@ void Ucm::process_header(void) {
 	if (tag_values[INTERNAL].str != NULL) {
 		flags |= INTERNAL_TABLE;
 		variant.flags |= INTERNAL_TABLE;
+	}
 
+	if (flags & INTERNAL_TABLE) {
 		if (tag_values[SUBCHAR1].str != NULL && tag_values[SUBCHAR].str == NULL)
 			fatal("%s: internal table specifies <subchar1>, but not <subchar>\n");
 	} else {

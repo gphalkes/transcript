@@ -22,26 +22,28 @@ fi
 # - copy pattern space to hold space
 # The last two commands are necessary because there is no command to clear the
 # hold space.
+{
+	unset HANDLED
+	while read TARGET FILES ; do
+		echo "../src/tables/${TARGET%:}.c: `echo \"$FILES\" | sed -r 's/(^| )(-[ci] )+/ /g'`"
+		echo "	@echo \"Generating ../src/tables/${TARGET%:}.c\""
+		echo "	@../src.util/ucm2ltc -o \"../src/tables/${TARGET%:}.c\" $FILES"
+		ALLTARGETS="${ALLTARGETS} ../src/tables/${TARGET%:}.c"
+		for f in $FILES ; do
+			if [ "x${f#-}" != "x$f" ] ; then
+				continue
+			fi
+			HANDLED="$HANDLED$f"$'\n'
+		done
+	done < <(sed -r -n '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}' rules | \
+		sed -r 's/#.*//;/^[[:space:]]*$/d')
 
-unset HANDLED
-while read TARGET FILES ; do
-	if [ -n "$REGENERATE" ] || ! [ -e "../src/tables/${TARGET%:}.c" ] ; then
-		echo "Generating ../src/tables/${TARGET%:}.c"
-		../src.util/ucm2ltc -o "../src/tables/${TARGET%:}.c" $FILES
-	fi
-	for f in $FILES ; do
-		if [ "x${f#-}" != "x$f" ] ; then
-			continue
-		fi
-		HANDLED="$HANDLED$f"$'\n'
+	for f in `{ echo "$HANDLED$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
+		out="${f##*/}"
+		echo "../src/tables/${out%.ucm}.c: $f"
+		echo "	@echo \"Generating ../src/tables/${out%.ucm}.c\""
+		echo "	@../src.util/ucm2ltc -o \"../src/tables/${out%.ucm}.c\" $f"
+		ALLTARGETS="${ALLTARGETS} ../src/tables/${out%.ucm}.c"
 	done
-done < <(sed -r -n '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}' rules | \
-	sed -r 's/#.*//;/^[[:space:]]*$/d')
-
-for f in `{ echo "$HANDLED$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
-	out="${f##*/}"
-	if [ -n "$REGENERATE" ] || ! [ -e "../src/tables/${out%.ucm}.c" ] ; then
-		echo "Generating ../src/tables/${out%.ucm}.c"
-		../src.util/ucm2ltc -o "../src/tables/${out%.ucm}.c" $f
-	fi
-done
+	echo "all:${ALLTARGETS}"
+} | make -f - ${REGENERATE:+-B} all
