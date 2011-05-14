@@ -23,9 +23,9 @@
 <mb_cur_min>         1
 <uconv_class>        "MBCS"
 <subchar>            \x1A
-<icu:state>          0-7f, 8e:2, 8f:1, a1-fe:1
+<icu:state>          0-7f, 8e:1, 8f:2, a1-fe:1
 <icu:state>          a1-fe
-<icu:state>          a1-fe:2
+<icu:state>          a1-fe:1
 
 CHARMAP
 <U0000> \x00 |0
@@ -121,7 +121,7 @@ CHARMAP
 <U005A> \x5A |0
 <U005B> \x5B |0
 <U005C> \x5C |0
-<U005C> \xA1\xC0 |0
+#<U005C> \xA1\xC0 |0
 <U005D> \x5D |0
 <U005E> \x5E |0
 <U005F> \x5F |0
@@ -156,7 +156,7 @@ CHARMAP
 <U007C> \x7C |0
 <U007D> \x7D |0
 <U007E> \x7E |0
-<U007E> \x8F\xA2\xB7 |0
+#<U007E> \x8F\xA2\xB7 |0
 <U007F> \x7F |0
 <U00A1> \x8F\xA2\xC2 |0
 <U00A2> \xA1\xF1 |0
