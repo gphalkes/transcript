@@ -160,6 +160,7 @@ CHARMAP
 <U00A2> \xA1\xF1 |0
 <U00A3> \xA1\xF2 |0
 <U00A4> \x8F\xA2\xF0 |0
+<U00A5> \x5C |1
 <U00A6> \x8F\xA2\xC3 |0
 <U00A7> \xA1\xF8 |0
 <U00A8> \xA1\xAF |0
@@ -559,6 +560,7 @@ CHARMAP
 <U2032> \xA1\xEC |0
 <U2033> \xA1\xED |0
 <U203B> \xA2\xA8 |0
+<U203E> \x7E |1
 <U2103> \xA1\xEE |0
 <U2116> \x8F\xA2\xF1 |0
 <U2122> \x8F\xA2\xEF |0
