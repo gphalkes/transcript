@@ -155,7 +155,6 @@ CHARMAP
 <U007C> \x7C |0
 <U007D> \x7D |0
 <U007E> \x7E |0
-<U007E> \x8F\xA2\xB7 |3
 <U007F> \x7F |0
 <U00A1> \x8F\xA2\xC2 |0
 <U00A2> \xA1\xF1 |0
@@ -13100,6 +13099,7 @@ CHARMAP
 <UFF5B> \xA1\xD0 |0
 <UFF5C> \xA1\xC3 |0
 <UFF5D> \xA1\xD1 |0
+<UFF5E> \x8F\xA2\xB7 |0
 <UFF61> \x8E\xA1 |0
 <UFF62> \x8E\xA2 |0
 <UFF63> \x8E\xA3 |0
