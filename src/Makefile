@@ -19,7 +19,7 @@ LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
 MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .ltc
 
-MODULES := ASCII unicode iso-2022
+MODULES := ascii unicode iso-2022
 
 # If SOURCES is not defined for a module, assume that module*.c are the sources
 $(foreach MODULE, $(MODULES), $(eval SOURCES.modules/$(MODULE).la ?= $(wildcard modules/$(MODULE)*.c)))

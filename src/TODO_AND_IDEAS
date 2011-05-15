@@ -4,6 +4,12 @@ HIGH PRIORITY
   incorrect input!
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
+- current loading mechanism which uses the real name for loading a converter
+  when no alias is available is not satisfactory. When trying an uppercase
+  name it will not look for the lowercase one, which leads to unexpected
+  results. Even for loading aliased names it is not entirely satisfactory, as
+  it requires uppercase characters in names and leads to mixed upper- and
+  lowercase names because of the display name stuff.
 - provide pkg-config stuf for our own library
 
 MEDIUM PRIORITY

@@ -155,6 +155,8 @@ static bool add_converter_alias(const char *name) {
 
 	/* Check if the name is already in use as a converter or an alias. */
 	LOOP_LIST(transcript_name_desc_t, ptr, converters)
+		if (ptr == converters_tail)
+			break;
 		if (strcmp(normalized_name, ptr->name) == 0)
 			_transcript_log("error: alias name '%s' is shadowd by a converter\n", name);
 
