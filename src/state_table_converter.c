@@ -333,6 +333,8 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const char 
 				break;
 			case ACTION_FINAL:
 			case ACTION_FINAL_PAIR:
+			case ACTION_FINAL_NOFLAGS:
+			case ACTION_FINAL_PAIR_NOFLAGS:
 			case ACTION_ILLEGAL:
 			case ACTION_UNASSIGNED:
 				*inbuf = (const char *) _inbuf;
@@ -436,10 +438,10 @@ static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *h
 
 	for (i = 0; i < handle->tables.nr_multi_mappings; i++) {
 		/* Skip if the first codepoint is smaller. */
-		if (codepoints[0] < handle->tables.codepage_sorted_multi_mappings[i]->codepoints[0])
+		if (codepoints[0] < handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0])
 			continue;
 		/* Skip other tests if the first codepoint is larger (sorted input). */
-		else if (codepoints[0] > handle->tables.codepage_sorted_multi_mappings[i]->codepoints[0])
+		else if (codepoints[0] > handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0])
 			break;
 
 		mapping_check_len = handle->tables.codepoint_sorted_multi_mappings[i]->codepoints_length * 2;

@@ -103,7 +103,7 @@ static uint32_t iconv_revert(iconv_t handle, char *seq, int length) {
 	if (iconv_result == (size_t) -1)
 		return UINT32_C(0xffffffff);
 	if ((80 - codepoint_len) != 4)
-		return UINT32_C(0xffffffff);
+		return UINT32_C(0xfffffffe);
 	return codepoint_buffer[0];
 }
 
@@ -157,7 +157,7 @@ static uint32_t transcript_revert(transcript_t *handle, const char *seq, int len
 	}
 	transcript_to_unicode_reset(handle);
 	if ((codepoint_ptr - (char *) codepoint_buffer) != 4)
-		return UINT32_C(0xffffffff);
+		return UINT32_C(0xfffffffe);
 	return codepoint_buffer[0];
 }
 

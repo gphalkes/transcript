@@ -276,9 +276,9 @@ CHARMAP
 <UFB29> \x2B |1
 <UFB2A> \xF9\xD1 |0
 <UFB2B> \xF9\xD2 |0
-<UFB2C> \xF9\xCC\xD1 |1
-<UFB2D> \xF9\xCC\xD2 |1
-<UFB2E> \xE0\xC9 |0
+<UFB2C> \xF9\xCC\xD1 |0
+<UFB2D> \xF9\xCC\xD2 |0
+<UFB2E> \xE0\xC7 |0
 <UFB2F> \xE0\xC8 |0
 <UFB30> \xE0\xCC |0
 <UFB31> \xE1\xCC |0
@@ -306,5 +306,6 @@ CHARMAP
 <UFB4C> \xE1\xCF |0
 <UFB4D> \xEB\xCF |0
 <UFB4E> \xF4\xCF |0
-<UFB4F> \xE0\xEC |1
+# Currently, we can't have multi-byte fallbacks
+#<UFB4F> \xE0\xEC |1
 END CHARMAP

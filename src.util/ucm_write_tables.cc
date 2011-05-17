@@ -148,10 +148,18 @@ static int compare_multi_mapping_codepage(const Mapping **a, const Mapping **b) 
 }
 
 static int compare_multi_mapping_codepoints(const Mapping **a, const Mapping **b) {
-	if ((*a)->codepoints.size() < (*b)->codepoints.size())
-		return 1;
-	if ((*a)->codepoints.size() > (*b)->codepoints.size())
-		return -1;
+	vector<uint32_t>::const_iterator end_iter = (*a)->codepoints.begin() + min((*a)->codepoints.size(), (*b)->codepoints.size());
+	pair<vector<uint32_t>::const_iterator, vector<uint32_t>::const_iterator> diff =
+		mismatch((*a)->codepoints.begin(), end_iter,
+			(*b)->codepoints.begin());
+	if (diff.first == end_iter) {
+		if ((*a)->codepoints.size() < (*b)->codepoints.size())
+			return 1;
+		if ((*a)->codepoints.size() > (*b)->codepoints.size())
+			return -1;
+	} else {
+		return *diff.first < *diff.second ? 1 : -1;
+	}
 	return 0;
 }
 
