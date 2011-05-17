@@ -6,6 +6,8 @@
 - check names for normalization clashes
 - loops in states cause a segementation fault!
 - line numbers are sometimes off on syntax errors (try "| 0" instead of "|0" in ibm-9447)
+- check that multi-mappings and simple mappings don't clash (if one side has a
+  single item this can happen!)
 
 - check out the following error:
 ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter than <mb_cur_min>

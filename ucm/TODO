@@ -1,0 +1,4 @@
+- add the fallback decomposition for FB4F [requires separate flags for
+  multi-mappings]
+- report bug in glibc mapping for U0385 (should map to a8ec, but maps to a5ec
+  instead)
