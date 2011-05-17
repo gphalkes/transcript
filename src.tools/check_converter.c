@@ -148,7 +148,7 @@ static uint32_t transcript_revert(transcript_t *handle, const char *seq, int len
 	char *codepoint_ptr = (char *) codepoint_buffer;
 
 	switch (transcript_to_unicode(handle, &seq, seq + length, &codepoint_ptr, codepoint_ptr + 20,
-			TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE)) {
+			TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE | TRANSCRIPT_END_OF_TEXT)) {
 		case TRANSCRIPT_SUCCESS:
 			break;
 		default:
