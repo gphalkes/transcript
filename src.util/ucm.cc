@@ -337,6 +337,8 @@ int Ucm::check_codepage_bytes(vector<uint8_t> &bytes) {
 		PANIC();
 next_char:;
 	}
+	if (count == 0)
+		fatal("%s:%d: Sequence too short: '%s'\n", file_name, line_number - 1, sprint_sequence(bytes));
 	return count;
 }
 
