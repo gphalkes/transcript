@@ -46,4 +46,4 @@ fi
 		ALLTARGETS="${ALLTARGETS} ../src/tables/${out%.ucm}.c"
 	done
 	echo "all:${ALLTARGETS}"
-} | make -f - ${REGENERATE:+-B} all
+} | make -f - ${REGENERATE:+-B} all && make -C ../src --no-print-directory
