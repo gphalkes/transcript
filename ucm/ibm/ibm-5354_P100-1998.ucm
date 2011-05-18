@@ -274,35 +274,36 @@ CHARMAP
 END CHARMAP
 
 CHARMAP
-# Commented mappings represent decomposed versions for which a composed version
-# also exists in the table
-#<U00C0> \x41\xCC |0
-#<U00C1> \x41\xEC |0
+# The precision 3 mappings are decomposed characters which are also available as
+# precomposed version in the codepage. Round-trip conversion results in using
+# the precomposed version in the codepage as well.
+<U00C0> \x41\xCC |3
+<U00C1> \x41\xEC |3
 <U00C3> \x41\xDE |0
-#<U00C8> \x45\xCC |0
-#<U00C9> \x45\xEC |0
+<U00C8> \x45\xCC |3
+<U00C9> \x45\xEC |3
 <U00CC> \x49\xCC |0
-#<U00CD> \x49\xEC |0
-#<U00D1> \x4E\xDE |0
+<U00CD> \x49\xEC |3
+<U00D1> \x4E\xDE |3
 <U00D2> \x4F\xCC |0
-#<U00D3> \x4F\xEC |0
+<U00D3> \x4F\xEC |3
 <U00D5> \x4F\xDE |0
-#<U00D9> \x55\xCC |0
-#<U00DA> \x55\xEC |0
+<U00D9> \x55\xCC |3
+<U00DA> \x55\xEC |3
 <U00DD> \x59\xEC |0
-#<U00E0> \x61\xCC |0
-#<U00E1> \x61\xEC |0
+<U00E0> \x61\xCC |3
+<U00E1> \x61\xEC |3
 <U00E3> \x61\xDE |0
-#<U00E8> \x65\xCC |0
-#<U00E9> \x65\xEC |0
+<U00E8> \x65\xCC |3
+<U00E9> \x65\xEC |3
 <U00EC> \x69\xCC |0
-#<U00ED> \x69\xEC |0
-#<U00F1> \x6E\xDE |0
+<U00ED> \x69\xEC |3
+<U00F1> \x6E\xDE |3
 <U00F2> \x6F\xCC |0
-#<U00F3> \x6F\xEC |0
+<U00F3> \x6F\xEC |3
 <U00F5> \x6F\xDE |0
-#<U00F9> \x75\xCC |0
-#<U00FA> \x75\xEC |0
+<U00F9> \x75\xCC |3
+<U00FA> \x75\xEC |3
 <U00FD> \x79\xEC |0
 <U0106> \x43\xEC |0
 <U0107> \x63\xEC |0
@@ -334,8 +335,7 @@ CHARMAP
 <U01FD> \xE6\xEC |0
 <U01FE> \xD8\xEC |0
 <U01FF> \xF8\xEC |0
-# Currently we don't have multi-mapping fallbacks
-#<U0385> \xA8\xEC |1
+<U0385> \xA8\xEC |1
 <U1E04> \x42\xF2 |0
 <U1E05> \x62\xF2 |0
 <U1E08> \xC7\xEC |0

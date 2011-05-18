@@ -51,6 +51,7 @@ typedef struct {
 	const uint8_t bytes[31];
 	const uint8_t codepoints_length;
 	const uint8_t bytes_length;
+	const uint8_t flags;
 } multi_mapping_v1_t;
 
 typedef struct {

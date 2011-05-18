@@ -306,6 +306,6 @@ CHARMAP
 <UFB4C> \xE1\xCF |0
 <UFB4D> \xEB\xCF |0
 <UFB4E> \xF4\xCF |0
-# Currently, we can't have multi-byte fallbacks
-#<UFB4F> \xE0\xEC |1
+# Compatibility decomposition
+<UFB4F> \xE0\xEC |1
 END CHARMAP

@@ -1,4 +1,4 @@
-- add the fallback decomposition for FB4F [requires separate flags for
-  multi-mappings]
-- report bug in glibc mapping for U0385 (should map to a8ec, but maps to a5ec
-  instead)
+- does Windows-1258 allow multiple combining characters? If so, there are a few
+  codepoints which are perhaps better encoded differently.
+- make a script to check the unihan database for changes that may influence
+  the mapping tables for the different Asian scripts

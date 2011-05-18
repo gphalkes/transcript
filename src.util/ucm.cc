@@ -106,8 +106,8 @@ void UcmBase::add_mapping(Mapping *mapping) {
 		used_to_unicode_flags |= Mapping::TO_UNICODE_MULTI_START;
 		used_from_unicode_flags |= Mapping::FROM_UNICODE_MULTI_START;
 
-		if (mapping->precision != 0)
-			fatal("%s:%d: Multi-mapping must have precision 0\n", file_name, line_number - 1);
+		if (mapping->precision == 2)
+			fatal("%s:%d: Multi-mapping can not have precision 2\n", file_name, line_number - 1);
 
 		multi_mappings.push_back(mapping);
 	}

@@ -109,6 +109,8 @@ void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) 
 }
 
 void Ucm::write_multi_mappings(FILE *output, vector<Mapping *> &mappings, unsigned int &mapping_idx) {
+	static const int precision_to_multi_flag[4] = { 0, 1, 0, 2 };
+
 	for (vector<Mapping *>::const_iterator mapping_iter = mappings.begin(); mapping_iter != mappings.end(); mapping_iter++) {
 		if (mapping_idx != 0)
 			fprintf(output, ",\n");
@@ -135,7 +137,9 @@ void Ucm::write_multi_mappings(FILE *output, vector<Mapping *> &mappings, unsign
 				fprintf(output, ", ");
 			fprintf(output, "0x%02x", *byte_iter);
 		}
-		fprintf(output, " },\n\t\t%d, %d }", (int) (*mapping_iter)->codepoints.size(), (int) (*mapping_iter)->codepage_bytes.size());
+		fprintf(output, " },\n\t\t%d, %d, %d }", (int) (*mapping_iter)->codepoints.size(),
+			(int) (*mapping_iter)->codepage_bytes.size(),
+			precision_to_multi_flag[(*mapping_iter)->precision]);
 	}
 }
 

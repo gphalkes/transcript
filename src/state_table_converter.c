@@ -65,6 +65,11 @@ enum {
 	TO_UNICODE_VARIANT = (1<<3)
 };
 
+enum {
+	MULTI_FROM_UNICODE_FALLBACK = (1<<0),
+	MULTI_TO_UNICODE_FALLBACK = (1<<1)
+};
+
 /** @struct save_state_t
     Structure holding the shift state of a state table converter. */
 typedef struct _transcript_state_table_state_t {
@@ -206,6 +211,9 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 				/* Note: we sorted the multi_mappings table according to bytes_length, so we will first
 				   check the longer mappings. This way we always find the longest match. */
 				for (i = 0; i < handle->tables.nr_multi_mappings; i++) {
+					if (handle->tables.codepage_sorted_multi_mappings[i]->flags & MULTI_FROM_UNICODE_FALLBACK)
+						continue;
+
 					check_len = min(handle->tables.codepage_sorted_multi_mappings[i]->bytes_length, inbuflimit - *inbuf);
 
 					/* Check if the multi-mapping is a prefix of the current input, or the
@@ -444,6 +452,10 @@ static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *h
 		else if (codepoints[0] > handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0])
 			break;
 
+		/* Skip to-unicode fallbacks. */
+		if (handle->tables.codepoint_sorted_multi_mappings[i]->flags & MULTI_TO_UNICODE_FALLBACK)
+			continue;
+
 		mapping_check_len = handle->tables.codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
 		check_len = min(ptr - (char *) codepoints, mapping_check_len);
 
@@ -486,6 +498,10 @@ static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *h
 		if (check_len >= mapping_check_len && memcmp(codepoints, handle->tables.codepoint_sorted_multi_mappings[i]->codepoints,
 				mapping_check_len) == 0)
 		{
+			if (handle->tables.codepoint_sorted_multi_mappings[i]->flags & MULTI_FROM_UNICODE_FALLBACK &&
+					!(flags & TRANSCRIPT_ALLOW_FALLBACK))
+				return TRANSCRIPT_FALLBACK;
+
 			/* Multi-mapping found. */
 			PUT_BYTES(handle->tables.codepoint_sorted_multi_mappings[i]->bytes_length,
 				handle->tables.codepoint_sorted_multi_mappings[i]->bytes);
@@ -618,6 +634,8 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 						return TRANSCRIPT_INTERNAL_ERROR;
 					case TRANSCRIPT_NO_SPACE:
 						return TRANSCRIPT_NO_SPACE;
+					case TRANSCRIPT_FALLBACK:
+						return TRANSCRIPT_FALLBACK;
 					case -1:
 						break;
 				}
