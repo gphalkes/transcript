@@ -37,13 +37,13 @@ static void *get_sym(lt_dlhandle handle, const char *sym, const char *converter_
     of trying to open with fopen, it will actually be dlopened and the function
     transcript_probe_<name> will be called.
 */
-static bool probe_converter(const char *name, const char *normalized_name, bool probe_load) {
+static bool probe_converter(const char *normalized_name, bool probe_load) {
 	if (probe_load) {
 		bool (*probe)(const char *);
 		lt_dlhandle handle;
 		int result = 0;
 
-		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) lt_dlopen, NULL)) == NULL)
+		if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) lt_dlopen, NULL)) == NULL)
 			return 0;
 
 		if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL)
@@ -54,7 +54,7 @@ static bool probe_converter(const char *name, const char *normalized_name, bool 
 	} else {
 		FILE *handle = NULL;
 		/* For most converters it is sufficient to know that the file is readable. */
-		if ((handle = _transcript_db_open(name, "ltc", (open_func_t) fopen_wrapper, NULL)) != NULL)
+		if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) fopen_wrapper, NULL)) != NULL)
 			fclose(handle);
 		return handle != NULL;
 	}
@@ -77,9 +77,9 @@ int transcript_probe_converter_nolock(const char *name) {
 	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
 		if (converter->flags & NAME_DESC_FLAG_DISABLED)
 			return false;
-		return probe_converter(converter->real_name, converter->name, !!(converter->flags & NAME_DESC_FLAG_PROBE_LOAD));
+		return probe_converter(converter->name, !!(converter->flags & NAME_DESC_FLAG_PROBE_LOAD));
 	}
-	return probe_converter(name, normalized_name, false);
+	return probe_converter(normalized_name, false);
 }
 
 
@@ -110,17 +110,17 @@ static transcript_t *complete_converter(transcript_t *handle, transcript_utf_t u
 }
 
 /** Open a converter plugin. */
-static transcript_t *open_converter(const char *normalized_name, const char *real_name, transcript_utf_t utf_type,
+static transcript_t *open_converter(const char *normalized_name, transcript_utf_t utf_type,
 		int flags, transcript_error_t *error)
 {
 	lt_dlhandle handle = NULL;
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
 
-	if ((handle = _transcript_db_open(real_name, "ltc", (open_func_t) lt_dlopen, error)) == NULL) {
+	if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) lt_dlopen, error)) == NULL) {
 		FILE *test_handle;
 		transcript_error_t local_error;
-		if ((test_handle = _transcript_db_open(real_name, "ltc", (open_func_t) fopen_wrapper, &local_error)) == NULL)
+		if ((test_handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) fopen_wrapper, &local_error)) == NULL)
 			ERROR(local_error);
 		fclose(test_handle);
 		ERROR(TRANSCRIPT_DLOPEN_FAILURE);
@@ -195,9 +195,9 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
 				*error = TRANSCRIPT_CONVERTER_DISABLED;
 			return NULL;
 		}
-		return complete_converter(open_converter(converter->name, converter->real_name, utf_type, flags, error), utf_type);
+		return complete_converter(open_converter(converter->name, utf_type, flags, error), utf_type);
 	}
-	return complete_converter(open_converter(normalized_name, name, utf_type, flags, error), utf_type);
+	return complete_converter(open_converter(normalized_name, utf_type, flags, error), utf_type);
 }
 
 /** Try to open a file from a database directory.
@@ -208,7 +208,7 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
     @return A @c FILE pointer on success, or @c NULL on failure.
 */
 static FILE *db_open(const char *name, const char *ext, const char *dir, open_func_t open_func, transcript_error_t *error) {
-	char *file_name = NULL, *copy_ptr;
+	char *file_name = NULL;
 	void *result = NULL;
 	size_t len;
 
@@ -218,11 +218,7 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
 
 	strcpy(file_name, dir);
 	strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
-	copy_ptr = file_name + strlen(file_name);
-	/* Copy name, but use lowercase. */
-	while (*name != 0)
-		*copy_ptr++ = _transcript_tolower(*name++);
-	*copy_ptr = 0;
+	strcat(file_name, name);
 	strcat(file_name, ".");
 	strcat(file_name, ext);
 

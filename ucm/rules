@@ -4,7 +4,7 @@ jis-x-0213: other/jis-x-0213-2000-1.ucm other/jis-x-0213-2004-1.ucm -c other/jis
 
 gb18030table: ibm/gb18030.ucm
 
-# Combine all ISO-8859 convertors into a single package
+# Combine all ISO-8859 converters into a single package
 iso-8859: ibm/iso-8859_10-1998.ucm -c ibm/iso-8859_16-2001.ucm -c ibm/iso-8859_6-1999.ucm -c \
 	ibm/iso-8859_11-2001.ucm -c ibm/iso-8859_2-1999.ucm -c ibm/iso-8859_7-1987.ucm -c \
 	ibm/iso-8859_13-1998.ucm -c ibm/iso-8859_3-1999.ucm -c ibm/iso-8859_7-2003.ucm -c \
@@ -14,3 +14,8 @@ iso-8859: ibm/iso-8859_10-1998.ucm -c ibm/iso-8859_16-2001.ucm -c ibm/iso-8859_6
 # Combine iso-2022 SBCS into a single package
 iso-2022-sbcs: other/iso-2022-ascii.ucm -c other/iso-2022-88591.ucm -c other/iso-2022-88597.ucm -c \
 	other/iso-2022-jisx0201kana.ucm -c other/iso-2022-jisx0201roman.ucm
+
+# Combine Windows-125X converters into a single package
+windows-125x: ibm/ibm-5346_P100-1998.ucm -c ibm/ibm-5347_P100-1998.ucm -c ibm/ibm-5348_P100-1997.ucm -c \
+	ibm/ibm-5349_P100-1998.ucm -c ibm/ibm-5350_P100-1998.ucm -c ibm/ibm-5354_P100-1998.ucm -c \
+	ibm/ibm-9447_P100-2002.ucm -c ibm/ibm-9448_X100-2005.ucm -c ibm/ibm-9449_P100-2002.ucm

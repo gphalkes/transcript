@@ -418,14 +418,17 @@ PARSE_FUNCTION(parse_options)
 			option_internal_table = true;
 		END_OPTION
 		OPTION('o', "output", REQUIRED_ARG)
-			char *ptr;
+			char normalized_output_name[160], *base_name;
 			if (option_output_name != NULL)
 				fatal("Only a single " OPTFMT " option may be specified\n", OPTPRARG);
 			if (strlen(optArg) < 3 || strcmp(optArg + strlen(optArg) - 2, ".c") != 0)
 				fatal("Output file name must end in .c\n");
-			for (ptr = optArg; *ptr != 0; ptr++)
-				if (strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", *ptr) != NULL)
-					fatal("Output file name must be all lowercase\n");
+			base_name = optArg;
+			while (strpbrk(base_name, DIRSEPS) != NULL)
+				base_name = strpbrk(base_name, DIRSEPS) + 1;
+			transcript_normalize_name(base_name, normalized_output_name, sizeof(normalized_output_name));
+			if (strncmp(base_name, normalized_output_name, strlen(base_name) - 2) != 0)
+				fatal("Output file name is not normalized (should be '%.*s')\n", strlen(normalized_output_name) - 1, normalized_output_name);
 			option_output_name = optArg;
 		END_OPTION
 		OPTION('v', "verbose", NO_ARG)
@@ -505,9 +508,9 @@ int main(int argc, char *argv[]) {
 		len = strlen(base_name);
 		if (len < 4 || strcmp(base_name + len - 4, ".ucm") != 0)
 			fatal("Input file does not end in .ucm. Please use explicit output name (-o)\n");
-		output_name = safe_strdup(base_name);
-		#warning FIXME: make name lowercase
-		strcpy(output_name + len - 3, "c");
+		transcript_normalize_name(base_name, normalized_output_name, sizeof(normalized_output_name));
+		output_name = safe_strdup(normalized_output_name);
+		strcpy(output_name + len - 3, ".c");
 	}
 
 	if ((output = fopen(output_name, "w+t")) == NULL)

@@ -126,8 +126,6 @@ static void make_links(const char *name) {
 	base_name = safe_strdup(filename(name));
 	base_name[strlen(base_name) - 4] = 0;
 	transcript_normalize_name(base_name, normalized_name, sizeof(normalized_name));
-	if (strchr(normalized_name, ',') != NULL)
-		*strchr(normalized_name, ',') = 0;
 	free(base_name);
 	sym_name = strcat_autoalloc(NULL, "transcript_namelist_");
 	sym_name = strcat_autoalloc(sym_name, normalized_name);
@@ -149,7 +147,8 @@ static void make_links(const char *name) {
 			base_name = strcat_autoalloc(base_name, name);
 			base_name[tmp - name + 1] = 0;
 		}
-		base_name = strcat_autoalloc(base_name, *namelist);
+		transcript_normalize_name(*namelist, normalized_name, sizeof(normalized_name));
+		base_name = strcat_autoalloc(base_name, normalized_name);
 		base_name = strcat_autoalloc(base_name, ".ltc");
 
 		if (option_verbose)

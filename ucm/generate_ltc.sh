@@ -25,10 +25,11 @@ fi
 {
 	unset HANDLED
 	while read TARGET FILES ; do
-		echo "../src/tables/${TARGET%:}.c: `echo \"$FILES\" | sed -r 's/(^| )(-[ci] )+/ /g'`"
-		echo "	@echo \"Generating ../src/tables/${TARGET%:}.c\""
-		echo "	@../src.util/ucm2ltc -o \"../src/tables/${TARGET%:}.c\" $FILES"
-		ALLTARGETS="${ALLTARGETS} ../src/tables/${TARGET%:}.c"
+		out="`echo \"${TARGET%:}\" | sed -r 's/\.ucm$//;s/[^a-zA-Z0-9]//g;s/(^|[^0-9])0+/\1/' | tr [:upper:] [:lower:]`"
+		echo "../src/tables/${out}.c: `echo \"$FILES\" | sed -r 's/(^| )(-[ci] )+/ /g'`"
+		echo "	@echo \"Generating ../src/tables/${out}.c\""
+		echo "	@../src.util/ucm2ltc -o \"../src/tables/${out}.c\" $FILES"
+		ALLTARGETS="${ALLTARGETS} ../src/tables/${out}.c"
 		for f in $FILES ; do
 			if [ "x${f#-}" != "x$f" ] ; then
 				continue
@@ -39,11 +40,11 @@ fi
 		sed -r 's/#.*//;/^[[:space:]]*$/d')
 
 	for f in `{ echo "$HANDLED$HANDLED" ; find -name '*.ucm' -printf '%P\n' ; } | sort | uniq -u` ; do
-		out="${f##*/}"
-		echo "../src/tables/${out%.ucm}.c: $f"
-		echo "	@echo \"Generating ../src/tables/${out%.ucm}.c\""
-		echo "	@../src.util/ucm2ltc -o \"../src/tables/${out%.ucm}.c\" $f"
-		ALLTARGETS="${ALLTARGETS} ../src/tables/${out%.ucm}.c"
+		out="`echo \"${f##*/}\" | sed -r 's/\.ucm$//;s/[^a-zA-Z0-9]//g;s/(^|[^0-9])0+/\1/' | tr [:upper:] [:lower:]`"
+		echo "../src/tables/${out}.c: $f"
+		echo "	@echo \"Generating ../src/tables/${out}.c\""
+		echo "	@../src.util/ucm2ltc -o \"../src/tables/${out}.c\" $f"
+		ALLTARGETS="${ALLTARGETS} ../src/tables/${out}.c"
 	done
 	echo "all:${ALLTARGETS}"
 } | make -f - ${REGENERATE:+-B} all && make -C ../src --no-print-directory
