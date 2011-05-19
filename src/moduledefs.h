@@ -27,7 +27,8 @@ extern "C" {
 #endif
 
 enum {
-	TRANSCRIPT_FULL_MODULE_V1 = 1, /* Provides all functions itself. */
+	TRANSCRIPT_DUMMY = 0,
+	TRANSCRIPT_FULL_MODULE_V1, /* Provides all functions itself. */
 	TRANSCRIPT_STATE_TABLE_V1, /* Provides a set of state tables. See state_table_converter for details. */
 	TRANSCRIPT_SBCS_TABLE_V1 /* Simple set of tables for SBCSs. See sbcs_converter for details. */
 };

@@ -130,6 +130,8 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
 		ERROR(TRANSCRIPT_INVALID_FORMAT);
 
 	switch (get_iface()) {
+		case TRANSCRIPT_DUMMY:
+			ERROR(TRANSCRIPT_PACKAGE_FILE);
 		case TRANSCRIPT_STATE_TABLE_V1: {
 			const converter_tables_v1_t *(*get_table)(void);
 			if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)

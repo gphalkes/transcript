@@ -109,6 +109,7 @@ typedef enum {
 	TRANSCRIPT_INTERNAL_TABLE, /**< Tried to load a table that is for internal use only. */
 	TRANSCRIPT_DLOPEN_FAILURE, /**< Opening if the plugin failed. */
 	TRANSCRIPT_CONVERTER_DISABLED, /**< The converter has been explicitly disabled. */
+	TRANSCRIPT_PACKAGE_FILE, /**< The converter name references a converter package file, not an actual converter. */
 
 	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 

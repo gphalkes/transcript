@@ -370,6 +370,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("Dynamic linker returned an error");
 		case TRANSCRIPT_CONVERTER_DISABLED:
 			return _("Converter has been disabled");
+		case TRANSCRIPT_PACKAGE_FILE:
+			return _("Name specifies a converter package file");
 	}
 }
 

@@ -26,7 +26,7 @@ fi
 	unset HANDLED
 	while read TARGET FILES ; do
 		out="`echo \"${TARGET%:}\" | sed -r 's/\.ucm$//;s/[^a-zA-Z0-9]//g;s/(^|[^0-9])0+/\1/' | tr [:upper:] [:lower:]`"
-		echo "../src/tables/${out}.c: `echo \"$FILES\" | sed -r 's/(^| )(-[ci] )+/ /g'`"
+		echo "../src/tables/${out}.c: `echo \"$FILES\" | sed -r 's/(^| )(-[^ \t]+ )+/ /g'`"
 		echo "	@echo \"Generating ../src/tables/${out}.c\""
 		echo "	@../src.util/ucm2ltc -o \"../src/tables/${out}.c\" $FILES"
 		ALLTARGETS="${ALLTARGETS} ../src/tables/${out}.c"

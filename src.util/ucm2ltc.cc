@@ -533,15 +533,13 @@ int main(int argc, char *argv[]) {
 	base_name[strlen(base_name) - 2] = 0;
 	transcript_normalize_name(base_name, normalized_output_name, sizeof(normalized_output_name));
 
-	// Remove any comma's from the file name, as they can not be in identifiers
-	if (strchr(normalized_output_name, ',') != NULL)
-		*strchr(normalized_output_name, ',') = 0;
-
 	fprintf(output, "static const char * const namelist[] = {\n");
 	for (iter = completed_ucms.begin(); iter != completed_ucms.end(); iter++)
 		(*iter)->write_namelist_entries(output);
 	fprintf(output, "\tNULL\n};\n\n");
 	fprintf(output, "TRANSCRIPT_EXPORT const char * const *transcript_namelist_%s(void) { return namelist; }\n", normalized_output_name);
+
+	#warning FIXME: write dummy interface if the name of the output does not match a converter
 
 	fclose(output);
 	free(output_name);
