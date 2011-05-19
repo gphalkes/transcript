@@ -963,8 +963,8 @@ static void close_converter(converter_state_t *handle) {
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_iso2022(void) {
 	static const char * const namelist[] = {
-		"ISO-2022-JP", "ISO-2022-JP-1", "ISO-2022-JP-2", "ISO-2022-JP-3",
-		"ISO-2022-JP-2004", "ISO-2022-KR", "ISO-2022-CN", "ISO-2022-CN-EXT",
+		"iso-2022-jp", "iso-2022-jp-1", "iso-2022-jp-2", "iso-2022-jp-3",
+		"iso-2022-jp-2004", "iso-2022-kr", "iso-2022-cn", "iso-2022-cn-ext",
 		NULL
 	};
 	return namelist;

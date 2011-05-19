@@ -208,7 +208,7 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
     @return A @c FILE pointer on success, or @c NULL on failure.
 */
 static FILE *db_open(const char *name, const char *ext, const char *dir, open_func_t open_func, transcript_error_t *error) {
-	char *file_name = NULL;
+	char *file_name = NULL, *copy_ptr;
 	void *result = NULL;
 	size_t len;
 
@@ -218,7 +218,11 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
 
 	strcpy(file_name, dir);
 	strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
-	strcat(file_name, name);
+	copy_ptr = file_name + strlen(file_name);
+	/* Copy name, but use lowercase. */
+	while (*name != 0)
+		*copy_ptr++ = _transcript_tolower(*name++);
+	*copy_ptr = 0;
 	strcat(file_name, ".");
 	strcat(file_name, ext);
 
@@ -226,6 +230,7 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
 		ERROR(TRANSCRIPT_ERRNO);
 
 end_error:
+	_transcript_log("Tyring to open file '%s': %p\n", file_name, result);
 	free(file_name);
 	return result;
 }

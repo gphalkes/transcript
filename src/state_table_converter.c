@@ -272,8 +272,6 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_PRIVATE_USE;
 				PUT_UNICODE(UINT32_C(0xfffd));
-			} else if ((conv_flags & TO_UNICODE_FALLBACK) && !(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
-				return TRANSCRIPT_FALLBACK;
 			} else if (codepoint == UINT32_C(0xffff)) {
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_UNASSIGNED;

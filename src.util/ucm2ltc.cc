@@ -418,10 +418,14 @@ PARSE_FUNCTION(parse_options)
 			option_internal_table = true;
 		END_OPTION
 		OPTION('o', "output", REQUIRED_ARG)
+			char *ptr;
 			if (option_output_name != NULL)
 				fatal("Only a single " OPTFMT " option may be specified\n", OPTPRARG);
 			if (strlen(optArg) < 3 || strcmp(optArg + strlen(optArg) - 2, ".c") != 0)
 				fatal("Output file name must end in .c\n");
+			for (ptr = optArg; *ptr != 0; ptr++)
+				if (strchr("ABCDEFGHIJKLMNOPQRSTUVWXYZ", *ptr) != NULL)
+					fatal("Output file name must be all lowercase\n");
 			option_output_name = optArg;
 		END_OPTION
 		OPTION('v', "verbose", NO_ARG)
@@ -502,6 +506,7 @@ int main(int argc, char *argv[]) {
 		if (len < 4 || strcmp(base_name + len - 4, ".ucm") != 0)
 			fatal("Input file does not end in .ucm. Please use explicit output name (-o)\n");
 		output_name = safe_strdup(base_name);
+		#warning FIXME: make name lowercase
 		strcpy(output_name + len - 3, "c");
 	}
 

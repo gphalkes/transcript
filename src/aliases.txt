@@ -7,7 +7,7 @@
 # Note that names will be normalized, so for example the names IBM-1201 and
 # ibm1201 will be considered equal (see the libtranscript documentation for
 # details on normalization). The converter name has to match the file-system
-# name of the converter exactly though.
+# name of the converter except that it is first translated to lowercase.
 
 # Converter names must start in column 1. Lines can be continued by indenting
 # the second and later lines with any amount of white-space.
@@ -87,7 +87,7 @@ x-UTF-8-BOM
 
 *ISO-8859-1 IBM-819 cp819 *Latin1 8859_1 csISOLatin1 iso-ir-100
 	ISO_8859-1:1987 l1 819
-ascii *ASCII *US-ASCII ANSI_X3.4-1968 ANSI_X3.4-1986 ISO_646.irv:1991
+*ASCII *US-ASCII ANSI_X3.4-1968 ANSI_X3.4-1986 ISO_646.irv:1991
 	iso_646.irv:1983 ISO646-US us csASCII iso-ir-6 cp367 ascii7 646
 	windows-20127 IBM-367
 
@@ -122,9 +122,9 @@ iso-8859_9-1999 ibm-920_P100-1995 IBM-920 *ISO-8859-9 *Latin5 csISOLatin5
 	turkish8 turkish
 iso-8859_10-1998 *ISO-8859-10 iso-ir-157 l6 ISO_8859-10:1992 csISOLatin6
 	*Latin6
-iso-8859_11-2001 ISO-8859-11 thai8
+iso-8859_11-2001 *ISO-8859-11 thai8
 
-iso-8859_13-1998 ibm-921_P100-1995 IBM-921 ISO-8859-13 8859_13 Windows-28603
+iso-8859_13-1998 ibm-921_P100-1995 IBM-921 *ISO-8859-13 8859_13 Windows-28603
 	cp921 921
 iso-8859_14-1998 *ISO-8859-14 iso-ir-199 *Latin8 iso-celtic l8 # ISO_8859-14:1998
 iso-8859_15-1999 ibm-923_P100-1998 IBM-923 *ISO-8859-15 *Latin9 l9 8859_15
@@ -133,11 +133,11 @@ iso-8859_15-1999 ibm-923_P100-1998 IBM-923 *ISO-8859-15 *Latin9 l9 8859_15
 # The Shift-JIS naming is a mess. There are at least 10 different encodings all
 # claiming to be Shift-JIS.
 
-shift_jis *Shift_JIS sjis pck x-sjis
+Shift_JIS sjis pck x-sjis
 
 # Note that Shift-JISX0213 is not entirely correct, as it misses the 10 codepoints
 # added in the 2004 version.
-shift_jis-2004 *Shift_JIS-2004 *Shift_JISX0213
+*Shift_JIS-2004 *Shift_JISX0213
 
 #ibm-942_P12A-1999 IBM-942 IBM-932 *Shift_JIS78 sjis78 IBM-942_VSUB_VPUA
 #	ibm-932_VSUB_VPUA # AKA cp932, but so is ms932
@@ -152,13 +152,13 @@ shift_jis-2004 *Shift_JIS-2004 *Shift_JISX0213
 
 #ibm-943_P130-1999 IBM-943_VASCII_VSUB_VPUA
 
-euc-jp *EUC-JP ibm-33722_P12A_P12A-2004_U2
+*EUC-JP ibm-33722_P12A_P12A-2004_U2
 	Extended_UNIX_Code_Packed_Format_for_Japanese csEUCPkdFmtJapanese
 	X-EUC-JP Windows-51932 IBM-33722_VPUA IBM-eucJP
 
 # Note that EUC-JISX0213 is not entirely correct, as it misses the 10 codepoints
 # added in the 2004 version.
-euc-jis-2004 *EUC-JIS-2004 *EUC-JISX0213
+*EUC-JIS-2004 *EUC-JISX0213
 
 ibm-33722_P120-1999 *IBM-33722 IBM-5050 cp33722 33722 IBM-33722_VASCII_VPUA
 
@@ -173,11 +173,11 @@ ibm-5471_P100-2006 *IBM-5471 MS950_HKSCS hkbig5 big5-hkscs:unicode3.0
 
 # GBK
 ibm-1386_P100-2001 *IBM-1386 cp1386 IBM-1386_VSUB_VPUA
-windows-936-2000 *GBK CP936 MS936 Windows-936
+windows-936-2000 *GBK CP936 MS936 *Windows-936
 
 # Technically, GB2312 doesn't include ASCII, which EUC-CN does. However, it is
 # often used as an alias for EUC-CN, so we do that as well.
-euc-cn *EUC-CN *GB2312
+*EUC-CN *GB2312
 
 #ibm-1383_P110-1999 IBM-1383 *GB2312 csGB2312 cp1383 1383 EUC-CN IBM-eucCN
 #	hp15CN IBM-1383_VPUA

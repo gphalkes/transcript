@@ -49,7 +49,10 @@ typedef struct transcript_t transcript_t;
 
 /** Flags for converters and conversions. */
 enum transcript_flags_t {
-	TRANSCRIPT_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion. */
+	TRANSCRIPT_ALLOW_FALLBACK = (1<<0), /**< Include fallback characters in the conversion.
+
+	    This flag is only used by ::transcript_from_unicode.
+	*/
 	TRANSCRIPT_SUBST_UNASSIGNED = (1<<1), /**< Automatically replace unmappable characters by substitute characters. */
 	TRANSCRIPT_SUBST_ILLEGAL = (1<<2), /**< Automatically insert a substitution character on illegal input. */
 	TRANSCRIPT_ALLOW_PRIVATE_USE = (1<<3), /**< Allow private-use mappings. If not allowed, they are handled like unassigned sequences, with the exception that they return a different error.. */
@@ -65,7 +68,7 @@ enum transcript_flags_t {
 	    ::transcript_from_unicode_flush to properly end the output buffer.
 	*/
 	TRANSCRIPT_END_OF_TEXT = (1<<9),
-	/** Only convert the next character, then return (useful for handling fallback/unassigned characters etc.).
+	/** Only convert the next character, then return (useful for handling fallback/unassigned characters etc).
 
 	    This flag is only valid when passed to ::transcript_from_unicode or ::transcript_to_unicode.
 	*/

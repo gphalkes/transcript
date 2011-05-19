@@ -2,9 +2,6 @@ HIGH PRIORITY
 =============
 - proper testing of all the converters!!! This means both correct and
   incorrect input!
-- reconsider whether to-unicode fallbacks should always be used or not. The
-  definition is that two sequences encode the same codepoint, which means they
-  are the same. However, there is usually a reason why it's encoded twice.
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
 - current loading mechanism which uses the real name for loading a converter

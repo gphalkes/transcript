@@ -145,6 +145,6 @@ TRANSCRIPT_EXPORT int transcript_get_iface_ascii(void) { return TRANSCRIPT_FULL_
 TRANSCRIPT_EXPORT int transcript_get_iface_iso88591(void) { return TRANSCRIPT_FULL_MODULE_V1; }
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_ascii(void) {
-	static const char * const namelist[] = { "ascii", "ISO-8859-1", NULL };
+	static const char * const namelist[] = { "ascii", "iso-8859-1", NULL };
 	return namelist;
 }

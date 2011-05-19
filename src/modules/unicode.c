@@ -383,10 +383,10 @@ static void close_converter(converter_state_t *handle) {
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
 	static const char * const namelist[] = {
-		"UTF-8", "UTF-8-BOM", "UTF-16", "UTF-16BE", "UTF-16LE",
-		"UTF-32", "UTF-32BE", "UTF-32LE", "UTF-7", "SCSU", "CESU-8",
-		"GB18030", "x-UTF-16LE-BOM", "x-UTF-16BE-BOM", "x-UTF-32LE-BOM",
-		"x-UTF-32BE-BOM", NULL
+		"utf-8", "utf-8-bom", "utf-16", "utf-16be", "utf-16le",
+		"utf-32", "utf-32be", "utf-32le", "utf-7", "scsu", "cesu-8",
+		"gb18030", "x-utf-16le-bom", "x-utf-16be-bom", "x-utf-32le-bom",
+		"x-utf-32be-bom", NULL
 	};
 	return namelist;
 }
