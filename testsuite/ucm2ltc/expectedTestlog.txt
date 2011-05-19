@@ -1,3 +1,5 @@
+==== Testcase ../tests/loop.test ====
+map00.ucm: State machine contains a loop
 ==== Testcase ../tests/variant_duplicate01.test ====
 map00.ucm: Duplicate mapping defined for \x42 in variant TEST2
 ==== Testcase ../tests/variant_duplicate02.test ====

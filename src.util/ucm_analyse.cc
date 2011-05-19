@@ -28,17 +28,24 @@ int Ucm::calculate_depth(Entry *entry) {
 		case ACTION_SHIFT:
 			return 1;
 		case ACTION_VALID:
+			/* Set action to ACTION_LOOP while recursing, such that we can recognize
+			   loops in the state machine. The action is reset to ACTION_VALID after
+			   the recursion is done. */
+			entry->action = ACTION_LOOP;
 			for (i = 0; i < codepage_states[entry->next_state]->entries.size(); i++) {
 				depth = calculate_depth(&codepage_states[entry->next_state]->entries[i]);
 				if (depth > max_depth)
 					max_depth = depth;
 			}
+			entry->action = ACTION_VALID;
 			if (max_depth > 0)
 				return max_depth + 1;
 			else
 				return -1;
 		case ACTION_ILLEGAL:
 			return -1;
+		case ACTION_LOOP:
+			fatal("%s: State machine contains a loop\n", file_name);
 		default:
 			PANIC();
 	}

@@ -1,0 +1,15 @@
+#%% No options
+
+<code_set_name>               "TEST"
+<mb_cur_max>                  2
+<mb_cur_min>                  1
+<uconv_class>                 "MBCS"
+<subchar>                     \x1A
+<icu:state>                   00-7f, a1-7e:1, 7f:2
+<icu:state>                   a1-7e
+<icu:state>                   a1-7e:2
+
+CHARMAP
+<U0020> \x20 |0
+<U0042> \x22\x23 |0
+END CHARMAP

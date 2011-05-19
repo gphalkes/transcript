@@ -44,11 +44,6 @@ LOW PRIORITY
   well
 - should TRANSCRIPT_ALLOW_PRIVATE_USE impact the from_unicode conversion as well?
 
-IDEAS/MISC
-==========
-- See http://x0213.org/codetable/index.en.html
-  official standard (in japanese) http://www.jisc.go.jp/app/pager?id=72545
-
 RELEASE ENGINEERING
 ===================
 - testing for
