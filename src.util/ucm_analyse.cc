@@ -98,6 +98,7 @@ void Ucm::validate_states(void) {
 
 	if (tag_values[SUBCHAR].str != NULL) {
 		vector<uint8_t> bytes;
+		int saved_line_number = line_number;
 
 		/* Set line_number such that correct line numbers are displayed in error messages. */
 		line_number = tag_values[SUBCHAR].line_number;
@@ -116,6 +117,7 @@ void Ucm::validate_states(void) {
 			line_number++;
 			check_codepage_bytes(bytes);
 		}
+		line_number = saved_line_number;
 	}
 }
 

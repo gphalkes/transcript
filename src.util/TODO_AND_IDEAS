@@ -4,7 +4,6 @@
   different routines in state_table_converter.c
 - check names in different UCM sets against each other for clashes
 - check names for normalization clashes
-- line numbers are sometimes off on syntax errors (try "| 0" instead of "|0" in ibm-9447)
 - check that multi-mappings and simple mappings don't clash (if one side has a
   single item this can happen!)
 
