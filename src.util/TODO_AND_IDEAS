@@ -1,3 +1,5 @@
+HIGH PRIORITY
+=============
 - figure out what is the best block size for the flags trie. It may well be
   different than what we have now. Maybe it's different for each number of
   bits saved. This is not a problem because it can be hard-coded in each of the
@@ -7,10 +9,10 @@
 - check that multi-mappings and simple mappings don't clash (if one side has a
   single item this can happen!)
 
+MEDIUM PRIORITY
+===============
 - check out the following error:
 ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter than <mb_cur_min>
-
-
 - allow extra initial states only if the MULTIBYTE_START_STATE_1 flag is also
   set
 - The following checks have to be implemented:
@@ -19,3 +21,7 @@ ibm-ucm/aix-IBM_udcJP-4.3.6.ucm: State machine specifies byte sequences shorter 
 	- the above must hold for variants as well
 	- the subchar and subchar1 characters may not appear in variants for
 		to_unicode mappings.
+
+LOW PRIORITY
+============
+- check memory leaks

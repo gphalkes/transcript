@@ -273,11 +273,7 @@ ibm-1129_P100-1997 *IBM-1129
 ibm-1131_P100-1997 *IBM-1131 cp1131
 ibm-1133_P100-1997 *IBM-1133
 
-# TODO: JIS_Encoding csJISEncoding JIS JIS7 JIS8. Although ICU says these are
-# aliases for some of the ISO-2022-JP* encodings, this is actually not true. The
-# JIS_Encoding does use the ISO-2022 scheme. However, the JIS_Encoding has more
-# character sets.
-*ISO-2022-JP :probe_load csISO2022JP
+*ISO-2022-JP :probe_load csISO2022JP JIS_Encoding csJISEncoding JIS JIS7 JIS8
 *ISO-2022-JP-1 :probe_load IBM-5054
 *ISO-2022-JP-2 :probe_load csISO2022JP2
 ISO-2022-JP-3 :probe_load

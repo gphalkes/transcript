@@ -48,12 +48,14 @@ enum {
 	ISO2022_JP,
 	ISO2022_JP1,
 	ISO2022_JP2,
+	ISO2022_JP2_STRICT,
 	ISO2022_JP3,
+	ISO2022_JP3_STRICT,
 	ISO2022_JP2004,
+	ISO2022_JP2004_STRICT,
 	ISO2022_KR,
 	ISO2022_CN,
-	ISO2022_CNEXT,
-	ISO2022_TEST
+	ISO2022_CNEXT
 };
 
 /** @struct name_to_iso2022type
@@ -67,17 +69,14 @@ static const name_to_iso2022type map[] = {
 	{ "iso2022jp", ISO2022_JP },
 	{ "iso2022jp1", ISO2022_JP1 },
 	{ "iso2022jp2", ISO2022_JP2 },
+	{ "iso2022jp2strict", ISO2022_JP2_STRICT },
 	{ "iso2022jp3", ISO2022_JP3 },
+	{ "iso2022jp3strict", ISO2022_JP3_STRICT },
 	{ "iso2022jp2004", ISO2022_JP2004 },
+	{ "iso2022jp2004strict", ISO2022_JP2004_STRICT },
 	{ "iso2022kr", ISO2022_KR },
 	{ "iso2022cn", ISO2022_CN },
 	{ "iso2022cnext", ISO2022_CNEXT }
-#if 0
-#ifdef DEBUG
-#warning using ISO-2022-TEST
-	, { "iso2022test", ISO2022_TEST }
-#endif
-#endif
 };
 
 
@@ -90,6 +89,7 @@ struct _transcript_iso2022_stc_handle_t {
 	uint_fast8_t seq_len; /**< Length of the escape sequence used to shift. */
 	char escape_seq[7]; /**< The escape sequence itselft. */
 	uint_fast8_t flags; /**< Flags indicating how to use the state table converter. */
+	uint_fast8_t g; /**< Which graphics set should this be loaded into. */
 	stc_handle_t *prev, *next; /**< Doubly-linked list ptrs. */
 };
 
@@ -123,7 +123,7 @@ typedef void (*reset_state_func_t)(converter_state_t *handle);
 struct converter_state_t {
 	transcript_t common;
 	stc_handle_t *g_initial[4]; /**< Initial sets of the converter (for resetting purposes). */
-	stc_handle_t *g_sets[4]; /**< Linked lists of possible tables. */
+	stc_handle_t *g_sets; /**< Linked lists of possible tables. */
 	stc_handle_t *ascii; /**< The ASCII converter. */
 	reset_state_func_t reset_state; /**< Function called after a NL character is encountered. */
 	state_t state;
@@ -146,15 +146,21 @@ static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x
 static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', 0 };
 static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', 0 };
 static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', 0 };
+/* Note that this set should be used for reading only, and then only in ISO-2022-JP-3/2004.
+   This is because it uses the same escape sequence as the 1983 version, which is
+   the only one mandated by any standard. However, to be able to read non-standard
+   compliant output, we add this set for reading. Note that because JIS X 0213
+   is an extension of the 1990 version, this poses no problem when writing. */
+static stc_descriptor_t jis_x_0208_1990 = { "jis-x-0208-1990", 2, '\x42', 0 };
 static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0212-1990", 2, '\x44', 0 };
 
 static stc_descriptor_t jis_x_0213_2000_1 = { "jis-x-0213-2000-1", 2, '\x4f', 0 };
 static stc_descriptor_t jis_x_0213_2000_2 = { "jis-x-0213-2000-2", 2, '\x50', 0 };
 static stc_descriptor_t jis_x_0213_2004_1 = { "jis-x-0213-2004-1", 2, '\x51', 0 };
-static stc_descriptor_t iso8859_7 = { "iso-2022-88597", 1, '\x4f', STC_FLAG_LARGE_SET };
+static stc_descriptor_t iso8859_7 = { "iso-2022-88597", 1, '\x46', STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "iso-2022-ksc5601", 2, '\x43', 0 };
 
-static stc_descriptor_t gb2312_1980 = { "gb2312-1980", 2, '\x41', 0 };
+static stc_descriptor_t gb2312_1980 = { "iso-2022-gb2312", 2, '\x41', 0 };
 
 static stc_descriptor_t cns_11643_1992_1 = { "CNS-11643-1992-1", 2, '\x47', 0 };
 static stc_descriptor_t cns_11643_1992_2 = { "CNS-11643-1992-2", 2, '\x48', 0 };
@@ -203,21 +209,19 @@ static int check_escapes(converter_state_t *handle, const uint8_t **inbuf, const
 
 sequence_found:
 	if (!skip) {
-		size_t i, len;
+		size_t len;
 
 		len = _inbuf - (*inbuf);
-		for (i = 0; i < 3; i++) {
-			for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-				if (len != ptr->seq_len)
-					continue;
+		for (ptr = handle->g_sets; ptr != NULL; ptr = ptr->next) {
+			if (len != ptr->seq_len)
+				continue;
 
-				if (memcmp(*inbuf, ptr->escape_seq, ptr->seq_len) != 0)
-					continue;
+			if (memcmp(*inbuf, ptr->escape_seq, ptr->seq_len) != 0)
+				continue;
 
-				handle->state.g_to[i] = ptr;
-				*inbuf = _inbuf;
-				return TRANSCRIPT_SUCCESS;
-			}
+			handle->state.g_to[ptr->g] = ptr;
+			*inbuf = _inbuf;
+			return TRANSCRIPT_SUCCESS;
 		}
 	} else {
 		*inbuf = _inbuf;
@@ -279,6 +283,12 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 					case TRANSCRIPT_INCOMPLETE:
 						goto incomplete_char;
 					case TRANSCRIPT_ILLEGAL:
+						/* Handle C1 escapes. */
+						if (handle->iso2022_type == ISO2022_JP2 && (*inbuf)[1] >= 0x40 && (*inbuf)[1] < 0x60) {
+							PUT_UNICODE((*inbuf)[1] + 0x40);
+							(*inbuf) += 2;
+							break;
+						}
 						return TRANSCRIPT_ILLEGAL;
 					case TRANSCRIPT_SUCCESS:
 						continue;
@@ -412,28 +422,27 @@ static void to_unicode_reset(converter_state_t *handle) {
     This function both updates the @a handle and write the associated sequence
     to the output.
 */
-static transcript_error_t switch_to_set(converter_state_t *handle, stc_handle_t *stc, uint_fast8_t g,
-		char **outbuf, const char const *outbuflimit)
-{
-	if (handle->state.g_from[g] != stc) {
+static transcript_error_t switch_to_set(converter_state_t *handle, stc_handle_t *stc, char **outbuf, const char const *outbuflimit) {
+	if (handle->state.g_from[stc->g] != stc) {
 		PUT_BYTES(stc->seq_len, stc->escape_seq);
-		handle->state.g_from[g] = stc;
+		handle->state.g_from[stc->g] = stc;
 	}
-	if (handle->state.from != g && ((handle->state.from & 3) != (1 << 2))) {
-		if (handle->shift_types & (1 << g)) {
-			PUT_BYTES(1 + (g >> 1), ls[g]);
-			handle->state.from = g;
-		} else if (g > 1 && (handle->shift_types & (1 << (g + 2)))) {
-			PUT_BYTES(1 + (g >> 1), ls[g]);
-			handle->state.from = (handle->state.from & 3) | (g << 2);
+	if (handle->state.from != stc->g) {
+		/* First check for a locking shift. If not available, check for a non-locking shift. */
+		if (handle->shift_types & (1 << stc->g)) {
+			PUT_BYTES(1 + (stc->g >> 1), ls[stc->g]);
+			handle->state.from = stc->g;
+		} else if (stc->g > 1 && (handle->shift_types & (1 << (stc->g + 2)))) {
+			PUT_BYTES(2, ls[stc->g + 2]);
+			handle->state.from = (handle->state.from & 3) | (stc->g << 2);
 		}
 	}
 	return TRANSCRIPT_SUCCESS;
 }
 
 /** Simplification macro calling switch_to_set, which returns if not enough space is available. */
-#define SWITCH_TO_SET(stc, g) do { \
-	if (switch_to_set(handle, stc, g, outbuf, outbuflimit) != TRANSCRIPT_SUCCESS) \
+#define SWITCH_TO_SET(stc) do { \
+	if (switch_to_set(handle, stc, outbuf, outbuflimit) != TRANSCRIPT_SUCCESS) \
 		return TRANSCRIPT_NO_SPACE; \
 } while (0)
 
@@ -442,23 +451,23 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
+	stc_handle_t *fallback_stc = NULL;
 	stc_handle_t *ptr;
 	char buffer[32], *buffer_ptr;
-	struct { stc_handle_t *stc; uint_fast8_t state; } fallback = { NULL, 0 };
 	uint_fast8_t state;
 	transcript_error_t result;
-	int i, internal_flags;
+	int internal_flags;
 
 	if (flags & TRANSCRIPT_FILE_START) {
 		/* RFC1557 specifies a text should start by loading KSC5601 as G1. */
 		if (handle->iso2022_type == ISO2022_KR) {
 			PUT_BYTES(4, "\x1b\x24\x29\x43");
-			handle->state.g_from[1] = handle->g_sets[1];
+			handle->state.g_from[1] = handle->g_sets->next;
 		}
 	}
 
 	while ((const char *) _inbuf < inbuflimit) {
-		fallback.stc = NULL;
+		fallback_stc = NULL;
 		/* Assume that most codepoints will come from the same character set, so just try to
 		   convert using that. If it succeeds, we're done. Otherwise, we need to search for
 		   the first set that does encode the character. */
@@ -473,8 +482,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 			case TRANSCRIPT_SUCCESS:
 				break;
 			case TRANSCRIPT_FALLBACK:
-				fallback.stc = ptr;
-				fallback.state = state;
+				fallback_stc = ptr;
 				break;
 			case TRANSCRIPT_UNASSIGNED: {
 				/* We may have encountered a control character, in which case we
@@ -485,15 +493,14 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				if (codepoint < 32) {
 					/* ESC, SHIFT-IN and SHIFT-OUT can not be encoded in the output, as they
 					   are used as character-set control characters. */
-					/*FIXME: we could make the SHIFT-IN/OUT stuf dependent on whether the converter actually uses them*/
 					if (codepoint == 0x1b || codepoint == 0x0e || codepoint == 0x0f) {
 						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
 							return TRANSCRIPT_ILLEGAL;
-						SWITCH_TO_SET(handle->ascii, 0);
+						SWITCH_TO_SET(handle->ascii);
 						buffer[0] = 0x1a;
 						PUT_BYTES(1, buffer);
 					} else {
-						SWITCH_TO_SET(handle->ascii, 0);
+						SWITCH_TO_SET(handle->ascii);
 						if (codepoint == 0x0a || codepoint == 0x0d) {
 							/* Take the simple approach: go to ASCII mode on _any_ possible line ending.
 							   This may be a bit too much, it is not wrong, and some converters may
@@ -502,16 +509,38 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 						}
 						buffer[0] = codepoint;
 						PUT_BYTES(1, buffer);
-						/* Make sure we skip looking for a matching converter. */
-						result = TRANSCRIPT_SUCCESS;
 					}
+					/* Make sure we skip looking for a matching converter. */
+					result = TRANSCRIPT_SUCCESS;
+				} else if (codepoint < 0xa0 && codepoint >= 0x80) {
+					if (handle->iso2022_type != ISO2022_JP2) {
+						if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+							return TRANSCRIPT_UNASSIGNED;
+						SWITCH_TO_SET(handle->ascii);
+						buffer[0] = 0x1a;
+						PUT_BYTES(1, buffer);
+					} else if (codepoint == 0x8e || codepoint == 0x8f) {
+						/* SS2 and SS3 can not be encoded in the output, as they are
+						   used as character-set control characters. */
+						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+							return TRANSCRIPT_ILLEGAL;
+						SWITCH_TO_SET(handle->ascii);
+						buffer[0] = 0x1a;
+						PUT_BYTES(1, buffer);
+					} else {
+						buffer[0] = 0x1b;
+						buffer[1] = codepoint - 0x40;
+						PUT_BYTES(2, buffer);
+					}
+					/* Make sure we skip looking for a matching converter. */
+					result = TRANSCRIPT_SUCCESS;
 				}
 				break;
 			}
 			case TRANSCRIPT_ILLEGAL:
 			case TRANSCRIPT_ILLEGAL_END:
 				if (flags & TRANSCRIPT_SUBST_ILLEGAL) {
-					SWITCH_TO_SET(handle->ascii, 0);
+					SWITCH_TO_SET(handle->ascii);
 					buffer[0] = 0x1a;
 					PUT_BYTES(1, buffer);
 					result = TRANSCRIPT_SUCCESS;
@@ -528,50 +557,46 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 			   with the previously used character set, we never reach this point. */
 			internal_flags = (flags & ~(TRANSCRIPT_ALLOW_FALLBACK | TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED)) |
 				TRANSCRIPT_SINGLE_CONVERSION;
-			for (i = 0; i < 4; i++) {
-				for (ptr = handle->g_sets[i]; ptr != NULL; ptr = ptr->next) {
-					if (!(ptr->flags & STC_FLAG_WRITE))
-						continue;
+			for (ptr = handle->g_sets; ptr != NULL; ptr = ptr->next) {
+				if (!(ptr->flags & STC_FLAG_WRITE))
+					continue;
 
-					tmp_inbuf = *inbuf;
-					buffer_ptr = buffer;
+				tmp_inbuf = *inbuf;
+				buffer_ptr = buffer;
 
-					switch (ptr->stc->convert_from(ptr->stc, &tmp_inbuf, inbuflimit,
-							&buffer_ptr, buffer + 32, internal_flags))
-					{
-						case TRANSCRIPT_SUCCESS:
-							SWITCH_TO_SET(ptr, i);
-							PUT_BYTES(buffer_ptr - buffer, buffer);
-							_inbuf = (const uint8_t *) tmp_inbuf;
-							goto converter_found;
-						case TRANSCRIPT_UNASSIGNED:
-							break;
-						case TRANSCRIPT_FALLBACK:
-							if (fallback.stc != NULL) {
-								fallback.stc = ptr;
-								fallback.state = i;
-							}
-							break;
-						case TRANSCRIPT_INCOMPLETE:
-							return TRANSCRIPT_INCOMPLETE;
-						default:
-							return TRANSCRIPT_INTERNAL_ERROR;
-					}
+				switch (ptr->stc->convert_from(ptr->stc, &tmp_inbuf, inbuflimit,
+						&buffer_ptr, buffer + 32, internal_flags))
+				{
+					case TRANSCRIPT_SUCCESS:
+						SWITCH_TO_SET(ptr);
+						PUT_BYTES(buffer_ptr - buffer, buffer);
+						_inbuf = (const uint8_t *) tmp_inbuf;
+						goto converter_found;
+					case TRANSCRIPT_UNASSIGNED:
+						break;
+					case TRANSCRIPT_FALLBACK:
+						if (fallback_stc == NULL)
+							fallback_stc = ptr;
+						break;
+					case TRANSCRIPT_INCOMPLETE:
+						return TRANSCRIPT_INCOMPLETE;
+					default:
+						return TRANSCRIPT_INTERNAL_ERROR;
 				}
 			}
 
-			if (fallback.stc == NULL) {
+			if (fallback_stc == NULL) {
 				if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 					return TRANSCRIPT_UNASSIGNED;
-				SWITCH_TO_SET(handle->ascii, 0);
+				SWITCH_TO_SET(handle->ascii);
 				buffer[0] = 0x1a;
 				PUT_BYTES(1, buffer);
 			} else {
 				/* Fallback */
 				if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
 					return TRANSCRIPT_FALLBACK;
-				SWITCH_TO_SET(fallback.stc, fallback.state);
-				switch (fallback.stc->stc->convert_from(fallback.stc->stc, (const char **) &_inbuf, inbuflimit, outbuf, outbuflimit,
+				SWITCH_TO_SET(fallback_stc);
+				switch (fallback_stc->stc->convert_from(fallback_stc->stc, (const char **) &_inbuf, inbuflimit, outbuf, outbuflimit,
 					flags | TRANSCRIPT_ALLOW_FALLBACK | TRANSCRIPT_SINGLE_CONVERSION))
 				{
 					case TRANSCRIPT_NO_SPACE:
@@ -592,13 +617,13 @@ converter_found:
 	}
 
 	if (flags & TRANSCRIPT_END_OF_TEXT)
-		SWITCH_TO_SET(handle->ascii, 0);
+		SWITCH_TO_SET(handle->ascii);
 	return TRANSCRIPT_SUCCESS;
 }
 
 /** flush_from implementation for ISO-2022 converters. */
 static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf, const char const *outbuflimit) {
-	SWITCH_TO_SET(handle->ascii, 0);
+	SWITCH_TO_SET(handle->ascii);
 	return TRANSCRIPT_SUCCESS;
 }
 
@@ -617,14 +642,14 @@ static void save_iso2022_state(converter_state_t *handle, save_state_t *save) {
 	save->from = handle->state.from;
 	for (i = 0; i < 4; i++) {
 		save->g_from[i] = 0;
-		ptr = handle->g_sets[i];
+		ptr = handle->g_sets;
 		while (ptr != NULL && ptr != handle->state.g_from[i]) {
 			ptr = ptr->next;
 			save->g_from[i]++;
 		}
 
 		save->g_to[i] = 0;
-		ptr = handle->g_sets[i];
+		ptr = handle->g_sets;
 		while (ptr != NULL && ptr != handle->state.g_to[i]) {
 			ptr = ptr->next;
 			save->g_to[i]++;
@@ -638,11 +663,11 @@ static void load_iso2022_state(converter_state_t *handle, save_state_t *save) {
 	handle->state.to = save->to;
 	handle->state.from = save->from;
 	for (i = 0; i < 4; i++) {
-		handle->state.g_from[i] = handle->g_sets[i];
+		handle->state.g_from[i] = handle->g_sets;
 		for (j = save->g_from[i]; j != 0 && handle->state.g_from[i] != NULL; j--)
 			handle->state.g_from[i] = handle->state.g_from[i]->next;
 
-		handle->state.g_to[i] = handle->g_sets[i];
+		handle->state.g_to[i] = handle->g_sets;
 		for (j = save->g_to[i]; j != 0 && handle->state.g_to[i] != NULL; j--)
 			handle->state.g_to[i] = handle->state.g_to[i]->next;
 	}
@@ -700,8 +725,9 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 
 	stc_handle->flags = flags;
 	stc_handle->prev = NULL;
-	stc_handle->next = handle->g_sets[g];
-	handle->g_sets[g] = stc_handle;
+	stc_handle->g = g;
+	stc_handle->next = handle->g_sets;
+	handle->g_sets = stc_handle;
 
 	/* Some converters have a short non-compliant sequence as well a strictly
 	   compliant escape sequence. Depending on the STC_FLAGS_SHORT_SEQ, either
@@ -722,8 +748,8 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 		else
 			extra_handle->flags &= ~(STC_FLAG_WRITE);
 		extra_handle->flags |= STC_FLAGS_DUPSTC;
-		extra_handle->next = handle->g_sets[g];
-		handle->g_sets[g] = extra_handle;
+		extra_handle->next = handle->g_sets;
+		handle->g_sets = extra_handle;
 	}
 
 	return true;
@@ -781,7 +807,8 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		   several implementations simply add the JIS X 0213 planes to the
 		   ISO-2022-JP-2 sets. To some extent this makes sense, because the
 		   JIS X 0213 sets don't cover all characters in the ISO-2022-JP-2
-		   repertoire.
+		   repertoire. Also, some converters use JIS X 0208 1990, instead of the
+		   1983 version as mandated by the standard(s).
 
 		   Also note that, to make things slightly worse, in the attempts to
 		   register the ISO-2022-JP-2004 character set with IANA, the following
@@ -791,31 +818,43 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		   ISO-2022-JP-2003
 
 		   It is unclear what part JIS X 0201 has to play in this. It does encode
-		   characters that are not in JIS X 0213...
+		   characters that are not in JIS X 0213. It would seem that some
+		   implementors of ISO-2022-JP-* simply add them to have access to the
+		   otherwise unavailable characters.
 		*/
-		#warning FIXME: do we want to include the JP-2 sets in JP-3 and JP-2004?
 		case ISO2022_JP2004:
 			DO_LOAD(handle, &jis_x_0213_2004_1, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
-			if (handle != NULL)
-				handle->shift_types = 0;
-			break;
+			/* FALLTHROUGH */
 		case ISO2022_JP3:
+			if (type != ISO2022_JP3_STRICT && type != ISO2022_JP2004_STRICT) {
+				/* These are not officially in ISO-2022-JP3, but glibc iconv includes them. */
+				DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
+				DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
+			}
 			DO_LOAD(handle, &jis_x_0213_2000_2, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &jis_x_0213_2000_1, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
+			/* Load the JIS X 0208 1990 version for reading only, because some
+			   non-compliant converters (e.g. glibc iconv) may generate it. We
+			   can actually convert them back to something useful in this case
+			   because JIS X 0213 includes them as well. */
+			DO_LOAD(handle, &jis_x_0208_1990, 0, STC_FLAGS_SHORT_SEQ);
 			if (handle != NULL)
 				handle->shift_types = 0;
 			break;
 		case ISO2022_JP2:
-			DO_LOAD(handle, &iso8859_1, 2, STC_FLAG_WRITE);
-			DO_LOAD(handle, &iso8859_7, 2, STC_FLAG_WRITE);
+			if (type != ISO2022_JP2_STRICT) {
+				DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
+				DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
+			}
 			DO_LOAD(handle, &ksc5601_1987, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &gb2312_1980, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
-			if (handle != NULL)
+			DO_LOAD(handle, &iso8859_7, 2, STC_FLAG_WRITE);
+			DO_LOAD(handle, &iso8859_1, 2, STC_FLAG_WRITE);
+			if (handle != NULL) {
 				handle->reset_state = reset_state_jp2;
+				handle->shift_types = SS2;
+			}
 			/* FALLTHROUGH */
 		case ISO2022_JP1:
 			DO_LOAD(handle, &jis_x_0212_1990, 0, STC_FLAG_WRITE);
@@ -824,12 +863,11 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
 			DO_LOAD(handle, &jis_x_0208_1978, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
 			DO_LOAD(handle, &jis_x_0208_1983, 0, STC_FLAG_WRITE | STC_FLAGS_SHORT_SEQ);
-			if (handle != NULL)
+			if (handle != NULL && type != ISO2022_JP2)
 				handle->shift_types = 0;
 			break;
 		case ISO2022_KR:
 			DO_LOAD(handle, &ksc5601_1987, 1, STC_FLAG_WRITE);
-			DO_LOAD(handle, &ascii, 0, STC_FLAG_WRITE);
 			if (handle != NULL)
 				handle->shift_types = LS0 | LS1;
 			break;
@@ -852,13 +890,6 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 				handle->shift_types = LS0 | LS1 | SS2 | (handle->iso2022_type == ISO2022_CNEXT ? SS3 : 0);
 				handle->reset_state = reset_state_cn;
 			}
-			break;
-		case ISO2022_TEST:
-			DO_LOAD(handle, &jis_x_0201_1976_roman, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &jis_x_0201_1976_kana, 0, STC_FLAG_WRITE);
-			DO_LOAD(handle, &iso8859_1, 2, STC_FLAG_WRITE);
-			if (handle != NULL)
-				handle->shift_types = 0;
 			break;
 		default:
 			if (error != NULL)
@@ -894,10 +925,7 @@ static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return NULL;
 	}
-	retval->g_sets[0] = NULL;
-	retval->g_sets[1] = NULL;
-	retval->g_sets[2] = NULL;
-	retval->g_sets[3] = NULL;
+	retval->g_sets = NULL;
 	retval->g_initial[0] = NULL;
 	retval->g_initial[1] = NULL;
 	retval->g_initial[2] = NULL;
@@ -915,7 +943,7 @@ static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags
 		close_converter(retval);
 		return NULL;
 	}
-	retval->ascii = retval->g_sets[0];
+	retval->ascii = retval->g_sets;
 	retval->g_initial[0] = retval->ascii;
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
@@ -949,15 +977,12 @@ static bool probe_iso2022(const char *name) {
 /** close implementation for ISO-2022 converters. */
 static void close_converter(converter_state_t *handle) {
 	stc_handle_t *ptr, *next;
-	size_t i;
 
-	for (i = 0; i < 4; i++) {
-		for (ptr = handle->g_sets[i]; ptr != NULL; ptr = next) {
-			if (!(ptr->flags & STC_FLAGS_DUPSTC))
-				transcript_close_converter(ptr->stc);
-			next = ptr->next;
-			free(ptr);
-		}
+	for (ptr = handle->g_sets; ptr != NULL; ptr = next) {
+		if (!(ptr->flags & STC_FLAGS_DUPSTC))
+			transcript_close_converter(ptr->stc);
+		next = ptr->next;
+		free(ptr);
 	}
 }
 
