@@ -549,15 +549,10 @@ bool Ucm::is_simple_table(void) {
 	   - must map only to BMP
 	   - may not include multi-mappings
 	   - 0 byte must map only to U0000 [ allows checking for absence without checking flags ]
-	   - state machine must be 0-ff or missing completely
+	   - state machine may have only 1 state
 	*/
 
-	if (uconv_class != CLASS_SBCS || !multi_mappings.empty() || !variants.empty() ||
-			codepage_states.size() != 1 ||
-			codepage_states.front()->entries.size() != 1 ||
-			codepage_states.front()->entries.front().low != 0 ||
-			codepage_states.front()->entries.front().high != 255 ||
-			codepage_states.front()->entries.front().action != ACTION_FINAL)
+	if (uconv_class != CLASS_SBCS || !multi_mappings.empty() || !variants.empty() || codepage_states.size() != 1)
 		return false;
 
 	for (vector<Mapping *>::const_iterator iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {

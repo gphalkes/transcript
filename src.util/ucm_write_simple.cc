@@ -157,6 +157,16 @@ void Ucm::write_simple(FILE *output) {
 			byte_to_codepoint[(unsigned int) (*iter)->codepage_bytes[0]] = (*iter)->codepoints[0];
 	}
 
+	/* Set entries for illegal to 0xfffe */
+	for (vector<Entry>::const_iterator entry_iter = codepage_states.front()->entries.begin();
+				entry_iter != codepage_states.front()->entries.end(); entry_iter++)
+	{
+		if (entry_iter->action == ACTION_ILLEGAL) {
+			for (int i = entry_iter->low; i <= entry_iter->high; i++)
+				byte_to_codepoint[i] = 0xfffe;
+		}
+	}
+
 	level0_indices = write_simple_from_unicode(output);
 	fprintf(output, "static const sbcs_converter_v1_t sbcs_converter_%d = {\n", unique);
 	if (used_from_unicode_flags & Mapping::FROM_UNICODE_FALLBACK)

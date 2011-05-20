@@ -44,17 +44,23 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 	while (*inbuf < inbuflimit) {
 		codepoint = handle->tables.byte_to_codepoint[*(const uint8_t *) *inbuf];
 
-		if (codepoint != 0xffff) {
+		if (codepoint < 0xfffe) {
 			if (handle->tables.byte_to_codepoint_flags != NULL && !(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
 					(handle->tables.byte_to_codepoint_flags[(*(const uint8_t *) *inbuf) >> 3] & (1 << ((*(const uint8_t *) *inbuf) & 7))))
 				return TRANSCRIPT_FALLBACK;
 			if (codepoint >= 0xe000 && codepoint < 0xf900 && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE))
 				return TRANSCRIPT_PRIVATE_USE;
 			PUT_UNICODE(codepoint);
-		} else if (flags & TRANSCRIPT_SUBST_UNASSIGNED) {
-			PUT_UNICODE(0xfffd);
-		} else {
-			return TRANSCRIPT_UNASSIGNED;
+		} else if (codepoint == 0xffff) {
+			if (flags & TRANSCRIPT_SUBST_UNASSIGNED)
+				PUT_UNICODE(0xfffd);
+			else
+				return TRANSCRIPT_UNASSIGNED;
+		} else if (codepoint == 0xfffe) {
+			if (flags & TRANSCRIPT_SUBST_ILLEGAL)
+				PUT_UNICODE(0xfffd);
+			else
+				return TRANSCRIPT_ILLEGAL;
 		}
 		(*inbuf)++;
 		if (flags & TRANSCRIPT_SINGLE_CONVERSION)
