@@ -9,6 +9,7 @@
 <mb_cur_min>                  1
 <uconv_class>                 "MBCS"
 <subchar>                     \x1a
+<transcript:internal>
 
 # ICU state information for the GB 18030 MBCS codepage
 # Note that the entire block for the supplementary Unicode planes is
