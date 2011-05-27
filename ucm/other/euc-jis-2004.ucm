@@ -1678,7 +1678,6 @@ CHARMAP
 <U4FE6> \x8F\xA1\xCF |0
 <U4FEE> \xBD\xA4 |0
 <U4FEF> \xD0\xED |0
-<U4FF1> \xAE\xA1 |0
 <U4FF2> \x8F\xA1\xD7 |0
 <U4FF3> \xC7\xD0 |0
 <U4FF5> \xC9\xB6 |0
@@ -2004,7 +2003,6 @@ CHARMAP
 <U5257> \xAE\xDF |0
 <U525B> \xB9\xE4 |0
 <U525C> \x8F\xA3\xBA |0
-<U525D> \xAF\xFE |0
 <U525E> \xD1\xF0 |0
 <U5261> \xAE\xE0 |0
 <U5263> \xB7\xF5 |0
@@ -2247,7 +2245,6 @@ CHARMAP
 <U5412> \xAE\xF5 |0
 <U541B> \xB7\xAF |0
 <U541D> \xD2\xE7 |0
-<U541E> \xCF\xFE |0
 <U541F> \xB6\xE3 |0
 <U5420> \xCB\xCA |0
 <U5424> \x8F\xA3\xE5 |0
@@ -2486,7 +2483,6 @@ CHARMAP
 <U564C> \xC1\xB9 |0
 <U564E> \xD3\xD9 |0
 <U5650> \xD3\xDA |0
-<U5653> \xF4\xA7 |0
 <U565B> \xB3\xFA |0
 <U565E> \x8F\xA4\xC7 |0
 <U5660> \x8F\xA4\xC8 |0
@@ -2909,7 +2905,6 @@ CHARMAP
 <U59EB> \xC9\xB1 |0
 <U59EE> \x8F\xA5\xD4 |0
 <U59F6> \xB0\xA8 |0
-<U59F8> \xFE\xFA |0
 <U59FB> \xB0\xF9 |0
 <U59FF> \xBB\xD1 |0
 <U5A01> \xB0\xD2 |0
@@ -3176,7 +3171,6 @@ CHARMAP
 <U5C51> \xB6\xFD |0
 <U5C53> \xD5\xFE |0
 <U5C55> \xC5\xB8 |0
-<U5C5B> \xFE\xFB |0
 <U5C5E> \xC2\xB0 |0
 <U5C5F> \x8F\xA8\xB1 |0
 <U5C60> \xC5\xCB |0
@@ -3412,7 +3406,6 @@ CHARMAP
 <U5E74> \xC7\xAF |0
 <U5E75> \xD6\xF4 |0
 <U5E76> \xD6\xF5 |0
-<U5E77> \xFE\xFC |0
 <U5E78> \xB9\xAC |0
 <U5E79> \xB4\xB4 |0
 <U5E7A> \xD6\xF6 |0
@@ -6401,7 +6394,6 @@ CHARMAP
 <U7622> \xE1\xED |0
 <U7624> \xE1\xEE |0
 <U7625> \x8F\xF1\xE2 |0
-<U7626> \xFE\xFD |0
 <U7627> \xE1\xEA |0
 <U7628> \x8F\xF1\xE3 |0
 <U762D> \xF8\xD7 |0
@@ -7427,7 +7419,6 @@ CHARMAP
 <U7E67> \xE5\xE2 |0
 <U7E69> \xE5\xEA |0
 <U7E6A> \xE5\xE9 |0
-<U7E6B> \xFE\xFE |0
 <U7E6D> \xCB\xFA |0
 <U7E70> \xB7\xAB |0
 <U7E73> \x8F\xF4\xD8 |0
@@ -11179,7 +11170,6 @@ CHARMAP
 <U2099D> \x8F\xA3\xD3 |0
 <U20AD3> \x8F\xA3\xD9 |0
 <U20B1D> \x8F\xA3\xDC |0
-<U20B9F> \xCF\xD4 |0
 <U20D45> \x8F\xA3\xF7 |0
 <U20DE1> \x8F\xA4\xAA |0
 <U20E64> \x8F\xA4\xBA |0
@@ -11461,3 +11451,19 @@ CHARMAP
 <U2A61A> \x8F\xFE\xF2 |0
 <U2A6B2> \x8F\xFE\xF6 |0
 END CHARMAP
+
+VARIANT euc-jis-2004
+<U4FF1> \xAE\xA1 |0
+<U525D> \xAF\xFE |0
+<U541E> \xCF\xFE |0
+<U5653> \xF4\xA7 |0
+<U59F8> \xFE\xFA |0
+<U5C5B> \xFE\xFB |0
+<U5E77> \xFE\xFC |0
+<U7626> \xFE\xFD |0
+<U7E6B> \xFE\xFE |0
+<U20B9F> \xCF\xD4 |0
+END VARIANT
+
+VARIANT euc-jisx0213
+END VARIANT

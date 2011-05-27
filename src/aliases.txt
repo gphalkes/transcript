@@ -35,22 +35,22 @@
 # platform byte order. The UTF-16 and UTF-32 encodings will switch endianess
 # when encountering a BOM on input. By default they use the big endian encoding.
 
-*UTF-8 IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
+UTF-8 IBM-1208 IBM-1209 IBM-5304 IBM-5305 IBM-13496 IBM-13497
 	IBM-17592 ibm-17593 Windows-65001 cp1208
 # Use UCS-2 as an alias for UTF-16, although it is actually UTF-16BE. However,
 # because people simply use UCS-2 and UTF-16 interchangebly, it is better to
 # do it this way.
-*UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
-*UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
+UTF-16 ISO-10646-UCS-2 IBM-1204 IBM-1205 unicode csUnicode ucs-2
+UTF-16BE x-utf-16be UnicodeBigUnmarked IBM-1200 IBM-1201
 	IBM-13488 IBM-13489 ibm-17584 IBM-17585 IBM-21680 IBM-21681 IBM-25776
 	IBM-25777 IBM-29872 ibm-29873 IBM-61955 IBM-61956 Windows-1201 cp1200
 	cp1201 UTF16_BigEndian
-*UTF-16LE x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-1203
+UTF-16LE x-utf-16le UnicodeLittleUnmarked IBM-1202 IBM-1203
 	IBM-13490 ibm-13491 IBM-17586 IBM-17587 IBM-21682 IBM-21683 IBM-25778
 	IBM-25779 ibm-29874 IBM-29875 UTF16_LittleEndian Windows-1200
-*UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
-*UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
-*UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
+UTF-32 ISO-10646-UCS-4 IBM-1236 IBM-1237 csUCS4 ucs-4
+UTF-32BE UTF32_BigEndian IBM-1232 IBM-1233 IBM-9424
+UTF-32LE UTF32_LittleEndian IBM-1234 IBM-1235
 
 # These special names force a particular endianess on output, but further are
 # equivalent to the UTF-16 and UTF-32 converters.
@@ -65,19 +65,20 @@ x-UTF-8-BOM
 
 # FIXME: add platform endian variants, default is without BOM (if you want platform
 # endian, you want it for communicating with a program that expects it in that ordering).
-#*UTF-16PE UTF-16_PlatformEndian
-#*UTF-32PE UTF-32_PlatformEndian
+# libiconv uses UTF-16-INTERNAL for this
+#UTF-16PE UTF-16_PlatformEndian
+#UTF-32PE UTF-32_PlatformEndian
 #UTF-16PE-BOM
 #UTF-32PE-BOM
 
-*UTF-7 Windows-65000
+UTF-7 Windows-65000
 
-*SCSU IBM-1212 IBM-1213
+SCSU IBM-1212 IBM-1213
 #FIXME: BOCU-1 is patented
 #*BOCU-1 csBOCU-1 IBM-1214 IBM-1215
-*CESU-8 IBM-9400
+CESU-8 IBM-9400
 
-*GB18030 :probe_load IBM-1392 Windows-54936
+GB18030 :probe_load IBM-1392 Windows-54936
 
 #FIXME: what is this doing here?
 #IMAP-mailbox-name
@@ -134,10 +135,8 @@ iso-8859_15-1999 ibm-923_P100-1998 IBM-923 *ISO-8859-15 *Latin9 l9 8859_15
 # claiming to be Shift-JIS.
 
 Shift_JIS sjis pck x-sjis
-
-# Note that Shift-JISX0213 is not entirely correct, as it misses the 10 codepoints
-# added in the 2004 version.
-*Shift_JIS-2004 *Shift_JISX0213
+Shift_JIS-2004
+Shift_JISX0213
 
 #ibm-942_P12A-1999 IBM-942 IBM-932 *Shift_JIS78 sjis78 IBM-942_VSUB_VPUA
 #	ibm-932_VSUB_VPUA # AKA cp932, but so is ms932
@@ -152,13 +151,11 @@ Shift_JIS sjis pck x-sjis
 
 #ibm-943_P130-1999 IBM-943_VASCII_VSUB_VPUA
 
-*EUC-JP ibm-33722_P12A_P12A-2004_U2
+EUC-JP ibm-33722_P12A_P12A-2004_U2
 	Extended_UNIX_Code_Packed_Format_for_Japanese csEUCPkdFmtJapanese
 	X-EUC-JP Windows-51932 IBM-33722_VPUA IBM-eucJP
-
-# Note that EUC-JISX0213 is not entirely correct, as it misses the 10 codepoints
-# added in the 2004 version.
-*EUC-JIS-2004 *EUC-JISX0213
+EUC-JIS-2004
+EUC-JISX0213
 
 ibm-33722_P120-1999 *IBM-33722 IBM-5050 cp33722 33722 IBM-33722_VASCII_VPUA
 

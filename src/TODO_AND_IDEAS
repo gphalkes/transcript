@@ -10,6 +10,7 @@ HIGH PRIORITY
   which is wrong. The 1B 2E 41 shifts in the ISO-8859-1 set into G2, but G2 only
   includes the 96 graphics characters, and not the C1 set! The C1 set should be
   encoded as 1B [40 - 5F]
+- report above bug to GNU libiconv as well
 - report bug in glibc iconv: converting U20AC (euro sign) gives strange result:
   1b 2e 46 1b 4e a4 1b 24 28 43 22 66 1b 28 42
   The sequence from the third 1b makes sense (KSC 5601/KS X 1001 encoded euro sign)

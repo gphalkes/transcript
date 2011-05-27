@@ -1677,7 +1677,6 @@ CHARMAP
 <U4FE6> \xF0\x6E |0
 <U4FEE> \x8F\x43 |0
 <U4FEF> \x98\xEB |0
-<U4FF1> \x87\x9F |0
 <U4FF2> \xF0\x76 |0
 <U4FF3> \x94\x6F |0
 <U4FF5> \x95\x55 |0
@@ -2003,7 +2002,6 @@ CHARMAP
 <U5257> \x87\xDD |0
 <U525B> \x8D\x84 |0
 <U525C> \xF1\x59 |0
-<U525D> \x88\x9E |0
 <U525E> \x99\x90 |0
 <U5261> \x87\xDE |0
 <U5263> \x8C\x95 |0
@@ -2246,7 +2244,6 @@ CHARMAP
 <U5412> \x87\xF3 |0
 <U541B> \x8C\x4E |0
 <U541D> \x99\xE5 |0
-<U541E> \x98\x9E |0
 <U541F> \x8B\xE1 |0
 <U5420> \x96\x69 |0
 <U5424> \xF1\x85 |0
@@ -2485,7 +2482,6 @@ CHARMAP
 <U564C> \x91\x58 |0
 <U564E> \x9A\x78 |0
 <U5650> \x9A\x79 |0
-<U5653> \xEA\xA5 |0
 <U565B> \x8A\x9A |0
 <U565E> \xF1\xC5 |0
 <U5660> \xF1\xC6 |0
@@ -2908,7 +2904,6 @@ CHARMAP
 <U59EB> \x95\x50 |0
 <U59EE> \xF2\x73 |0
 <U59F6> \x88\xA6 |0
-<U59F8> \xEF\xF8 |0
 <U59FB> \x88\xF7 |0
 <U59FF> \x8E\x70 |0
 <U5A01> \x88\xD0 |0
@@ -3175,7 +3170,6 @@ CHARMAP
 <U5C51> \x8B\xFB |0
 <U5C53> \x9B\x9E |0
 <U5C55> \x93\x57 |0
-<U5C5B> \xEF\xF9 |0
 <U5C5E> \x91\xAE |0
 <U5C5F> \xF0\xAF |0
 <U5C60> \x93\x6A |0
@@ -3411,7 +3405,6 @@ CHARMAP
 <U5E74> \x94\x4E |0
 <U5E75> \x9B\xF2 |0
 <U5E76> \x9B\xF3 |0
-<U5E77> \xEF\xFA |0
 <U5E78> \x8D\x4B |0
 <U5E79> \x8A\xB2 |0
 <U5E7A> \x9B\xF4 |0
@@ -6400,7 +6393,6 @@ CHARMAP
 <U7622> \xE1\x8D |0
 <U7624> \xE1\x8E |0
 <U7625> \xF6\x82 |0
-<U7626> \xEF\xFB |0
 <U7627> \xE1\x8A |0
 <U7628> \xF6\x83 |0
 <U762D> \xEC\xD5 |0
@@ -7426,7 +7418,6 @@ CHARMAP
 <U7E67> \xE3\x82 |0
 <U7E69> \xE3\x8A |0
 <U7E6A> \xE3\x89 |0
-<U7E6B> \xEF\xFC |0
 <U7E6D> \x96\x9A |0
 <U7E70> \x8C\x4A |0
 <U7E73> \xF7\xD6 |0
@@ -11178,7 +11169,6 @@ CHARMAP
 <U2099D> \xF1\x72 |0
 <U20AD3> \xF1\x78 |0
 <U20B1D> \xF1\x7B |0
-<U20B9F> \x98\x73 |0
 <U20D45> \xF1\x97 |0
 <U20DE1> \xF1\xA8 |0
 <U20E64> \xF1\xB8 |0
@@ -11460,3 +11450,19 @@ CHARMAP
 <U2A61A> \xFC\xF0 |0
 <U2A6B2> \xFC\xF4 |0
 END CHARMAP
+
+VARIANT shift_jis-2004
+<U4FF1> \x87\x9F |0
+<U525D> \x88\x9E |0
+<U541E> \x98\x9E |0
+<U5653> \xEA\xA5 |0
+<U59F8> \xEF\xF8 |0
+<U5C5B> \xEF\xF9 |0
+<U5E77> \xEF\xFA |0
+<U7626> \xEF\xFB |0
+<U7E6B> \xEF\xFC |0
+<U20B9F> \x98\x73 |0
+END VARIANT
+
+VARIANT shift_jisx0213
+END VARIANT

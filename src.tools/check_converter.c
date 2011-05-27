@@ -99,7 +99,7 @@ static uint32_t iconv_revert(iconv_t handle, char *seq, int length) {
 	size_t iconv_result;
 
 	iconv_result = iconv(handle, &seq, &seq_len, &codepoint_ptr, &codepoint_len);
-	iconv(handle, NULL, NULL, NULL, NULL);
+	iconv(handle, NULL, NULL, &codepoint_ptr, &codepoint_len);
 	if (iconv_result == (size_t) -1)
 		return UINT32_C(0xffffffff);
 	if ((80 - codepoint_len) != 4)
