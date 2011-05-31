@@ -96,13 +96,6 @@ static bool add_converter_name(const char *name) {
 
 	converter->aliases = NULL;
 	converter->next = NULL;
-
-	if ((converter->name = _transcript_strdup(normalized_name)) == NULL) {
-		_transcript_log("error: out of memory while loading aliases\n");
-		/* FIXME: should really jump out of the whole parsing here. */
-		goto return_error;
-	}
-
 	converter->flags = 0;
 
 	if (is_display_name) {

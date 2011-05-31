@@ -178,7 +178,8 @@ void *_transcript_open_sbcs_table_converter(const sbcs_converter_v1_t *tables, i
 		return NULL;
 	}
 
-	retval->tables = *tables;
+	/* GCC doesn't accept retval->tables = *tables; */
+	memcpy(&retval->tables, tables, sizeof(sbcs_converter_v1_t));
 
 	retval->common.convert_from = (conversion_func_t) from_unicode_conversion;
 	retval->common.flush_from = NULL;

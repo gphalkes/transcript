@@ -11,14 +11,6 @@ HIGH PRIORITY
   includes the 96 graphics characters, and not the C1 set! The C1 set should be
   encoded as 1B [40 - 5F]
 - report above bug to GNU libiconv as well
-- report bug in glibc iconv: converting U20AC (euro sign) gives strange result:
-  1b 2e 46 1b 4e a4 1b 24 28 43 22 66 1b 28 42
-  The sequence from the third 1b makes sense (KSC 5601/KS X 1001 encoded euro sign)
-  Anything before that (i.e. the switch to ISO-8859-7, followed by SS2 and a4)
-  can only be explained as the converter trying to use the euro sign in there,
-  but not encoding it correctly (last byte should be 24, not a4). However,
-  strictly speaking neither option is correct, as the named character sets
-  should be the 1987 versions.
 
 MEDIUM PRIORITY
 ===============
