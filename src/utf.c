@@ -200,7 +200,7 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
 		if ((*_inbuf & 0xc0) != 0x80) {
 			if (!skip)
 				return TRANSCRIPT_UTF_ILLEGAL;
-			*inbuf = (char *) inbuf;
+			*inbuf = (const char *) _inbuf;
 			return 0;
 		}
 
