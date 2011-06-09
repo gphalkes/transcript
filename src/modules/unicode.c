@@ -96,7 +96,15 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 				case TRANSCRIPT_UTF_INTERNAL_ERROR:
 					return TRANSCRIPT_INTERNAL_ERROR;
 				case TRANSCRIPT_UTF_ILLEGAL:
-					return TRANSCRIPT_ILLEGAL;
+					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+						return TRANSCRIPT_ILLEGAL;
+					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbuflimit)) != 0)
+						return result;
+					get_unicode(handle, (const char **) &_inbuf, inbuflimit, true);
+					*inbuf = (const char *) _inbuf;
+					if (flags & TRANSCRIPT_SINGLE_CONVERSION)
+						return TRANSCRIPT_SUCCESS;
+					continue;
 				case TRANSCRIPT_UTF_INCOMPLETE:
 					if (flags & TRANSCRIPT_END_OF_TEXT) {
 						if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
