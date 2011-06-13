@@ -11,11 +11,10 @@ enough control over the conversion, or they are otherwise inflexible. In my
 specific case, i.e. the t3window library, it is vital that a character is not
 substituted by an unknown other character. (The t3window library is used to
 draw "windows" on a terminal display.) If for example the displayed width
-is different from the expected width due to a character replacment, the
-on-screen cursor will be in a different place than expected, causing unexpected
-behavior.
+is different from the expected width due to a character replacment, the result
+will look distorted.
 
-In the following sections we will detail the problems with each of the
+In the following sections I will detail the problems with each of the
 previously named libaries.
 
 iconv
@@ -98,11 +97,11 @@ several drawbacks:
   expression matching and formatting/parsing of numbers and dates. I prefer
   libraries which adhere to the Unix principle: "do one thing, and do it well".
 * ICU is based on IBM's character conversion tables, which do not always align
-  well with other's tables. Furthermore, they tend to bunch several related
-  converters together, even though they are not actually the same (e.g. the
-  Shift-JIS variants).
-* It can only encode to and from UTF-16. For programs whishing to use a
-  different representation of Unicode, a second conversion is needed.
+  well with other's tables.
+* The converter alias definitions tend to bunch several related converters
+  together, even though they are not actually the same (e.g. the Shift-JIS
+  variants).
+* It can only encode to and from UTF-16.
 
 Admittedly, these reasons are not as strong as the reasons cited for iconv and
 recode. The last of these, for example, can be easily worked around by

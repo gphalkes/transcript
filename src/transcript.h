@@ -145,6 +145,7 @@ typedef struct {
 /** Required size of a buffer for saving converter state. */
 #define TRANSCRIPT_SAVE_STATE_SIZE 32
 
+TRANSCRIPT_API void transcript_set_lock_callbacks(void (*acquire)(void *), void (*release)(void *), void *lock);
 TRANSCRIPT_API int transcript_probe_converter(const char *name);
 TRANSCRIPT_API transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);
 TRANSCRIPT_API void transcript_close_converter(transcript_t *handle);
