@@ -229,5 +229,7 @@ EOF
 
 #FIXME: check ucm2ltc specific things [i.e. snprintf and strdup through C++, isatty and fileno]
 
-	create_makefile "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" "LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
+	create_makefile "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
+	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"} \
+	"${with_ucm2ltc+UCM2LTCTARGET=src.util/ucm2ltc/ucm2ltc}"
 }

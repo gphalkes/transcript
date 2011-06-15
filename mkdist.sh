@@ -6,8 +6,6 @@ BASEDIR="`pwd`"
 
 . ../repo-scripts/mkdist_funcs.sh
 
-PACKAGE=libtranscript
-
 setup_hg
 get_version_hg
 #check_mod_hg
@@ -31,18 +29,22 @@ sed -i "/#define TRANSCRIPT_VERSION/c #define TRANSCRIPT_VERSION ${VERSION_BIN}"
 
 for SRC in ${SOURCES} ${GENSOURCES} ${AUXSOURCES} ; do
 	[[ "${SRC}" =~ \.h$ ]] && continue
+	[[ "${SRC}" =~ \.objects/ ]] && SRC="`echo \"${SRC}\" | sed -r 's%\.objects/%%'`"
 
 	if [[ "${SRC}" =~ ^src/[^/]*\.c ]] ; then
 		LIBTRANSCRIPT_SOURCES="${LIBTRANSCRIPT_SOURCES} ${SRC}"
 	elif [[ "${SRC}" =~ ^src.util/linkltc/ ]] ; then
 		LINKLTC_SOURCES="${LINKLTC_SOURCES} ${SRC}"
-	elif [[ "${SRC}" =~ ^src.util/ucm2ltc/ ]] ; then
+	elif [[ "${SRC}" =~ ^src.util/ucm2ltc/[^/]*\.cc? ]] ; then
 		UCM2LTC_SOURCES="${UCM2LTC_SOURCES} ${SRC}"
 	else
 		echo "Don't know what to do with source ${SRC}"
 	fi
 done
 
-sed -r -i "s%<SOURCES_LIBTRANSCRIPT>%${LIBTRANSCRIPT_SOURCES}%g" ${TOPDIR}/Makefile.in
+sed -r -i "s%<SOURCES_LIBTRANSCRIPT>%${LIBTRANSCRIPT_SOURCES}%g;\
+s%<SOURCES_LINKLTC>%${LINKLTC_SOURCES}%g;\
+s%<SOURCES_UCM2LTC>%${UCM2LTC_SOURCES}%g" ${TOPDIR}/Makefile.in
+sed -r -i 's%\.objects/%%g' ${TOPDIR}/src.util/ucm2ltc/ucmparser.cc
 
 create_tar

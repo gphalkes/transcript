@@ -40,6 +40,7 @@ LDLIBS.test := -ltranscript
 TARGETS := test
 LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
 EXTRATARGETS := converter-links
+VERBOSE := 1
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#

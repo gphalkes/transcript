@@ -47,7 +47,7 @@ libdir=$(prefix)/lib
 docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
 
-all: src/libtranscript.la src.util/linkltc/linkltc
+all: src/libtranscript.la src.util/linkltc/linkltc $(UCM2LTCTARGET)
 
 .PHONY: all clean dist-clean install
 .SUFFIXES: .c .cc .o .lo .mo .po
@@ -66,21 +66,20 @@ dist-clean: clean
 	rm -rf src/.libs src/libtranscript.la config.log Makefile
 
 .c.lo:
-	$(LIBTOOL) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
-
-.c.o:
-	$(CC) $(CFLAGS) -Isrc $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
-
-.cc.o:
-	$(CXX) $(CXXFLAGS) -Isrc $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
-
+	$(LIBTOOL) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -rpath=$(libdir)
+	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
 
-src.util/linkltc/linkltc: $(OBJECTS_LINKLTC)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) $(GETTEXTLIBS) -Lsrc/.libs -ltranscript
 
-src.util/ucm2ltc/ucm2ltc: $(OBJECTS_UCM2LTC)
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_UCM2LTC) $(LDLIBS) $(GETTEXTLIBS) -Lsrc/.libs -ltranscript
+.c.o:
+	$(CC) $(CFLAGS) -Isrc -c -o $@ $<
 
+.cc.o:
+	$(CXX) $(CXXFLAGS) -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Isrc -c -o $@ $<
+
+src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
+
+src.util/ucm2ltc/ucm2ltc: $(OBJECTS_UCM2LTC) src/libtranscript.la
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_UCM2LTC) $(LDLIBS) -Lsrc/.libs -ltranscript
