@@ -1,0 +1,212 @@
+# Copyright (C) 2011 G.P. Halkes
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+EXTENSIONS="c libtool cxx"
+
+SWITCHES="+gettext -ucm2ltc"
+OPTIONS="localedir"
+
+COMPILERULE='$(CC) $(CFLAGS) $(GETTEXTFLAGS) $(ICUFLAGS) -c -o $@ $<'
+LINKRULE='$(CC) $(CFLAGS) $(LDFLAGS) -o .config .config.o $(LDLIBS) $(GETTEXTLIBS) $(ICULIBS)'
+
+USERRULES='.SUFFIXES: .mo .po
+.po.mo:
+	msgfmt -o $@ $<
+'
+
+USERHELP=print_help
+PRECHECKFUNC=precheck
+
+print_help() {
+	cat <<EOF
+  --without-gettext  Disable gettext translations
+  --with-ucm2ltc     Build converter specification compiler (ucm2ltc)
+                         Requires a working C++ compiler
+  --localedir=<dir>  Installation directory for locales [prefix/share/locale]
+EOF
+}
+
+DEFAULT_LINGUAS="nl"
+
+precheck() {
+	if [ "no" = "${with_ucm2ltc}" ] ; then
+		EXTENSIONS="c libtool"
+	fi
+}
+
+checkfunction() {
+	clean .config.o
+
+	CHECKFOR="$1"
+	CODE="$2"
+	shift 2
+	{
+		for INCLUDE
+		do
+			echo "#include ${INCLUDE}"
+		done
+		cat <<EOF
+int main(int argc, char *argv[]) {
+	${CODE}
+	return 0;
+}
+EOF
+	} > .config.c
+
+	clean .config.o
+	test_link "${CHECKFOR}"
+}
+
+config() {
+	# Test for all required functionality
+
+	cat > .config.c <<EOF
+#include <sys/types.h>
+#include <dirent.h>
+
+int main(int argc, char *argv[]) {
+	DIR *dir;
+	struct dirent *entry;
+
+	dir = opendir(".");
+	entry = readdir(dir);
+	puts(entry->d_name[0]);
+	closedir(dir);
+	return 0;
+}
+EOF
+
+	clean .config.o
+	test_link "opendir/readdir/closedir" || {
+		check_message_result "!! A required function is not available."
+		exit 1
+	}
+
+	cat > .config.c <<EOF
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[]) {
+	struct stat statbuf;
+	symlink("old", "new");
+	unlink("name");
+	lstat("name", &statbuf);
+	IS_LINK(statbuf.st_mode);
+	return 0;
+}
+EOF
+
+	clean .config.o
+	test_link "symlink/unlink/lstat" || {
+		check_message_result "!! A required function is not available."
+		exit 1
+	}
+
+	cat > .config.c <<EOF
+#include <ltdl.h>
+
+int main(int argc, char *argv[]) {
+	lt_dlhandle handle;
+	handle = lt_dlopen("name");
+	lt_dlerror();
+	lt_dlsym(handle, "sym_name");
+	lt_dlclose(handle);
+	lt_dlinit();
+	lt_dlexit();
+	return 0;
+}
+EOF
+
+	clean .config.o
+	test_link "libltdl" "TESTLIBS=-lltdl" || {
+		check_message_result "!! Please install libltdl and its development files"
+		exit 1
+	}
+
+	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
+		CFLAGS="${CFLAGS} -DHAS_NL_LANGINFO"
+	elif not checkfunction "setlocale" "setlocale(LC_CTYPE, NULL);" "<locale.h>" ; then
+		check_message_result "!! A required function is not available."
+		exit 1
+	fi
+
+	checkfunction "strdup" "strdup(\"foo\");" "<string.h>" && CFLAGS="${CFLAGS} -DHAS_STRDUP"
+
+	unset GETTEXTFLAGS GETTEXTLIBS linguas LOCALEDIR
+	# Check for gettext functionality
+	if [ "yes" = "${with_gettext}" ] ; then
+		checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || {
+			check_message_result "!! Gettext support unavailable. Try configuring with --without-gettext"
+			exit 1
+		}
+#FIXME: need to change to check for functions specifically used in library
+		cat > .config.c <<EOF
+#include <locale.h>
+#include <libintl.h>
+
+int main(int argc, char *argv[]) {
+	setlocale(LC_ALL, "");
+	bindtextdomain("transcript", "/usr/share/locale");
+	textdomain("transcript");
+	gettext("transcript");
+	return 0;
+}
+EOF
+		{
+			test_compile "gettext and related functions" GETTEXTFLAGS=-DUSE_GETTEXT && {
+				test_link "gettext in standard library" GETTEXTFLAGS=-DUSE_GETTEXT ||
+				{ test_link "gettext in -lintl" GETTEXTFLAGS=-DUSE_GETTEXT GETTEXTLIBS=-lintl && GETTEXTLIBS=-lintl ; } ||
+				{ test_link "gettext in -lintl -liconv" GETTEXTFLAGS=-DUSE_GETTEXT "GETTEXTLIBS=-lintl -liconv" && GETTEXTLIBS="-lintl -liconv" ; }
+			} && {
+				clean .config.po .config.mo
+				cat > .config.po <<EOF
+msgid  "msg"
+msgstr "translation"
+EOF
+				check_message "Checking for msgfmt... "
+				if test_make .config.mo >> config.log 2>&1 ; then
+					check_message_result "yes"
+					true
+				else
+					check_message_result "no"
+					false
+				fi
+			}
+		} || {
+			clean .config.po .config.mo
+			check_message_result "!! Could not compile with gettext. Try configuring with --without-gettext."
+			exit 1
+		}
+		GETTEXTFLAGS="-DUSE_GETTEXT"
+		clean .config.po .config.mo
+
+		unset linguas
+		if [ -n "${LINGUAS+set}" ] ; then
+			check_message "Checking for available selected translations... "
+			for lingua in ${LINGUAS}
+			do
+				if [ -f "po/${lingua}.po" ] && echo "${linguas}" | not grep "^\\(.* \\)*${lingua}\\( .*\\)*$" > /dev/null ; then
+					linguas="${linguas}${linguas:+ }${lingua}"
+				fi
+			done
+			check_message_result "done [${linguas}]"
+		else
+			linguas="${DEFAULT_LINGUAS}"
+		fi
+	fi
+
+#FIXME: check ucm2ltc specific things
+
+	create_makefile "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" "LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
+}

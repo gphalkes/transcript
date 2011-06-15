@@ -17,10 +17,11 @@
 #include <errno.h>
 #include <string.h>
 #include <limits.h>
-#include <locale.h>
 #include <stdarg.h>
 #ifdef HAS_NL_LANGINFO
 #include <langinfo.h>
+#else
+#include <locale.h>
 #endif
 #include "ltdl.h"
 
