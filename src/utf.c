@@ -38,7 +38,7 @@
 #if __GNUC__ > 4 || (__GNUC__ == 4 &&  __GNUC_MINOR__ >= 3)
 #define swapl(value) __builtin_bswap32(value)
 #else
-static inline uint32_t swapl(uint32_t value) {
+static _TRANSCRIPT_INLINE uint32_t swapl(uint32_t value) {
 	return swaps(value) << 16 | swaps(value >> 16);
 }
 #endif

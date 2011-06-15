@@ -1,4 +1,5 @@
 syntax: glob
+configure
 src.tools/check_converter
 src.util/linkltc
 src/modules/*.la

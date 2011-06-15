@@ -16,14 +16,11 @@ EXTENSIONS="c libtool cxx"
 SWITCHES="+gettext -ucm2ltc"
 OPTIONS="localedir"
 
-COMPILERULE='$(CC) $(CFLAGS) $(GETTEXTFLAGS) $(ICUFLAGS) -c -o $@ $<'
-LINKRULE='$(CC) $(CFLAGS) $(LDFLAGS) -o .config .config.o $(LDLIBS) $(GETTEXTLIBS) $(ICULIBS)'
+SUFFIXES="${SUFFIXES} .mo .po"
+DEFAULT_LINGUAS="nl"
+LTSHARED=1
 
-USERRULES='.SUFFIXES: .mo .po
-.po.mo:
-	msgfmt -o $@ $<
-'
-
+USERRULES=print_rules
 USERHELP=print_help
 PRECHECKFUNC=precheck
 
@@ -36,7 +33,14 @@ print_help() {
 EOF
 }
 
-DEFAULT_LINGUAS="nl"
+print_rules() {
+	cat <<EOF
+.po.mo:
+	msgfmt -o \$@ \$<
+
+EOF
+}
+
 
 precheck() {
 	if [ "no" = "${with_ucm2ltc}" ] ; then
@@ -88,7 +92,7 @@ EOF
 
 	clean .config.o
 	test_link "opendir/readdir/closedir" || {
-		check_message_result "!! A required function is not available."
+		check_message_result "!! A required function is not available (see config.log for details)."
 		exit 1
 	}
 
@@ -102,14 +106,14 @@ int main(int argc, char *argv[]) {
 	symlink("old", "new");
 	unlink("name");
 	lstat("name", &statbuf);
-	IS_LINK(statbuf.st_mode);
+	S_ISLNK(statbuf.st_mode);
 	return 0;
 }
 EOF
 
 	clean .config.o
 	test_link "symlink/unlink/lstat" || {
-		check_message_result "!! A required function is not available."
+		check_message_result "!! A required function is not available (see config.log for details)."
 		exit 1
 	}
 
@@ -134,19 +138,36 @@ EOF
 		exit 1
 	}
 
+	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
 		CFLAGS="${CFLAGS} -DHAS_NL_LANGINFO"
-	elif not checkfunction "setlocale" "setlocale(LC_CTYPE, NULL);" "<locale.h>" ; then
+	elif checkfunction "setlocale" "setlocale(LC_CTYPE, NULL);" "<locale.h>" ; then
+		HAS_SETLOCALE=yes
+	else
 		check_message_result "!! A required function is not available."
 		exit 1
 	fi
 
 	checkfunction "strdup" "strdup(\"foo\");" "<string.h>" && CFLAGS="${CFLAGS} -DHAS_STRDUP"
 
+	if checkfunction "htole32 in <sys/endian.h>" "htole32(20);" "<sys/endian.h>" ; then
+		CFLAGS="${CFLAGS} -DUSE_SYS_ENDIAN"
+	elif checkfunction "htole32 in <endian.h>" "htole32(20);" "<endian.h>" ; then
+		CFLAGS="${CFLAGS} -DUSE_ENDIAN"
+	fi
+
+	cat > .config.c <<EOF
+static inline int foo() { return 4; }
+int main(int argc, char *argv[]) {
+	return foo;
+}
+EOF
+	test_compile "inline keyword" && CFLAGS="${CFLAGS} -DHAS_INLINE"
+
 	unset GETTEXTFLAGS GETTEXTLIBS linguas LOCALEDIR
 	# Check for gettext functionality
 	if [ "yes" = "${with_gettext}" ] ; then
-		checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || {
+		[ "${HAS_SETLOCALE}" = "yes" ] || checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || {
 			check_message_result "!! Gettext support unavailable. Try configuring with --without-gettext"
 			exit 1
 		}
@@ -156,19 +177,19 @@ EOF
 #include <libintl.h>
 
 int main(int argc, char *argv[]) {
-	setlocale(LC_ALL, "");
-	bindtextdomain("transcript", "/usr/share/locale");
-	textdomain("transcript");
-	gettext("transcript");
+	bindtextdomain("libtranscript", "/usr/share/locale");
+	dgettext("libtranscript", "string");
 	return 0;
 }
 EOF
 		{
-			test_compile "gettext and related functions" GETTEXTFLAGS=-DUSE_GETTEXT && {
-				test_link "gettext in standard library" GETTEXTFLAGS=-DUSE_GETTEXT ||
-				{ test_link "gettext in -lintl" GETTEXTFLAGS=-DUSE_GETTEXT GETTEXTLIBS=-lintl && GETTEXTLIBS=-lintl ; } ||
-				{ test_link "gettext in -lintl -liconv" GETTEXTFLAGS=-DUSE_GETTEXT "GETTEXTLIBS=-lintl -liconv" && GETTEXTLIBS="-lintl -liconv" ; }
+			test_compile "gettext and related functions" && {
+				test_link "gettext in standard library" ||
+				{ test_link "gettext in -lintl" TESTLIBS=-lintl && GETTEXTLIBS=-lintl ; } ||
+				{ test_link "gettext in -lintl -liconv" "TESTLIBS=-lintl -liconv" && GETTEXTLIBS="-lintl -liconv" ; }
 			} && {
+				GETTEXTFLAGS="-DUSE_GETTEXT"
+
 				clean .config.po .config.mo
 				cat > .config.po <<EOF
 msgid  "msg"
@@ -206,7 +227,7 @@ EOF
 		fi
 	fi
 
-#FIXME: check ucm2ltc specific things
+#FIXME: check ucm2ltc specific things [i.e. snprintf and strdup through C++, isatty and fileno]
 
 	create_makefile "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" "LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
 }

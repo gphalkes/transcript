@@ -13,8 +13,10 @@
 .POSIX:
 
 # C-compiler flags
-# If strdup is not provided by the library, add -DNO_STRDUP.
-CFLAGS=-O2
+# - If strdup is not provided by the library, remove -DHAS_STRDUP.
+# - If your platform does not support the nl_langinfo function, remove
+#    -DHAS_NL_LANGINFO
+CFLAGS=-O2 -DHAS_STRDUP -DHAS_NL_LANGINFO
 
 # The libtool executable
 LIBTOOL=libtool
@@ -28,13 +30,11 @@ prefix=/usr/local
 # it has been enabled. The GNU libc already contains the gettext library, so
 # there is no need to add any flags. Otherwise, -lintl is usually required, and
 # sometimes -liconv as well.
-GETTEXTFLAGS=
-GETTEXTLIBS=
-
-# Gettext related
 # LOCALEDIR: the directory where the locale dependant files should be installed.
 # LINGUAS: translations to be installed. Look in po directory for available
 #  translations.
+GETTEXTFLAGS=
+GETTEXTLIBS=
 LOCALEDIR=$(prefix)/share/locale
 LINGUAS=
 
@@ -43,19 +43,20 @@ INSTALL=install
 
 # Miscelaneous install paths
 bindir=$(prefix)/bin
-docdir=$(prefix)/share/doc/dwdiff-<VERSION>
+libdir=$(prefix)/lib
+docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
 
-all: src/libtranscript.la
+all: src/libtranscript.la src.util/linkltc/linkltc
 
 .PHONY: all clean dist-clean install
 
 SOURCES_LIBTRANSCRIPT=<SOURCES_LIBTRANSCRIPT>
 OBJECTS_LIBTRANSCRIPT=$(SOURCES_LIBTRANSCRIPT:.c=.lo)
 SOURCES_UCM2LTC=<SOURCES_UCM2LTC>
-OBJECTS_UCM2LTC=$(SOURCES_UCM2LTC:.cc=.lo)
+OBJECTS_UCM2LTC=$(SOURCES_UCM2LTC:.cc=.o)
 SOURCES_LINKLTC=<SOURCES_LINKLTC>
-OBJECTS_LINKLTC=$(SOURCES_LINKLTC:.cc=.lo)
+OBJECTS_LINKLTC=$(SOURCES_LINKLTC:.c=.o)
 
 clean:
 	rm -rf src*/*.lo po/*.mo
@@ -66,10 +67,19 @@ dist-clean: clean
 .c.lo:
 	$(LIBTOOL) --mode=compile --tag=CC $(CC) $(CFLAGS) $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
 
-.cc.lo:
-	$(LIBTOOL) --mode=compile --tag=CXX $(CXX) $(CXXFLAGS) $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
+.c.o:
+	$(CC) $(CFLAGS) -Isrc $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
+
+.cc.o:
+	$(CXX) $(CXXFLAGS) -Isrc $(GETTEXTFLAGS) -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
 
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(LIBTOOL) --mode=link --tag=CC $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS)
+	$(LIBTOOL) --mode=link --tag=CC $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -rpath=$(libdir)
+
+src.util/linkltc/linkltc: $(OBJECTS_LINKLTC)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) $(GETTEXTLIBS) -Lsrc/.libs -ltranscript
+
+src.util/ucm2ltc/ucm2ltc: $(OBJECTS_UCM2LTC)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_UCM2LTC) $(LDLIBS) $(GETTEXTLIBS) -Lsrc/.libs -ltranscript
 
