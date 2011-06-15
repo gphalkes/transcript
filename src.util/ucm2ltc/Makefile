@@ -15,25 +15,19 @@ SOURCES.ucm2ltc := ucm2ltc.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize
 	variant.cc ucmparser.gg ucmlexer.l ucm_write_simple.cc
 DEPS.ucmparser.gg := ucmlexer.l ucm2ltc.cc
 CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
-LDFLAGS.ucm2ltc := -L../src/.libs -ltranscript
+LDFLAGS.ucm2ltc := -L../../src/.libs -ltranscript
 
-SOURCES.linkltc := linkltc.c
-LDFLAGS.linkltc := -L../src/.libs -ltranscript -lltdl
-CFLAGS.linkltc := -I../src
-
-TARGETS := linkltc
 CXXTARGETS := ucm2ltc
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
-include ../../makesys/rules.mk
+include ../../../makesys/rules.mk
 #================================================#
-CXXFLAGS += -I. -I../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
+CXXFLAGS += -I. -I../../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 
 ucm2ltc: | library
-linkltc: | library
 
 library:
-	@$(MAKE) -q -C ../src libtranscript.la || $(MAKE) -C ../src libtranscript.la
+	@$(MAKE) -q -C ../../src libtranscript.la || $(MAKE) -C ../../src libtranscript.la
 
 .PHONY: library

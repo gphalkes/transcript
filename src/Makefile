@@ -79,10 +79,10 @@ links:
 	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
 
 converter-links: | linkltc $(LTTARGETS)
-	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
-	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc *.ltc
+	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc
+	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc
 
 linkltc: libtranscript.la
-	@$(MAKE) -q -C ../src.util linkltc || $(MAKE) --no-print-directory -C ../src.util linkltc
+	@$(MAKE) -q -C ../src.util/linkltc || $(MAKE) --no-print-directory -C ../src.util/linkltc
 
 .PHONY: links converter-links linkltc
