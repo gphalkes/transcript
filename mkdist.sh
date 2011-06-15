@@ -32,19 +32,24 @@ for SRC in ${SOURCES} ${GENSOURCES} ${AUXSOURCES} ; do
 	[[ "${SRC}" =~ \.objects/ ]] && SRC="`echo \"${SRC}\" | sed -r 's%\.objects/%%'`"
 
 	if [[ "${SRC}" =~ ^src/[^/]*\.c ]] ; then
-		LIBTRANSCRIPT_SOURCES="${LIBTRANSCRIPT_SOURCES} ${SRC}"
+		LIBTRANSCRIPT_OBJECTS="${LIBTRANSCRIPT_OBJECTS} ${SRC%.c}.lo"
+	elif [[ "${SRC}" =~ src/tables/.*\.c ]] ; then
+		TABLES="${TABLES} ${SRC%.c}.la"
 	elif [[ "${SRC}" =~ ^src.util/linkltc/ ]] ; then
-		LINKLTC_SOURCES="${LINKLTC_SOURCES} ${SRC}"
+		LINKLTC_OBJECTS="${LINKLTC_OBJECTS} ${SRC%.c}.o"
 	elif [[ "${SRC}" =~ ^src.util/ucm2ltc/[^/]*\.cc? ]] ; then
-		UCM2LTC_SOURCES="${UCM2LTC_SOURCES} ${SRC}"
+		UCM2LTC_OBJECTS="${UCM2LTC_OBJECTS} ${SRC%.c*}.o"
 	else
 		echo "Don't know what to do with source ${SRC}"
 	fi
 done
 
-sed -r -i "s%<SOURCES_LIBTRANSCRIPT>%${LIBTRANSCRIPT_SOURCES}%g;\
-s%<SOURCES_LINKLTC>%${LINKLTC_SOURCES}%g;\
-s%<SOURCES_UCM2LTC>%${UCM2LTC_SOURCES}%g" ${TOPDIR}/Makefile.in
+sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${LIBTRANSCRIPT_OBJECTS}%g;\
+s%<OBJECTS_LINKLTC>%${LINKLTC_OBJECTS}%g;\
+s%<OBJECTS_UCM2LTC>%${UCM2LTC_OBJECTS}%g;\
+s%<TABLES>%${TABLES}%g" ${TOPDIR}/Makefile.in
 sed -r -i 's%\.objects/%%g' ${TOPDIR}/src.util/ucm2ltc/ucmparser.cc
+
+( cd ${TOPDIR}/src ; ln -s . transcript )
 
 create_tar
