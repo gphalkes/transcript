@@ -24,26 +24,26 @@ mandir=$(prefix)/share/man
 all: lib linkltc $(UCM2LTCTARGET)
 
 lib:
-	$(MAKE) -f Makefile.libtranscript
+	@$(MAKE) -f Makefile.libtranscript
 
 linkltc: lib
-	$(MAKE) -f Makefile.linkltc
+	@$(MAKE) -f Makefile.linkltc
 
 ucm2ltc: lib
-	$(MAKE) -f Makefile.ucm2ltc
+	@$(MAKE) -f Makefile.ucm2ltc
 
 .PHONY: all clean dist-clean install lib linkltc ucm2ltc
 .SUFFIXES: .c .cc .o .lo .la .mo .po
 
 clean:
-	$(MAKE) -f Makefile.libtranscript clean
-	$(MAKE) -f Makefile.linkltc clean
-	$(MAKE) -f Makefile.ucm2ltc clean
+	@$(MAKE) -f Makefile.libtranscript clean
+	@$(MAKE) -f Makefile.linkltc clean
+	@$(MAKE) -f Makefile.ucm2ltc clean
 
 dist-clean:
-	$(MAKE) -f Makefile.libtranscript dist-clean
-	$(MAKE) -f Makefile.linkltc dist-clean
-	$(MAKE) -f Makefile.ucm2ltc dist-clean
-	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc
+	@$(MAKE) -f Makefile.libtranscript dist-clean
+	@$(MAKE) -f Makefile.linkltc dist-clean
+	@$(MAKE) -f Makefile.ucm2ltc dist-clean
+	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log
 
 install:

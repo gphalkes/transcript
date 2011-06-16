@@ -8,6 +8,7 @@ BASEDIR="`pwd`"
 
 setup_hg
 get_version_hg
+VERSION=0.1
 #check_mod_hg
 #~ build_all
 get_sources_hg
@@ -20,36 +21,34 @@ copy_files doc/API doc/motivation.txt
 if [[ "${VERSION}" =~ [0-9]{8} ]] ; then
 	VERSION_BIN=0
 else
-	VERSION_BIN="$(printf \"%02x%02x%02x\" $(echo ${VERSION} | tr '.' ' '))"
+	VERSION_BIN="$(printf "%02x%02x%02x" $(echo ${VERSION} | tr '.' ' '))"
 fi
 
 sed -i "s/<VERSION>/${VERSION}/g" `find ${TOPDIR} -type f | egrep -v '^src'`
 sed -i "/#define TRANSCRIPT_VERSION/c #define TRANSCRIPT_VERSION ${VERSION_BIN}" ${TOPDIR}/src/transcript.h
 ( cd ${TOPDIR} ; "${BASEDIR}/../config/merge_config" )
 
-for SRC in ${SOURCES} ${GENSOURCES} ${AUXSOURCES} ; do
-	[[ "${SRC}" =~ \.h$ ]] && continue
-	[[ "${SRC}" =~ \.objects/ ]] && SRC="`echo \"${SRC}\" | sed -r 's%\.objects/%%'`"
+OBJECTS_LIBTRANSCRIPT="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src/[^/]*\.c$' | sed -r 's/\.c\>/.lo/g' | tr '\n' ' '`"
+TABLES="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src/tables/.*\.c$' | sed -r 's/\.c\>/.la/g' | tr '\n' ' '`"
+OBJECTS_LINKLTC="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src\.util/linkltc/.*\.c$' | sed -r 's/\.c\>/.o/g' | tr '\n' ' '`"
+OBJECTS_UCM2LTC="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src\.util/ucm2ltc/.*\.cc?$' | sed -r 's/\.cc?\>/.o/g' | tr '\n' ' '`"
 
-	if [[ "${SRC}" =~ ^src/[^/]*\.c ]] ; then
-		LIBTRANSCRIPT_OBJECTS="${LIBTRANSCRIPT_OBJECTS} ${SRC%.c}.lo"
-	elif [[ "${SRC}" =~ src/tables/.*\.c ]] ; then
-		TABLES="${TABLES} ${SRC%.c}.la"
-	elif [[ "${SRC}" =~ ^src.util/linkltc/ ]] ; then
-		LINKLTC_OBJECTS="${LINKLTC_OBJECTS} ${SRC%.c}.o"
-	elif [[ "${SRC}" =~ ^src.util/ucm2ltc/[^/]*\.cc? ]] ; then
-		UCM2LTC_OBJECTS="${UCM2LTC_OBJECTS} ${SRC%.c*}.o"
-	else
-		echo "Don't know what to do with source ${SRC}"
-	fi
-done
+make -C src -p > ${TMPDIR}/rules.txt
+MODULES="`egrep '^MODULES\>' ${TMPDIR}/rules.txt | head -n1 | sed -r 's/.*=//'`"
+MODULETARGETS="`echo \"${MODULES}\" | sed -r 's%(\<[^ \t]+\>)%src/modules/\1.la%g'`"
 
-sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${LIBTRANSCRIPT_OBJECTS}%g;\
-s%<TABLES>%${TABLES}%g" ${TOPDIR}/Makefile.libtranscript.in
-sed -r -i "s%<OBJECTS_LINKLTC>%${LINKLTC_OBJECTS}%g" ${TOPDIR}/Makefile.linkltc.in
-sed -r -i "s%<OBJECTS_UCM2LTC>%${UCM2LTC_OBJECTS}%g" ${TOPDIR}/Makefile.ucm2ltc.in
+sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${OBJECTS_LIBTRANSCRIPT}%g;\
+s%<TABLES>%${TABLES}%g;s%<MODULES>%${MODULETARGETS}%g" ${TOPDIR}/Makefile.libtranscript.in
+sed -r -i "s%<OBJECTS_LINKLTC>%${OBJECTS_LINKLTC}%g" ${TOPDIR}/Makefile.linkltc.in
+sed -r -i "s%<OBJECTS_UCM2LTC>%${OBJECTS_UCM2LTC}%g" ${TOPDIR}/Makefile.ucm2ltc.in
 
-#FIXME: it would be better if we didn't have to modify this file
+for MODULE in ${MODULES} ; do
+	MODULEOBJECTS="`egrep \"^modules/${MODULE}.la\" ${TMPDIR}/rules.txt | head -n1 | sed -r 's%modules/%src/modules/%g;s%\.objects/%%g;s/\|.*//;s/.*://'`"
+	echo "src/modules/${MODULE}.la: ${MODULEOBJECTS} src/libtranscript.la"
+	echo "	\$(SILENTLDLT) \$(LIBTOOL) \$(SILENCELT) --mode=link --tag=CC \$(CC) -shared -module -avoid-version -shrext .ltc \$(CFLAGS) \$(LDFLAGS) -o \$@ ${MODULEOBJECTS} -Lsrc/.libs -ltranscript \$(LDLIBS) -rpath \$(libdir)/transcript"
+done >> ${TOPDIR}/Makefile.libtranscript.in
+
+# Modify parser output to look for files in current directory iso .objects
 sed -r -i 's%\.objects/%%g' ${TOPDIR}/src.util/ucm2ltc/ucmparser.cc
 
 ( cd ${TOPDIR}/src ; ln -s . transcript )

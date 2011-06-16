@@ -41,12 +41,17 @@ GETTEXTLIBS=
 LOCALEDIR=$(prefix)/share/locale
 LINGUAS=
 
+SILENCELT=--silent
+SILENTCCLT=@echo '[CCLT]' $< ;
+SILENTLDLT=@echo '[LDLT]' $@ ;
+
 # Miscelaneous install paths
 libdir=$(prefix)/lib
 
-all: src/libtranscript.la tables
+all: src/libtranscript.la tables modules
 
 tables: <TABLES>
+modules: <MODULES>
 
 .PHONY: all clean dist-clean
 .SUFFIXES: .c .o .lo .la .mo .po
@@ -54,17 +59,16 @@ tables: <TABLES>
 OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
 
 clean:
-	rm -rf src/*.lo po/*.mo
+	rm -rf src/*.lo src/tables/*.lo src/modules/*.lo po/*.mo src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs
 
 dist-clean: clean
-	rm -rf src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs
 
 .c.lo:
-	$(LIBTOOL) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
+	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
 
 .lo.la:
-	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< -Lsrc/.libs -ltranscript $(LDLIBS) -lltdl -rpath $(libdir)
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
 

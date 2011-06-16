@@ -14,7 +14,7 @@
 EXTENSIONS="c libtool cxx"
 MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc"
 
-SWITCHES="+gettext -ucm2ltc"
+SWITCHES="+gettext -ucm2ltc -verbose-compile"
 OPTIONS="localedir"
 
 SUFFIXES="${SUFFIXES} .mo .po"
@@ -31,6 +31,7 @@ print_help() {
   --with-ucm2ltc     Build converter specification compiler (ucm2ltc)
                          Requires a working C++ compiler
   --localedir=<dir>  Installation directory for locales [prefix/share/locale]
+  --with-verbose-compile   Echo all commands during compile
 EOF
 }
 
@@ -93,10 +94,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "opendir/readdir/closedir" || {
-		check_message_result "!! A required function is not available (see config.log for details)."
-		exit 1
-	}
+	test_link "opendir/readdir/closedir" || error "!! A required function is not available (see config.log for details)."
 
 	cat > .config.c <<EOF
 #include <sys/types.h>
@@ -114,10 +112,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "symlink/unlink/lstat" || {
-		check_message_result "!! A required function is not available (see config.log for details)."
-		exit 1
-	}
+	test_link "symlink/unlink/lstat" || error "!! A required function is not available (see config.log for details)."
 
 	cat > .config.c <<EOF
 #include <ltdl.h>
@@ -135,10 +130,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "libltdl" "TESTLIBS=-lltdl" || {
-		check_message_result "!! Please install libltdl and its development files"
-		exit 1
-	}
+	test_link "libltdl" "TESTLIBS=-lltdl" || error "!! Please install libltdl and its development files"
 
 	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
@@ -146,8 +138,7 @@ EOF
 	elif checkfunction "setlocale" "setlocale(LC_CTYPE, NULL);" "<locale.h>" ; then
 		HAS_SETLOCALE=yes
 	else
-		check_message_result "!! A required function is not available."
-		exit 1
+		error "!! A required function is not available."
 	fi
 
 	checkfunction "strdup" "strdup(\"foo\");" "<string.h>" && CONFIGFLAGS="${CONFIGFLAGS} -DHAS_STRDUP"
@@ -169,10 +160,9 @@ EOF
 	unset GETTEXTFLAGS GETTEXTLIBS linguas LOCALEDIR
 	# Check for gettext functionality
 	if [ "yes" = "${with_gettext}" ] ; then
-		[ "${HAS_SETLOCALE}" = "yes" ] || checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || {
-			check_message_result "!! Gettext support unavailable. Try configuring with --without-gettext"
-			exit 1
-		}
+		[ "${HAS_SETLOCALE}" = "yes" ] || checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || \
+			error "!! Gettext support unavailable. Try configuring with --without-gettext"
+
 #FIXME: need to change to check for functions specifically used in library
 		cat > .config.c <<EOF
 #include <locale.h>
@@ -208,8 +198,7 @@ EOF
 			}
 		} || {
 			clean .config.po .config.mo
-			check_message_result "!! Could not compile with gettext. Try configuring with --without-gettext."
-			exit 1
+			error "!! Could not compile with gettext. Try configuring with --without-gettext."
 		}
 		GETTEXTFLAGS="-DUSE_GETTEXT"
 		clean .config.po .config.mo
@@ -229,8 +218,32 @@ EOF
 		fi
 	fi
 
-#FIXME: check ucm2ltc specific things [i.e. snprintf and strdup through C++, isatty and fileno]
+	if [ yes = "${with_ucm2ltc}" ] ; then
+		cat > .config.c <<EOF
+#include <unistd.h>
+#include <stdio.h>
+
+int main(int argc, char *argv[]) {
+	return isatty(fileno(stdin));
+}
+EOF
+		clean .config.o
+		test_link "isatty/fileno" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
+		cat > .configcxx.cc <<EOF
+#include <stdio.h>
+
+int main(int argc, char *argv[]) {
+	char test[10];
+	snprintf(test, sizeof(test), "foo");
+}
+EOF
+		clean .configcxx.o
+		test_link_cxx "snprintf" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
+		UCM2LTC="UCM2LTCTARGET=ucm2ltc"
+	fi
+
+	[ yes = "${with_verbose_compile}" ] && VERBOSE="SILENCELT= SILENTCCLT= SILENTLDLT= SILENTCC= SILENTCXX= SILENTLD="
 
 	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
-	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}  "${with_ucm2ltc+UCM2LTCTARGET=src.util/ucm2ltc/ucm2ltc}"
+	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}  $UCM2LTC $VERBOSE
 }

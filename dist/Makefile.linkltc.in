@@ -23,17 +23,19 @@ all: src.util/linkltc/linkltc
 .PHONY: all clean dist-clean
 .SUFFIXES: .c .o
 
+SILENTCC=@echo '[CC]' $< ;
+SILENTLD=@echo '[LD]' $@ ;
+
 OBJECTS_LINKLTC=<OBJECTS_LINKLTC>
 
 clean:
-	rm -rf src.util/linkltc/*.o po/*.mo
+	rm -rf src.util/linkltc/*.o src.util/linkltc/linkltc
 
 dist-clean: clean
-	rm -rf src.util/linkltc/linkltc
 
 .c.o:
-	$(CC) $(CFLAGS) -Isrc -c -o $@ $<
+	$(SILENTCC) $(CC) $(CFLAGS) -Isrc -c -o $@ $<
 
 src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
+	$(SILENTLD) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
 
