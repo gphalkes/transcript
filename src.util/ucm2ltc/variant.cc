@@ -22,7 +22,7 @@ Variant::Variant(Ucm *_base, const char *_id, bool internal) : base(_base) {
 	while (strpbrk(_id, DIRSEPS) != NULL)
 		_id = strpbrk(_id, DIRSEPS) + 1;
 
-	if ((id = strdup(_id)) == NULL)
+	if ((id = safe_strdup(_id)) == NULL)
 		OOM();
 
 	len = strlen(id);

@@ -123,7 +123,7 @@ Ucm::Ucm(const char *_name) : variant(this, option_converter_name == NULL ? _nam
 void Ucm::set_tag_value(tag_t tag, const char *value) {
 	if (tag == IGNORED)
 		return;
-	if ((tag_values[tag].str = strdup(value)) == NULL)
+	if ((tag_values[tag].str = safe_strdup(value)) == NULL)
 		OOM();
 	tag_values[tag].line_number = line_number;
 }
