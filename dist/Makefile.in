@@ -21,7 +21,7 @@ libdir=$(prefix)/lib
 docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
 
-all: lib linkltc $(UCM2LTC_TARGET)
+all: lib linkltc $(UCM2LTCTARGET)
 
 lib:
 	$(MAKE) -f Makefile.libtranscript

@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 EXTENSIONS="c libtool cxx"
+MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc"
 
 SWITCHES="+gettext -ucm2ltc"
 OPTIONS="localedir"
@@ -72,6 +73,7 @@ EOF
 }
 
 config() {
+	unset CONFIGFLAGS
 	# Test for all required functionality
 
 	cat > .config.c <<EOF
@@ -140,7 +142,7 @@ EOF
 
 	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
-		CFLAGS="${CFLAGS} -DHAS_NL_LANGINFO"
+		CONFIGFLAGS="${CONFIGFLAGS} -DHAS_NL_LANGINFO"
 	elif checkfunction "setlocale" "setlocale(LC_CTYPE, NULL);" "<locale.h>" ; then
 		HAS_SETLOCALE=yes
 	else
@@ -148,12 +150,12 @@ EOF
 		exit 1
 	fi
 
-	checkfunction "strdup" "strdup(\"foo\");" "<string.h>" && CFLAGS="${CFLAGS} -DHAS_STRDUP"
+	checkfunction "strdup" "strdup(\"foo\");" "<string.h>" && CONFIGFLAGS="${CONFIGFLAGS} -DHAS_STRDUP"
 
 	if checkfunction "htole32 in <sys/endian.h>" "htole32(20);" "<sys/endian.h>" ; then
-		CFLAGS="${CFLAGS} -DUSE_SYS_ENDIAN"
+		CONFIGFLAGS="${CONFIGFLAGS} -DUSE_SYS_ENDIAN"
 	elif checkfunction "htole32 in <endian.h>" "htole32(20);" "<endian.h>" ; then
-		CFLAGS="${CFLAGS} -DUSE_ENDIAN"
+		CONFIGFLAGS="${CONFIGFLAGS} -DUSE_ENDIAN"
 	fi
 
 	cat > .config.c <<EOF
@@ -162,7 +164,7 @@ int main(int argc, char *argv[]) {
 	return foo;
 }
 EOF
-	test_compile "inline keyword" && CFLAGS="${CFLAGS} -DHAS_INLINE"
+	test_compile "inline keyword" && CONFIGFLAGS="${CONFIGFLAGS} -DHAS_INLINE"
 
 	unset GETTEXTFLAGS GETTEXTLIBS linguas LOCALEDIR
 	# Check for gettext functionality
@@ -229,7 +231,6 @@ EOF
 
 #FIXME: check ucm2ltc specific things [i.e. snprintf and strdup through C++, isatty and fileno]
 
-	create_makefile "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
-	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"} \
-	"${with_ucm2ltc+UCM2LTCTARGET=src.util/ucm2ltc/ucm2ltc}"
+	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
+	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}  "${with_ucm2ltc+UCM2LTCTARGET=src.util/ucm2ltc/ucm2ltc}"
 }
