@@ -12,32 +12,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 .POSIX:
 
-# C-compiler flags
-# - If strdup is not provided by the library, remove -DHAS_STRDUP.
-# - If your platform does not support the nl_langinfo function, remove
-#    -DHAS_NL_LANGINFO
-CFLAGS=-O2 -DHAS_STRDUP -DHAS_NL_LANGINFO
-
-# The libtool executable
-LIBTOOL=libtool
-
-# Installation prefix
-prefix=/usr/local
-
-# Gettext configuration
-# GETTEXTFLAGS should contain -DUSE_GETTEXT to enable gettext translations
-# GETTEXTLIBS should contain all link flags to allow linking with gettext, if
-# it has been enabled. The GNU libc already contains the gettext library, so
-# there is no need to add any flags. Otherwise, -lintl is usually required, and
-# sometimes -liconv as well.
-# LOCALEDIR: the directory where the locale dependant files should be installed.
-# LINGUAS: translations to be installed. Look in po directory for available
-#  translations.
-GETTEXTFLAGS=
-GETTEXTLIBS=
-LOCALEDIR=$(prefix)/share/locale
-LINGUAS=
-
 # Install program to use (should provide -m and -d options)
 INSTALL=install
 
@@ -47,42 +21,29 @@ libdir=$(prefix)/lib
 docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
 
-all: src/libtranscript.la src.util/linkltc/linkltc $(UCM2LTCTARGET) tables
+all: lib linkltc $(UCM2LTC_TARGET)
 
-tables: <TABLES>
+lib:
+	$(MAKE) -f Makefile.libtranscript
 
-.PHONY: all clean dist-clean install
+linkltc: lib
+	$(MAKE) -f Makefile.linkltc
+
+ucm2ltc: lib
+	$(MAKE) -f Makefile.ucm2ltc
+
+.PHONY: all clean dist-clean install lib linkltc ucm2ltc
 .SUFFIXES: .c .cc .o .lo .la .mo .po
 
-OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
-OBJECTS_UCM2LTC=<OBJECTS_UCM2LTC>
-OBJECTS_LINKLTC=<OBJECTS_LINKLTC>
-
 clean:
-	rm -rf src/*.lo src/.libs src/tables/*.la src/tables/.libs src.util/linkltc/*.o src.util/ucm2ltc/*.o po/*.mo
+	$(MAKE) -f Makefile.libtranscript clean
+	$(MAKE) -f Makefile.linkltc clean
+	$(MAKE) -f Makefile.ucm2ltc clean
 
-dist-clean: clean
-	rm -rf src/.libs src/libtranscript.la config.log Makefile
+dist-clean:
+	$(MAKE) -f Makefile.libtranscript dist-clean
+	$(MAKE) -f Makefile.linkltc dist-clean
+	$(MAKE) -f Makefile.ucm2ltc dist-clean
+	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc
 
-.c.lo:
-	$(LIBTOOL) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
-
-.lo.la:
-	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< -Lsrc/.libs -ltranscript $(LDLIBS) -lltdl -rpath $(libdir)
-
-src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
-
-
-.c.o:
-	$(CC) $(CFLAGS) -Isrc -c -o $@ $<
-
-.cc.o:
-	$(CXX) $(CXXFLAGS) -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Isrc -c -o $@ $<
-
-src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
-
-src.util/ucm2ltc/ucm2ltc: $(OBJECTS_UCM2LTC) src/libtranscript.la
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_UCM2LTC) $(LDLIBS) -Lsrc/.libs -ltranscript
-
+install:

@@ -1,0 +1,39 @@
+# Copyright (C) 2011 G.P. Halkes
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+.POSIX:
+
+# C-compiler flags
+CFLAGS=-O2
+
+# Installation prefix
+prefix=/usr/local
+
+all: src.util/linkltc/linkltc
+
+.PHONY: all clean dist-clean
+.SUFFIXES: .c .o
+
+OBJECTS_LINKLTC=<OBJECTS_LINKLTC>
+
+clean:
+	rm -rf src.util/linkltc/*.o po/*.mo
+
+dist-clean: clean
+	rm -rf src.util/linkltc/linkltc
+
+.c.o:
+	$(CC) $(CFLAGS) -Isrc -c -o $@ $<
+
+src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
+

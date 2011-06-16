@@ -1,0 +1,48 @@
+# Copyright (C) 2011 G.P. Halkes
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+.POSIX:
+
+# C-compiler flags
+CFLAGS=-O2
+
+# C++-compiler flags
+CXXFLAGS=-O2
+
+# Config flags
+# - If strdup is not provided by the library, remove -DHAS_STRDUP.
+# - If your platform does not support the nl_langinfo function, remove
+#    -DHAS_NL_LANGINFO
+CONFIGFLAGS=-DHAS_STRDUP -DHAS_NL_LANGINFO
+
+all: src.util/ucm2ltc/ucm2ltc
+
+.PHONY: all clean dist-clean
+.SUFFIXES: .c .cc .o
+
+OBJECTS_UCM2LTC=<OBJECTS_UCM2LTC>
+
+clean:
+	rm -rf src.util/ucm2ltc/*.o
+
+dist-clean: clean
+	rm -rf src.util/ucm2ltc/ucm2ltc
+
+.c.o:
+	$(CC) $(CFLAGS) $(CONFIGFLAGS) -Isrc -c -o $@ $<
+
+.cc.o:
+	$(CXX) $(CXXFLAGS) $(CONFIGFLAGS) -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS -Isrc -c -o $@ $<
+
+src.util/ucm2ltc/ucm2ltc: $(OBJECTS_UCM2LTC) src/libtranscript.la
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_UCM2LTC) $(LDLIBS) -Lsrc/.libs -ltranscript
+

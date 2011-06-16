@@ -1,0 +1,70 @@
+# Copyright (C) 2011 G.P. Halkes
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3, as
+# published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+.POSIX:
+
+# C-compiler flags
+CFLAGS=-O2
+
+# Configuration flags
+# - If strdup is not provided by the library, remove -DHAS_STRDUP.
+# - If your platform does not support the nl_langinfo function, remove
+#    -DHAS_NL_LANGINFO
+CONFIGFLAGS=-DHAS_STRDUP -DHAS_NL_LANGINFO
+
+# The libtool executable
+LIBTOOL=libtool
+
+# Installation prefix
+prefix=/usr/local
+
+# Gettext configuration
+# GETTEXTFLAGS should contain -DUSE_GETTEXT to enable gettext translations
+# GETTEXTLIBS should contain all link flags to allow linking with gettext, if
+# it has been enabled. The GNU libc already contains the gettext library, so
+# there is no need to add any flags. Otherwise, -lintl is usually required, and
+# sometimes -liconv as well.
+# LOCALEDIR: the directory where the locale dependant files should be installed.
+# LINGUAS: translations to be installed. Look in po directory for available
+#  translations.
+GETTEXTFLAGS=
+GETTEXTLIBS=
+LOCALEDIR=$(prefix)/share/locale
+LINGUAS=
+
+# Miscelaneous install paths
+libdir=$(prefix)/lib
+
+all: src/libtranscript.la tables
+
+tables: <TABLES>
+
+.PHONY: all clean dist-clean
+.SUFFIXES: .c .o .lo .la .mo .po
+
+OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
+
+clean:
+	rm -rf src/*.lo po/*.mo
+
+dist-clean: clean
+	rm -rf src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs
+
+.c.lo:
+	$(LIBTOOL) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
+
+.lo.la:
+	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< -Lsrc/.libs -ltranscript $(LDLIBS) -lltdl -rpath $(libdir)
+
+src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
+	$(LIBTOOL) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
+

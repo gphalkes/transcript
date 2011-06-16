@@ -45,9 +45,11 @@ for SRC in ${SOURCES} ${GENSOURCES} ${AUXSOURCES} ; do
 done
 
 sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${LIBTRANSCRIPT_OBJECTS}%g;\
-s%<OBJECTS_LINKLTC>%${LINKLTC_OBJECTS}%g;\
-s%<OBJECTS_UCM2LTC>%${UCM2LTC_OBJECTS}%g;\
-s%<TABLES>%${TABLES}%g" ${TOPDIR}/Makefile.in
+s%<TABLES>%${TABLES}%g" ${TOPDIR}/Makefile.libtranscript.in
+sed -r -i "s%<OBJECTS_LINKLTC>%${LINKLTC_OBJECTS}%g" ${TOPDIR}/Makefile.linkltc.in
+sed -r -i "s%<OBJECTS_UCM2LTC>%${UCM2LTC_OBJECTS}%g" ${TOPDIR}/Makefile.ucm2ltc.in
+
+#FIXME: it would be better if we didn't have to modify this file
 sed -r -i 's%\.objects/%%g' ${TOPDIR}/src.util/ucm2ltc/ucmparser.cc
 
 ( cd ${TOPDIR}/src ; ln -s . transcript )
