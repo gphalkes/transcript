@@ -46,4 +46,11 @@ dist-clean:
 	@$(MAKE) -f Makefile.ucm2ltc dist-clean
 	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log
 
-install:
+install: all
+	$(INSTALL) -d $(libdir)/transcript
+	$(INSTALL) `echo src/.libs/libtranscript* | sed 's/[^ ]*\.la[^ ]*//'` $(libdir)
+	$(INSTALL) src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
+	$(INSTALL) -d $(bindir)
+	$(INSTALL) src.util/linkltc/linkltc $(bindir)
+	$(bindir)/linkltc $(libdir)/transcript/*.ltc
+	[ -n "$(UCM2LTCTARGET)" ] && $(INSTALL) src.util/ucm2ltc/ucm2ltc
