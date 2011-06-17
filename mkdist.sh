@@ -10,6 +10,9 @@ setup_hg
 get_version_hg
 check_mod_hg
 build_all
+if [ -z "${NOBUILD}" ] || [ -z "${PREREL}" ] ; then
+	make -C doc clean ; make -C doc all
+fi
 get_sources_hg
 make_tmpdir
 copy_sources ${SOURCES} ${GENSOURCES} ${AUXSOURCES}
