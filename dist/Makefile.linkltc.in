@@ -22,6 +22,7 @@ all: src.util/linkltc/linkltc
 
 .PHONY: all clean dist-clean
 .SUFFIXES: .c .o
+.SECONDARY: # Tell GNU make not to delete intermediate files
 
 SILENTCC=@echo '[CC]' $< ;
 SILENTLD=@echo '[LD]' $@ ;

@@ -28,6 +28,7 @@ all: src.util/ucm2ltc/ucm2ltc
 
 .PHONY: all clean dist-clean
 .SUFFIXES: .c .cc .o
+.SECONDARY: # Tell GNU make not to delete intermediate files
 
 SILENTCC=@echo '[CC]' $< ;
 SILENTCXX=@echo '[CXX]' $< ;

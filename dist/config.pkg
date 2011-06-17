@@ -24,12 +24,13 @@ LTSHARED=1
 USERRULES=print_rules
 USERHELP=print_help
 PRECHECKFUNC=precheck
+SEDEXTRA=sed_extra
 
 print_help() {
 	cat <<EOF
   --without-gettext  Disable gettext translations
   --with-ucm2ltc     Build converter specification compiler (ucm2ltc)
-                         Requires a working C++ compiler
+                           Requires a working C++ compiler
   --localedir=<dir>  Installation directory for locales [prefix/share/locale]
   --with-verbose-compile   Echo all commands during compile
 EOF
@@ -43,11 +44,15 @@ print_rules() {
 EOF
 }
 
-
 precheck() {
 	if [ "no" = "${with_ucm2ltc}" ] ; then
 		EXTENSIONS="c libtool"
 	fi
+}
+
+sed_extra() {
+	#~ if [ yes = "${with_ucm2ltc}" ] ; then
+	[ yes = "${with_verbose_compile}" ] && echo '/^SILEN\(CE\|T\)/d'
 }
 
 checkfunction() {
@@ -239,11 +244,15 @@ int main(int argc, char *argv[]) {
 EOF
 		clean .configcxx.o
 		test_link_cxx "snprintf" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
-		UCM2LTC="UCM2LTCTARGET=ucm2ltc"
+	else
+		MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc"
+		cat > Makefile.ucm2ltc <<EOF
+all:
+clean:
+dist-clean:
+EOF
 	fi
 
-	[ yes = "${with_verbose_compile}" ] && VERBOSE="SILENCELT= SILENTCCLT= SILENTLDLT= SILENTCC= SILENTCXX= SILENTLD="
-
 	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
-	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}  $UCM2LTC $VERBOSE
+	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
 }

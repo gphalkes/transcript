@@ -17,6 +17,7 @@ copy_sources ${SOURCES} ${GENSOURCES} ${AUXSOURCES}
 copy_dist_files
 copy_files doc/API doc/motivation.txt
 #copy_files ${AUXFILES}
+create_configure
 
 if [[ "${VERSION}" =~ [0-9]{8} ]] ; then
 	VERSION_BIN=0
@@ -26,7 +27,6 @@ fi
 
 sed -i "s/<VERSION>/${VERSION}/g" `find ${TOPDIR} -type f | egrep -v '^src'`
 sed -i "/#define TRANSCRIPT_VERSION/c #define TRANSCRIPT_VERSION ${VERSION_BIN}" ${TOPDIR}/src/transcript.h
-( cd ${TOPDIR} ; "${BASEDIR}/../config/merge_config" )
 
 OBJECTS_LIBTRANSCRIPT="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src/[^/]*\.c$' | sed -r 's/\.c\>/.lo/g' | tr '\n' ' '`"
 TABLES="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src/tables/.*\.c$' | sed -r 's/\.c\>/.la/g' | tr '\n' ' '`"

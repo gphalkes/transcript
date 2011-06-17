@@ -12,6 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 .POSIX:
 
+prefix=/usr/local
+
 # Install program to use (should provide -m and -d options)
 INSTALL=install
 
@@ -21,7 +23,7 @@ libdir=$(prefix)/lib
 docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
 
-all: lib linkltc $(UCM2LTCTARGET)
+all: lib linkltc ucm2ltc
 
 lib:
 	@$(MAKE) -f Makefile.libtranscript
@@ -48,9 +50,11 @@ dist-clean:
 
 install: all
 	$(INSTALL) -d $(libdir)/transcript
-	$(INSTALL) `echo src/.libs/libtranscript* | sed 's/[^ ]*\.la[^ ]*//'` $(libdir)
+	$(INSTALL) `echo src/.libs/libtranscript* | sed 's/[^ ]*\.la[^ ]*//g'` $(libdir)
 	$(INSTALL) src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
+	$(INSTALL) -d $(docdir)/API/search
+	find doc/API -type f | xargs -IX $(INSTALL) X $(docdir)/X
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) src.util/linkltc/linkltc $(bindir)
 	$(bindir)/linkltc $(libdir)/transcript/*.ltc
-	[ -n "$(UCM2LTCTARGET)" ] && $(INSTALL) src.util/ucm2ltc/ucm2ltc
+	[ -f src.util/ucm2ltc/ucm2ltc ] && $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir)

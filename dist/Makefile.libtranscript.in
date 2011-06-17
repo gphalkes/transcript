@@ -55,6 +55,7 @@ modules: <MODULES>
 
 .PHONY: all clean dist-clean
 .SUFFIXES: .c .o .lo .la .mo .po
+.SECONDARY: # Tell GNU make not to delete intermediate files
 
 OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
 
