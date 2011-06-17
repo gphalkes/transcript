@@ -18,7 +18,6 @@
 
 #include "transcript.h"
 #include "api.h"
-#include "bool.h"
 #include "handle.h"
 #include "utf.h"
 
@@ -150,7 +149,7 @@ TRANSCRIPT_API int transcript_probe_converter_nolock(const char *name);
 	TRANSCRIPT_EXPORT transcript_t *transcript_open_##_name(const char *name, transcript_utf_t utf_type, \
 		int flags, transcript_error_t *error) { return _func(name, utf_type, flags, error); }
 #define TRANSCRIPT_ALIAS_PROBE(_func, _name) \
-	TRANSCRIPT_EXPORT bool transcript_probe_##_name(const char *name) { return _func(name); }
+	TRANSCRIPT_EXPORT int transcript_probe_##_name(const char *name) { return _func(name); }
 
 #define TRANSCRIPT_ARRAY_SIZE(name) (sizeof(name) / sizeof(name[0]))
 

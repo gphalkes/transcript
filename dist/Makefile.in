@@ -23,6 +23,8 @@ bindir=$(prefix)/bin
 libdir=$(prefix)/lib
 docdir=$(prefix)/share/doc/libtranscript-<VERSION>
 mandir=$(prefix)/share/man
+includedir=$(prefix)/include
+pkgconfigdir=$(libdir)/pkgconfig
 
 all: lib linkltc ucm2ltc
 
@@ -49,12 +51,21 @@ dist-clean:
 	@$(MAKE) -f Makefile.ucm2ltc dist-clean
 	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log
 
-install: all
+libtranscript.pc: libtranscript.pc.in
+	@echo '/^prefix=/c\' > .sedscript
+	@echo 'prefix=$(prefix) >> .sedscript
+	sed -f .sedscript $< > $@
+
+install: all libtranscript.pc
 	$(INSTALL) -d $(libdir)/transcript
 	$(INSTALL) `echo src/.libs/libtranscript* | sed 's/[^ ]*\.la[^ ]*//g'` $(libdir)
 	$(INSTALL) src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
+	$(INSTALL) -d $(includedir)/transcript/transcript
+	$(INSTALL) src/transcript.h src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search
 	find doc/API -type f | xargs -IX $(INSTALL) X $(docdir)/X
+	$(INSTALL) -d $(pkgconfigdir)
+	$(INSTALL) libtranscript.pc $(pkgconfigdir)
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) src.util/linkltc/linkltc $(bindir)
 	$(bindir)/linkltc $(libdir)/transcript/*.ltc

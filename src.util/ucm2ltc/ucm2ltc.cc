@@ -539,8 +539,6 @@ int main(int argc, char *argv[]) {
 	fprintf(output, "\tNULL\n};\n\n");
 	fprintf(output, "TRANSCRIPT_EXPORT const char * const *transcript_namelist_%s(void) { return namelist; }\n", normalized_output_name);
 
-	#warning FIXME: write dummy interface if the name of the output does not match a converter
-
 	fclose(output);
 	free(output_name);
 	return EXIT_SUCCESS;

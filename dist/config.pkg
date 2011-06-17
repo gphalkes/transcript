@@ -50,11 +50,6 @@ precheck() {
 	fi
 }
 
-sed_extra() {
-	#~ if [ yes = "${with_ucm2ltc}" ] ; then
-	[ yes = "${with_verbose_compile}" ] && echo '/^SILEN\(CE\|T\)/d'
-}
-
 checkfunction() {
 	clean .config.o
 
@@ -253,6 +248,33 @@ dist-clean:
 EOF
 	fi
 
+	check_message "Checking for pkg-config... "
+	PKGCONFIGPATH="`pkg-config --variable pc_path pkg-config`"
+	if [ $? -eq 0 ] ; then
+		check_message_result "yes"
+		IFS=':'
+		PREFIXPKGCONFIG="${prefix-/usr/local}/lib/pkgconfig"
+		unset pkgconfigdir
+		for DIR in ${PKGCONFIGPATH}
+		do
+			if [ "${DIR}" = "${PREFIXPKGCONFIG}" ] ; then
+				pkgconfigdir="${DIR}"
+				break
+			fi
+		done
+		unset IFS
+		[ -z "${pkgconfigdir}" ] && pkgconfigdir="`echo \"${PKGCONFIGPATH}\" | sed 's/:.*//'`"
+	else
+		check_message_result "no"
+	fi
+
 	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
 	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
+}
+
+sed_extra() {
+	#~ if [ yes = "${with_ucm2ltc}" ] ; then
+	echo "/^pkgconfigdir=/c\\
+pkgconfigdir=${pkgconfigdir}"
+	[ yes = "${with_verbose_compile}" ] && echo '/^SILEN\(CE\|T\)/d'
 }

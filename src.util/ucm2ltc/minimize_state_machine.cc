@@ -173,7 +173,7 @@ static void mark_entry(full_state_t *start, unsigned char *bytes, int length, ac
 	switch (start->entries[*bytes].action & ~ACTION_FLAG_PAIR) {
 		case ACTION_VALID:
 			if (length == 1)
-				#warning FIXME: this should give an error to the user, but probably at an earlier state!
+				//FIXME: this should give an error to the user, but probably at an earlier state!
 				PANIC();
 			mark_entry(start->entries[*bytes].next_state, bytes + 1, length - 1, mark_action);
 			return;

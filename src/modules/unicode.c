@@ -19,6 +19,7 @@
 
 #include <transcript/static_assert.h>
 #include "unicode.h"
+#include "bool.h"
 
 static_assert(sizeof(state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
@@ -370,7 +371,7 @@ static transcript_t *open_unicode(const char *name, transcript_utf_t utf_type, i
 	return (transcript_t *) retval;
 }
 
-TRANSCRIPT_EXPORT bool transcript_probe_gb18030(const char *name) {
+TRANSCRIPT_EXPORT int transcript_probe_gb18030(const char *name) {
 	name_to_utftype *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
