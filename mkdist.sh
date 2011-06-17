@@ -20,7 +20,7 @@ create_configure
 if [[ "${VERSION}" =~ [0-9]{8} ]] ; then
 	VERSION_BIN=0
 else
-	VERSION_BIN="$(printf "%02x%02x%02x" $(echo ${VERSION} | tr '.' ' '))"
+	VERSION_BIN="$(printf "0x%02x%02x%02x" $(echo ${VERSION} | tr '.' ' '))"
 fi
 
 sed -i "s/<VERSION>/${VERSION}/g" `find ${TOPDIR} -type f | egrep -v '^src'`

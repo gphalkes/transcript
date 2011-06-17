@@ -61,8 +61,8 @@ Reporting bugs
 ==============
 
 If you think you have found a bug, please check that you are using the latest
-version of libtranscript [http://os.ghalkes.nl/libtranscript]. When reporting
-bugs, please include a minimal example that demonstrates the problem.
+version of libtranscript [http://os.ghalkes.nl/libtranscript.html]. When
+reporting bugs, please include a minimal example that demonstrates the problem.
 
 
 Author
