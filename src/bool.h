@@ -14,12 +14,6 @@
 #ifndef TRANSCRIPT_BOOL_H
 #define TRANSCRIPT_BOOL_H
 
-#warning FIXME: make this define a bool_t, such that it is the same on all compilers!
-/* Define a bool type if not already defined (C++ and C99 do)*/
-#if !(defined(__cplusplus) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 19990601L))
-typedef enum {false, true} bool;
-#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 19990601L
-#include <stdbool.h>
-#endif
+typedef enum {FALSE, TRUE} bool_t;
 
 #endif

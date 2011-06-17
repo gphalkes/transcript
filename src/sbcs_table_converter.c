@@ -79,7 +79,7 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const char 
 
 /** Simplification macro for the get_unicode function in the converter handle. */
 #define GET_UNICODE() do { \
-	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
+	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, FALSE); \
 } while (0)
 
 /** Simplification macro for the put_bytes call, which automatically returns on TRANSCRIPT_NO_SPACE. */

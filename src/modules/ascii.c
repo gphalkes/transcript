@@ -66,7 +66,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, cha
 	uint8_t *_inbuf = (uint8_t *) *inbuf;
 
 	while ((*inbuf) < inbuflimit) {
-		codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
+		codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, FALSE);
 		switch (codepoint) {
 			case TRANSCRIPT_UTF_ILLEGAL:
 				return TRANSCRIPT_ILLEGAL;

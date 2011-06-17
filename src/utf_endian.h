@@ -51,7 +51,7 @@ static transcript_error_t ALT(put_utf32)(uint_fast32_t codepoint, char **outbuf,
 }
 
 /** Read a codepoint encoded as UTF-16. */
-static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbuflimit, bool_t skip) {
 	uint16_t tmp;
 	uint_fast32_t codepoint, masked_codepoint;
 
@@ -103,7 +103,7 @@ static uint_fast32_t ALT(get_utf16)(const char **inbuf, const char const *inbufl
 }
 
 /** Read a codepoint encoded as UTF-32. */
-static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t ALT(get_utf32)(const char **inbuf, const char const *inbuflimit, bool_t skip) {
 	uint32_t codepoint;
 
 	if ((*inbuf) + 4 > inbuflimit)

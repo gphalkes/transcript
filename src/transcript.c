@@ -260,7 +260,7 @@ transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char *
     corrupt, or the conversions are not permitted by the flag settings).
 */
 transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit) {
-	if (handle->get_unicode(inbuf, inbuflimit, true) == TRANSCRIPT_UTF_INCOMPLETE)
+	if (handle->get_unicode(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
 		return TRANSCRIPT_INCOMPLETE;
 	return TRANSCRIPT_SUCCESS;
 }
@@ -489,12 +489,12 @@ int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c
 */
 void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
 	size_t write_idx = 0;
-	bool last_was_digit = false;
+	bool_t last_was_digit = FALSE;
 
 	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
 		/* Skip any character that is not alphanumeric. */
 		if (!_transcript_isalnum(*name)) {
-			last_was_digit = false;
+			last_was_digit = FALSE;
 		} else {
 			if (!last_was_digit && *name == '0')
 				continue;
@@ -613,7 +613,7 @@ static void add_search_dir(const char *dir) {
     does not load the availability of the aliases.
 */
 void _transcript_init(void) {
-	static bool initialized = false;
+	static bool_t initialized = FALSE;
 
 	/* We check the initialized variable first without locking the mutex. We can
 	   safely do this, because once it has been set, it will never be reset. So
@@ -662,7 +662,7 @@ void _transcript_init(void) {
 			}
 			_transcript_init_aliases_from_file();
 		}
-		initialized = true;
+		initialized = TRUE;
 		RELEASE_LOCK();
 	}
 }

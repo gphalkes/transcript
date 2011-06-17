@@ -11,7 +11,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTENSIONS="c libtool cxx"
+EXTENSIONS="c libtool cxx pkgconfig"
 MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc"
 
 SWITCHES="+gettext -ucm2ltc -verbose-compile"
@@ -46,7 +46,7 @@ EOF
 
 precheck() {
 	if [ "no" = "${with_ucm2ltc}" ] ; then
-		EXTENSIONS="c libtool"
+		EXTENSIONS="c libtool pkgconfig"
 	fi
 }
 

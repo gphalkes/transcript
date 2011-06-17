@@ -19,7 +19,6 @@
 
 #include <transcript/static_assert.h>
 #include "unicode.h"
-#include "bool.h"
 
 static_assert(sizeof(state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
 
@@ -59,7 +58,7 @@ static int put_common(converter_state_t *handle, uint_fast32_t codepoint, char *
 	return handle->common.put_unicode(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->common.get_unicode to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_common(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t get_common(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
 	return handle->common.get_unicode(inbuf, inbuflimit, skip);
 }
 /** Wrapper routine for @c handle->from_unicode_put to provide a uniform interface across all @c put_xxx routines. */
@@ -67,7 +66,7 @@ static int put_from_unicode(converter_state_t *handle, uint_fast32_t codepoint, 
 	return handle->from_unicode_put(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->to_unicode_get to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
 	return handle->to_unicode_get(inbuf, inbuflimit, skip);
 }
 
@@ -91,7 +90,7 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 	int result;
 
 	while (*inbuf < inbuflimit) {
-		codepoint = get_unicode(handle, (const char **) &_inbuf, inbuflimit, false);
+		codepoint = get_unicode(handle, (const char **) &_inbuf, inbuflimit, FALSE);
 		if (codepoint > 0x110000) {
 			switch (codepoint) {
 				case TRANSCRIPT_UTF_INTERNAL_ERROR:
@@ -101,7 +100,7 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 						return TRANSCRIPT_ILLEGAL;
 					if ((result = put_unicode(handle, UINT32_C(0xfffd), outbuf, outbuflimit)) != 0)
 						return result;
-					get_unicode(handle, (const char **) &_inbuf, inbuflimit, true);
+					get_unicode(handle, (const char **) &_inbuf, inbuflimit, TRUE);
 					*inbuf = (const char *) _inbuf;
 					if (flags & TRANSCRIPT_SINGLE_CONVERSION)
 						return TRANSCRIPT_SUCCESS;
@@ -167,11 +166,11 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 			   is present. */
 			handle->to_unicode_get = get_be;
 
-			codepoint = get_be((const char **) &_inbuf, inbuflimit, false);
+			codepoint = get_be((const char **) &_inbuf, inbuflimit, FALSE);
 			/* If the input is Little Endian, it will look like 0xfffe (or 0xfffe0000) if read in
 			   Big Endian, which will result in a TRANSCRIPT_UTF_ILLEGAL result. */
 			if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
-				codepoint = get_le((const char **) &_inbuf, inbuflimit, false);
+				codepoint = get_le((const char **) &_inbuf, inbuflimit, FALSE);
 				if (codepoint == UINT32_C(0xFEFF))
 					handle->to_unicode_get = get_le;
 			}
@@ -180,7 +179,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 			if (codepoint == UINT32_C(0xFEFF))
 				*inbuf = (const char *) _inbuf;
 		} else if (handle->utf_type == _TRANSCRIPT_UTF8_BOM) {
-			if (handle->to_unicode_get((const char **) &_inbuf, inbuflimit, false) == UINT32_C(0xFEFF))
+			if (handle->to_unicode_get((const char **) &_inbuf, inbuflimit, FALSE) == UINT32_C(0xFEFF))
 				*inbuf = (const char *) _inbuf;
 		}
 	}
@@ -190,7 +189,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 
 /** skip_to implementation for Unicode converters. */
 static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
-	if (handle->to_unicode_get(inbuf, inbuflimit, true) == TRANSCRIPT_UTF_INCOMPLETE)
+	if (handle->to_unicode_get(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
 		return TRANSCRIPT_INCOMPLETE;
 	return TRANSCRIPT_SUCCESS;
 }
@@ -377,12 +376,12 @@ TRANSCRIPT_EXPORT int transcript_probe_gb18030(const char *name) {
 
 	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
-		return false;
+		return FALSE;
 
 	if (ptr->utf_type == _TRANSCRIPT_GB18030)
 		return transcript_probe_converter_nolock("gb18030table");
 
-	return true;
+	return TRUE;
 }
 
 /** close implementation for Unicode converters. */

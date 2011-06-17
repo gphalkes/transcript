@@ -95,7 +95,7 @@ typedef struct {
 } converter_state_t;
 
 static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit);
-static bool init_flag_handler(flag_handler_t *flags, uint8_t flag_info);
+static bool_t init_flag_handler(flag_handler_t *flags, uint8_t flag_info);
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
@@ -361,7 +361,7 @@ static void to_unicode_reset(converter_state_t *handle) {
 
 /** Simplification macro for the get_unicode function in the converter handle. */
 #define GET_UNICODE() do { \
-	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false); \
+	codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, FALSE); \
 } while (0)
 
 /** Simplification macro for the put_bytes call, which automatically returns on TRANSCRIPT_NO_SPACE. */
@@ -433,7 +433,7 @@ static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *h
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	size_t check_len;
 	size_t mapping_check_len;
-	bool can_read_more = flags & TRANSCRIPT_NO_MN_CONVERSION ? false : true;
+	bool_t can_read_more = flags & TRANSCRIPT_NO_MN_CONVERSION ? FALSE : TRUE;
 
 	/* Note: we specifically use the codepoint_sorted_multi_mappings to ensure that we always use
 	   the longest possible match. */
@@ -464,28 +464,28 @@ static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *h
 
 			if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) {
 				if (flags & TRANSCRIPT_END_OF_TEXT) {
-					can_read_more = false;
+					can_read_more = FALSE;
 					goto check_next_mapping;
 				}
 				return TRANSCRIPT_INCOMPLETE;
 			}
 
 			if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
-				can_read_more = false;
+				can_read_more = FALSE;
 				goto check_next_mapping;
 			}
 
 			switch (_transcript_put_utf16_no_check(codepoint, &ptr)) {
 				case TRANSCRIPT_INCOMPLETE:
 					if (flags & TRANSCRIPT_END_OF_TEXT) {
-						can_read_more = false;
+						can_read_more = FALSE;
 						goto check_next_mapping;
 					}
 					return TRANSCRIPT_INCOMPLETE;
 				case TRANSCRIPT_SUCCESS:
 					break;
 				case TRANSCRIPT_NO_SPACE:
-					can_read_more = false;
+					can_read_more = FALSE;
 					goto check_next_mapping;
 				default:
 					return TRANSCRIPT_INTERNAL_ERROR;
@@ -795,13 +795,13 @@ static uint8_t get_flags_8_trie(const flags_v1_t *flags, const uint8_t *bits2fla
 	return get_flags_8(flags, bits2flags, (idx & 15) + (flags->indices[idx >> 4] << 4));
 }
 
-static bool init_flag_handler(flag_handler_t *flags, uint8_t flag_info) {
-	bool trie;
+static bool_t init_flag_handler(flag_handler_t *flags, uint8_t flag_info) {
+	bool_t trie;
 
 	trie = (flag_info & 0x80) != 0;
 	flag_info &= 0x7f;
 	if (flag_info > 106) {
-		return false;
+		return FALSE;
 	} else if (flag_info > 98) {
 		flags->bits2flags = bits2flags1[flag_info - 99];
 		flags->get_flags = trie ? get_flags_1_trie : get_flags_1;
@@ -814,7 +814,7 @@ static bool init_flag_handler(flag_handler_t *flags, uint8_t flag_info) {
 	} else {
 		flags->get_flags = trie ? get_flags_8_trie : get_flags_8;
 	}
-	return true;
+	return TRUE;
 }
 
 

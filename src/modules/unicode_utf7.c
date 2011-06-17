@@ -20,21 +20,21 @@
 #define MINUS 45
 
 /** Check whether a character should be encoded directly, and not as base64 encoding. */
-static bool is_direct(uint_fast32_t c) {
+static bool_t is_direct(uint_fast32_t c) {
 	static const uint32_t is_direct_table[128 / 32] = {
 		UINT32_C(0x2600), UINT32_C(0x87fff381), UINT32_C(0x07fffffe), UINT32_C(0x07fffffe) };
 	return c < 128 && ((is_direct_table[c >> 5] & (1 << (c & 31))) != 0);
 }
 
 /** Check whether a character is a valid base64 character. */
-static bool is_base64(uint_fast8_t c) {
+static bool_t is_base64(uint_fast8_t c) {
 	static const uint32_t is_base64_table[256 / 32] = {
 		0, UINT32_C(0x3ff8800), UINT32_C(0x7fffffe), UINT32_C(0x7fffffe), 0, 0, 0, 0};
 	return (is_base64_table[c >> 5] & (1 << (c & 31))) != 0;
 }
 
 /** Check whether a character may be encoded directly, and not as base64 encoding. */
-static bool is_optionally_direct(uint_fast8_t c) {
+static bool_t is_optionally_direct(uint_fast8_t c) {
 	static const uint32_t is_od_table[256 / 32] = {
 		UINT32_C(0x2600), UINT32_C(0xfffff7ff), UINT32_C(0xefffffff), UINT32_C(0x3fffffff), 0, 0, 0, 0 };
 	return (is_od_table[c >> 5] & (1 << (c & 31))) != 0;
@@ -193,7 +193,7 @@ int _transcript_from_unicode_flush_utf7(converter_state_t *handle, char **outbuf
 /** @internal
     @brief Read a codepoint from a UTF-7 encoded buffer.
 */
-uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool skip) {
+uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
 	uint_fast32_t codepoint, high_surrogate = 0;
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t next_mode;

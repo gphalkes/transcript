@@ -58,10 +58,10 @@ static void add_display_name(const char *name, int available) {
 }
 
 /** Process the next non-alias name found in the aliases.txt file. */
-static bool add_converter_name(const char *name) {
+static bool_t add_converter_name(const char *name) {
 	transcript_name_desc_t *converter = NULL;
 	char normalized_name[NORMALIZE_NAME_MAX];
-	bool is_display_name = *name == '*';
+	bool_t is_display_name = *name == '*';
 
 	if (is_display_name)
 		name++;
@@ -109,7 +109,7 @@ static bool add_converter_name(const char *name) {
 	else
 		converters = converter;
 	converters_tail = converter;
-	return true;
+	return TRUE;
 
 return_error:
 	if (converter) {
@@ -117,7 +117,7 @@ return_error:
 		free(converter->name);
 		free(converter);
 	}
-	return false;
+	return FALSE;
 }
 
 /** Handle any touch-ups of the last converter data structure. */
@@ -131,10 +131,10 @@ static void converter_done(void) {
 }
 
 /** Process an alias found in the aliases.txt file. */
-static bool add_converter_alias(const char *name) {
+static bool_t add_converter_alias(const char *name) {
 	transcript_alias_name_t *alias = NULL;
 	char normalized_name[NORMALIZE_NAME_MAX];
-	bool is_display_name = *name == '*';
+	bool_t is_display_name = *name == '*';
 
 	if (is_display_name)
 		name++;
@@ -178,14 +178,14 @@ static bool add_converter_alias(const char *name) {
 
 	alias->next = converters_tail->aliases;
 	converters_tail->aliases = alias;
-	return true;
+	return TRUE;
 
 return_error:
 	if (alias != NULL) {
 		free(alias->name);
 		free(alias);
 	}
-	return false;
+	return FALSE;
 }
 
 /** @internal
@@ -219,7 +219,7 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
     the list built by ::init_availability is available.
 */
 static void init_availability(void) {
-	static bool availability_initialized = false;
+	static bool_t availability_initialized = FALSE;
 
 	DIR *dir;
 	struct dirent *entry;
@@ -230,7 +230,7 @@ static void init_availability(void) {
 
 	/* The initial check is to ensure that in the most common case, we skip the
 	   locking of the mutex. This is possible because we only set the value to
-	   true, never to false. Now we do the properly mutex protected check. */
+	   TRUE, never to FALSE. Now we do the properly mutex protected check. */
 	ACQUIRE_LOCK();
 	if (availability_initialized) {
 		RELEASE_LOCK();
@@ -260,7 +260,7 @@ static void init_availability(void) {
 		closedir(dir);
 	}
 
-	availability_initialized = true;
+	availability_initialized = TRUE;
 	RELEASE_LOCK();
 }
 
@@ -292,7 +292,7 @@ static void *read_alias_file(const char *name) {
 	size_t idx = 0;
 	char id[MAX_ID + 1];
 	int c, line_number = 1;
-	bool comma_seen = false;
+	bool_t comma_seen = FALSE;
 
 	enum {
 		LINE_START,
@@ -375,7 +375,7 @@ static void *read_alias_file(const char *name) {
 					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 					state = SKIP_REST;
 				}
-				comma_seen = false;
+				comma_seen = FALSE;
 				break;
 			case AFTER_ID:
 				if (_transcript_isspace(c))

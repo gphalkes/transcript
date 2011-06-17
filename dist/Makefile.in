@@ -38,18 +38,18 @@ ucm2ltc: lib
 	@$(MAKE) -f Makefile.ucm2ltc
 
 .PHONY: all clean dist-clean install lib linkltc ucm2ltc
-.SUFFIXES: .c .cc .o .lo .la .mo .po
 
 clean:
 	@$(MAKE) -f Makefile.libtranscript clean
 	@$(MAKE) -f Makefile.linkltc clean
 	@$(MAKE) -f Makefile.ucm2ltc clean
+	rm -rf libtranscript.pc
 
 dist-clean:
 	@$(MAKE) -f Makefile.libtranscript dist-clean
 	@$(MAKE) -f Makefile.linkltc dist-clean
 	@$(MAKE) -f Makefile.ucm2ltc dist-clean
-	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log
+	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log libtranscript.pc
 
 libtranscript.pc: libtranscript.pc.in
 	@echo '/^prefix=/c\' > .sedscript

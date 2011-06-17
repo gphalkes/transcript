@@ -178,7 +178,7 @@ static void from_unicode_reset(converter_state_t *handle);
 static void close_converter(converter_state_t *handle);
 
 /** Check an escape sequence for validity within this converter. */
-static int check_escapes(converter_state_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit, bool skip) {
+static int check_escapes(converter_state_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit, bool_t skip) {
 	stc_handle_t *ptr;
 	const uint8_t *_inbuf = *inbuf + 1;
 
@@ -279,7 +279,7 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 						break;
 				}
 
-				switch (check_escapes(handle, inbuf, inbuflimit, false)) {
+				switch (check_escapes(handle, inbuf, inbuflimit, FALSE)) {
 					case TRANSCRIPT_INCOMPLETE:
 						goto incomplete_char;
 					case TRANSCRIPT_ILLEGAL:
@@ -375,7 +375,7 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const uint8
 		return TRANSCRIPT_INCOMPLETE;
 
 	if (**inbuf == 0x1b)
-		return check_escapes(handle, inbuf, inbuflimit, true) == TRANSCRIPT_INCOMPLETE ?
+		return check_escapes(handle, inbuf, inbuflimit, TRUE) == TRANSCRIPT_INCOMPLETE ?
 			TRANSCRIPT_INCOMPLETE : TRANSCRIPT_SUCCESS;
 
 	if (**inbuf < 32) {
@@ -489,7 +489,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 				   should switch to ASCII and continue. */
 
 				uint32_t codepoint;
-				codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, false);
+				codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, FALSE);
 				if (codepoint < 32) {
 					/* ESC, SHIFT-IN and SHIFT-OUT can not be encoded in the output, as they
 					   are used as character-set control characters. */
@@ -690,7 +690,7 @@ static void reset_state_jp2(converter_state_t *handle) {
 
     Used internally to load the different converters used by ISO-2022.
 */
-static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+static bool_t real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
 		transcript_utf_t utf_type, uint_fast8_t flags)
 {
 	stc_handle_t *stc_handle, *extra_handle;
@@ -705,13 +705,13 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 	ext_handle = transcript_open_converter_nolock(desc->name, utf_type, TRANSCRIPT_INTERNAL, error);
 
 	if (ext_handle == NULL)
-		return false;
+		return FALSE;
 
 	if ((stc_handle = malloc(sizeof(stc_handle_t))) == NULL) {
 		transcript_close_converter(ext_handle);
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
-		return false;
+		return FALSE;
 	}
 
 	stc_handle->stc = ext_handle;
@@ -738,7 +738,7 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 			free(stc_handle);
 			if (error != NULL)
 				*error = TRANSCRIPT_OUT_OF_MEMORY;
-			return false;
+			return FALSE;
 		}
 		memcpy(extra_handle, stc_handle, sizeof(stc_handle_t));
 		extra_handle->escape_seq[2] = desc->final_byte;
@@ -752,11 +752,11 @@ static bool real_load(converter_state_t *handle, stc_descriptor_t *desc, int g, 
 		handle->g_sets = extra_handle;
 	}
 
-	return true;
+	return TRUE;
 }
 
 /** Probe the availability of a converter. */
-static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+static bool_t probe(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
 		transcript_utf_t utf_type, uint_fast8_t flags)
 {
 	(void) handle;
@@ -771,14 +771,14 @@ static bool probe(converter_state_t *handle, stc_descriptor_t *desc, int g, tran
 /** Convenience macro which tries to load a converter and exits the function if it is not available. */
 #define DO_LOAD(handle, desc, g, _write) do { \
 	if (!load((handle), (desc), (g), error, utf_type, (_write))) \
-		return false; \
+		return FALSE; \
 } while (0)
 
-typedef bool (*load_table_func)(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
+typedef bool_t (*load_table_func)(converter_state_t *handle, stc_descriptor_t *desc, int g, transcript_error_t *error,
 	transcript_utf_t utf_type, uint_fast8_t flags);
 
 /** Load the converters required for a specific ISO-2022 converter. */
-static bool do_load(load_table_func load, converter_state_t *handle, int type, transcript_utf_t utf_type, transcript_error_t *error) {
+static bool_t do_load(load_table_func load, converter_state_t *handle, int type, transcript_utf_t utf_type, transcript_error_t *error) {
 		switch (type) {
 		/* Current understanding of the ISO-2022-JP-* situation:
 		   JIS X 0213 has two planes: the first plane which is a superset of
@@ -894,9 +894,9 @@ static bool do_load(load_table_func load, converter_state_t *handle, int type, t
 		default:
 			if (error != NULL)
 				*error = TRANSCRIPT_INTERNAL_ERROR;
-			return false;
+			return FALSE;
 	}
-	return true;
+	return TRUE;
 }
 
 /** Compare function for lfind. */
@@ -939,7 +939,7 @@ static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags
 		return NULL;
 	}
 	/* Load ASCII, which all converters need. */
-	if (!real_load(retval, &ascii, 0, error, utf_type, true)) {
+	if (!real_load(retval, &ascii, 0, error, utf_type, TRUE)) {
 		close_converter(retval);
 		return NULL;
 	}
@@ -962,14 +962,14 @@ static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags
 	return retval;
 }
 
-static bool probe_iso2022(const char *name) {
+static bool_t probe_iso2022(const char *name) {
 	name_to_iso2022type *ptr;
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 	transcript_error_t error;
 
 	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
-		return false;
+		return FALSE;
 
 	return do_load(probe, NULL, ptr->iso2022_type, 0, &error);
 }

@@ -37,9 +37,9 @@ static void *get_sym(lt_dlhandle handle, const char *sym, const char *converter_
     of trying to open with fopen, it will actually be dlopened and the function
     transcript_probe_<name> will be called.
 */
-static bool probe_converter(const char *normalized_name, bool probe_load) {
+static bool_t probe_converter(const char *normalized_name, bool_t probe_load) {
 	if (probe_load) {
-		bool (*probe)(const char *);
+		bool_t (*probe)(const char *);
 		lt_dlhandle handle;
 		int result = 0;
 
@@ -76,10 +76,10 @@ int transcript_probe_converter_nolock(const char *name) {
 
 	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
 		if (converter->flags & NAME_DESC_FLAG_DISABLED)
-			return false;
+			return FALSE;
 		return probe_converter(converter->name, !!(converter->flags & NAME_DESC_FLAG_PROBE_LOAD));
 	}
-	return probe_converter(normalized_name, false);
+	return probe_converter(normalized_name, FALSE);
 }
 
 

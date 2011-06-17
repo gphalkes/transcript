@@ -112,7 +112,7 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 
 	uint32_t codepoints[20];
 	char *codepoint_ptr;
-	bool non_reversible;
+	bool_t non_reversible;
 
 	const char *inbuflimit, *outbuflimit;
 
@@ -147,7 +147,7 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 
 	while (_inbuf < inbuflimit) {
 		transcript_save_state(cd->from, saved_state);
-		non_reversible = false;
+		non_reversible = FALSE;
 		codepoint_ptr = (char *) &codepoints;
 		/* Convert a single character of the input, by forcing a single conversion. */
 		switch (transcript_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit, &codepoint_ptr,
@@ -160,13 +160,13 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 				transcript_to_unicode(cd->from, (const char **) &_inbuf, inbuflimit,
 						&codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]),
 						TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_MN_CONVERSION | TRANSCRIPT_ALLOW_FALLBACK);
-				non_reversible = true;
+				non_reversible = TRUE;
 				break;
 			case TRANSCRIPT_PRIVATE_USE:
 			case TRANSCRIPT_UNASSIGNED:
 				codepoints[0] = 0xFFFD;
 				transcript_to_unicode_skip(cd->from, (const char **) &_inbuf, inbuflimit);
-				non_reversible = true;
+				non_reversible = TRUE;
 				break;
 			case TRANSCRIPT_ILLEGAL:
 				ERROR(EILSEQ);
@@ -186,7 +186,7 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 			/* If the previous conversion yielded more than one codepoint, the
 			   conversion is definately non_reversible. */
 			if (codepoint_ptr > (char *) codepoints + sizeof(codepoints[0]))
-				non_reversible = true;
+				non_reversible = TRUE;
 
 			codepoint_ptr = (char *) &codepoints;
 		try_again:
@@ -205,7 +205,7 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 					if (non_reversible)
 						/* We shouldn't be able to get here! Return "internal error". */
 						ERROR(EBADF);
-					non_reversible = true;
+					non_reversible = TRUE;
 					goto try_again;
 				case TRANSCRIPT_NO_SPACE:
 					ERROR(E2BIG);
@@ -218,7 +218,7 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 
 		if (non_reversible) {
 			result++;
-			non_reversible = false;
+			non_reversible = FALSE;
 		}
 		*inbuf = _inbuf;
 	}
