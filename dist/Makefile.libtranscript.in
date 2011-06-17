@@ -24,7 +24,7 @@ CONFIGFLAGS=-DHAS_STRDUP -DHAS_NL_LANGINFO
 # The libtool executable
 LIBTOOL=libtool
 
-# Installation prefix
+# Installation prefix (also defined in Makefile)
 prefix=/usr/local
 
 # Gettext configuration

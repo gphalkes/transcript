@@ -12,6 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 .POSIX:
 
+# Installation prefix (also defined in Makefile.libtranscript)
 prefix=/usr/local
 
 # Install program to use (should provide -m and -d options)

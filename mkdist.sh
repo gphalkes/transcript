@@ -8,15 +8,13 @@ BASEDIR="`pwd`"
 
 setup_hg
 get_version_hg
-VERSION=0.1
-#check_mod_hg
-#~ build_all
+check_mod_hg
+build_all
 get_sources_hg
 make_tmpdir
 copy_sources ${SOURCES} ${GENSOURCES} ${AUXSOURCES}
 copy_dist_files
 copy_files doc/API doc/motivation.txt
-#copy_files ${AUXFILES}
 create_configure
 
 if [[ "${VERSION}" =~ [0-9]{8} ]] ; then
