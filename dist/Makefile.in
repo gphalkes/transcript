@@ -53,7 +53,7 @@ dist-clean:
 
 libtranscript.pc: libtranscript.pc.in
 	@echo '/^prefix=/c\' > .sedscript
-	@echo 'prefix=$(prefix) >> .sedscript
+	@echo 'prefix=$(prefix)' >> .sedscript
 	sed -f .sedscript $< > $@
 
 install: all libtranscript.pc

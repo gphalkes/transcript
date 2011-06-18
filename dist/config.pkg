@@ -11,10 +11,10 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTENSIONS="c libtool cxx pkgconfig"
+EXTENSIONS="c libtool cxx pkgconfig verbose_compile"
 MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc"
 
-SWITCHES="+gettext -ucm2ltc -verbose-compile"
+SWITCHES="+gettext -ucm2ltc"
 OPTIONS="localedir"
 
 SUFFIXES="${SUFFIXES} .mo .po"
@@ -32,7 +32,6 @@ print_help() {
   --with-ucm2ltc     Build converter specification compiler (ucm2ltc)
                            Requires a working C++ compiler
   --localedir=<dir>  Installation directory for locales [prefix/share/locale]
-  --with-verbose-compile   Echo all commands during compile
 EOF
 }
 
@@ -219,16 +218,6 @@ EOF
 	fi
 
 	if [ yes = "${with_ucm2ltc}" ] ; then
-		cat > .config.c <<EOF
-#include <unistd.h>
-#include <stdio.h>
-
-int main(int argc, char *argv[]) {
-	return isatty(fileno(stdin));
-}
-EOF
-		clean .config.o
-		test_link "isatty/fileno" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
 		cat > .configcxx.cc <<EOF
 #include <stdio.h>
 
@@ -253,8 +242,6 @@ EOF
 }
 
 sed_extra() {
-	#~ if [ yes = "${with_ucm2ltc}" ] ; then
 	echo "/^pkgconfigdir=/c\\
 pkgconfigdir=${pkgconfigdir}"
-	[ yes = "${with_verbose_compile}" ] && echo '/^SILEN\(CE\|T\)/d'
 }

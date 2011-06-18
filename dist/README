@@ -53,8 +53,8 @@ They have been tested using both GNU make and BSD make.
 
 libtranscript uses several POSIX functions, namely: opendir, readdir, closedir,
 symlink, unlink, lstat, and eitehr nl_langinfo or setlocale, (and for the
-optional ucm2ltc: snprintf, isatty and fileno). libtranscript should compile on
-any Un*x system that provides these functions.
+optional ucm2ltc: snprintf). libtranscript should compile on any Un*x system
+that provides these functions.
 
 
 Reporting bugs
