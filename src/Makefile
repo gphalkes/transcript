@@ -62,7 +62,7 @@ generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
 		-r0x10000 -DFFFF -H'#include "transcript.h"' -e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $<
 
 clean::
-	rm generic_fallbacks.[ch] 2>/dev/null
+	rm -rf generic_fallbacks.[ch] 2>/dev/null
 	rm -rf modules/.libs modules/*.la 2>/dev/null
 	rm -rf tables/.libs tables/*.la 2>/dev/null
 

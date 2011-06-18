@@ -80,10 +80,10 @@ void Ucm::write_entries(FILE *output, vector<State *> &states, unsigned int &tot
 	}
 }
 
-void Ucm::write_states(FILE *output, vector<State *> &states, const char *name) {
+void Ucm::write_states(FILE *output, vector<State *> &states, const char *converter_name) {
 	vector<Entry>::const_iterator entry_iter;
 
-	fprintf(output, "static const state_v1_t %s_states_%d[] = {\n", name, unique);
+	fprintf(output, "static const state_v1_t %s_states_%d[] = {\n", converter_name, unique);
 	for (vector<State *>::const_iterator state_iter = states.begin(); state_iter != states.end(); state_iter++) {
 		if (state_iter != states.begin())
 			fprintf(output, ",\n");
