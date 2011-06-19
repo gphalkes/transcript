@@ -9,12 +9,12 @@ BASEDIR="`pwd`"
 setup_hg
 get_version_hg
 check_mod_hg
-build_all
 [ -z "${NOBUILD}" ] && {
-	( cd ucm ; ./generate_ltc.sh -r )
 	make -C src
-	make -C doc clean ; make -C doc all
+	( cd ucm ; LD_LIBRARY_PATH=../src/.libs ./generate_ltc.sh -r )
 }
+build_all
+[ -z "${NOBUILD}" ] && { make -C doc clean ; make -C doc all ; }
 get_sources_hg
 make_tmpdir
 copy_sources ${SOURCES} ${GENSOURCES} ${AUXSOURCES}

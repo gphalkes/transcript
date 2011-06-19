@@ -15,8 +15,11 @@
 # Installation prefix (also defined in Makefile.libtranscript)
 prefix=/usr/local
 
-# Install program to use (should provide -m and -d options)
+# Install program to use (should be BSD install compatible)
 INSTALL=install
+
+# The libtool executable
+LIBTOOL=libtool
 
 # Miscelaneous install paths
 bindir=$(prefix)/bin
@@ -26,7 +29,7 @@ mandir=$(prefix)/share/man
 includedir=$(prefix)/include
 pkgconfigdir=$(libdir)/pkgconfig
 
-all: lib linkltc ucm2ltc
+all: lib linkltc ucm2ltc install uninstall
 
 lib:
 	@$(MAKE) -f Makefile.libtranscript
@@ -58,16 +61,23 @@ libtranscript.pc: libtranscript.pc.in
 
 install: all libtranscript.pc
 	$(INSTALL) -d $(libdir)/transcript
-	$(INSTALL) `echo src/.libs/libtranscript* | sed 's/[^ ]*\.la[^ ]*//g'` $(libdir)
-	$(INSTALL) src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
+	$(LIBTOOL) --mode=install $(INSTALL) -s src/libtranscript.la $(libdir)
+	$(INSTALL) -s src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
 	$(INSTALL) -d $(includedir)/transcript/transcript
 	$(INSTALL) src/transcript.h src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search
-	find doc/API -type f | xargs -IX $(INSTALL) X $(docdir)/X
+	(cd doc ; find API -type f) | xargs -IX $(INSTALL) doc/X $(docdir)/X
 	$(INSTALL) COPYING $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) libtranscript.pc $(pkgconfigdir)
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) src.util/linkltc/linkltc $(bindir)
-	$(bindir)/linkltc $(libdir)/transcript/*.ltc
-	[ -f src.util/ucm2ltc/ucm2ltc ] && $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir)
+	LD_LIBRARY_PATH="$(libdir)" $(bindir)/linkltc $(libdir)/transcript/*.ltc
+	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir) ; fi
+
+uninstall:
+	$(LIBTOOL) --mode=uninstall rm $(libdir)/libtranscript.la
+	rm -rf $(libdir)/transcript
+	rm -rf $(docdir)
+	rm -f $(bindir)/linkltc $(bindir)/ucm2ltc $(pkgconfigdir)/libtranscript.pc
+	rm -rf $(includedir)/transcript

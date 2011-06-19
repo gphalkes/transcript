@@ -6,7 +6,6 @@ Name: libtranscript
 Description: libtranscript character-set conversion library
 Version: <VERSION>
 URL: http://os.ghalkes.nl/libtranscript.html
-Requires.private: libltdl
 Cflags: -I${includedir}/transcript
 Libs: -L${libdir} -ltranscript
 Libs.private: -lltdl
