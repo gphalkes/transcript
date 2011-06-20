@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 .POSIX:
 
-# Installation prefix (also defined in Makefile.libtranscript)
+# Installation prefix (also defined in mk/libtranscript)
 prefix=/usr/local
 
 # Install program to use (should be BSD install compatible)
@@ -32,27 +32,28 @@ pkgconfigdir=$(libdir)/pkgconfig
 all: lib linkltc ucm2ltc install uninstall
 
 lib:
-	@$(MAKE) -f Makefile.libtranscript
+	@$(MAKE) -f mk/libtranscript
 
 linkltc: lib
-	@$(MAKE) -f Makefile.linkltc
+	@$(MAKE) -f mk/linkltc
 
 ucm2ltc: lib
-	@$(MAKE) -f Makefile.ucm2ltc
+	@$(MAKE) -f mk/ucm2ltc
 
 .PHONY: all clean dist-clean install lib linkltc ucm2ltc
+.IGNORE: uninstall
 
 clean:
-	@$(MAKE) -f Makefile.libtranscript clean
-	@$(MAKE) -f Makefile.linkltc clean
-	@$(MAKE) -f Makefile.ucm2ltc clean
+	@$(MAKE) -f mk/libtranscript clean
+	@$(MAKE) -f mk/linkltc clean
+	@$(MAKE) -f mk/ucm2ltc clean
 	rm -rf libtranscript.pc
 
 dist-clean:
-	@$(MAKE) -f Makefile.libtranscript dist-clean
-	@$(MAKE) -f Makefile.linkltc dist-clean
-	@$(MAKE) -f Makefile.ucm2ltc dist-clean
-	rm -rf Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc config.log libtranscript.pc
+	@$(MAKE) -f mk/libtranscript dist-clean
+	@$(MAKE) -f mk/linkltc dist-clean
+	@$(MAKE) -f mk/ucm2ltc dist-clean
+	rm -rf Makefile mk/libtranscript mk/linkltc mk/ucm2ltc config.log libtranscript.pc
 
 libtranscript.pc: libtranscript.pc.in
 	@echo '/^prefix=/c\' > .sedscript

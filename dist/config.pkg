@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 EXTENSIONS="c libtool cxx pkgconfig verbose_compile"
-MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc Makefile.ucm2ltc"
+MAKEFILES="Makefile mk/libtranscript mk/linkltc mk/ucm2ltc"
 
 SWITCHES="+gettext -ucm2ltc"
 OPTIONS="localedir"
