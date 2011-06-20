@@ -229,8 +229,8 @@ EOF
 		clean .configcxx.o
 		test_link_cxx "snprintf" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
 	else
-		MAKEFILES="Makefile Makefile.libtranscript Makefile.linkltc"
-		cat > Makefile.ucm2ltc <<EOF
+		MAKEFILES="Makefile mk/libtranscript mk/linkltc"
+		cat > mk/ucm2ltc <<EOF
 all:
 clean:
 dist-clean:

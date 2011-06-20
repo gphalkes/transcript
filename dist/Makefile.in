@@ -29,7 +29,7 @@ mandir=$(prefix)/share/man
 includedir=$(prefix)/include
 pkgconfigdir=$(libdir)/pkgconfig
 
-all: lib linkltc ucm2ltc install uninstall
+all: lib linkltc ucm2ltc
 
 lib:
 	@$(MAKE) -f mk/libtranscript
@@ -40,7 +40,7 @@ linkltc: lib
 ucm2ltc: lib
 	@$(MAKE) -f mk/ucm2ltc
 
-.PHONY: all clean dist-clean install lib linkltc ucm2ltc
+.PHONY: all clean dist-clean install install-moddev lib linkltc ucm2ltc uninstall
 .IGNORE: uninstall
 
 clean:
@@ -66,15 +66,18 @@ install: all libtranscript.pc
 	chmod 0644 $(libdir)/libtranscript.la
 	$(INSTALL) -s src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
 	$(INSTALL) -d $(includedir)/transcript/transcript
-	$(INSTALL) -m0644 src/transcript.h src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
+	$(INSTALL) -m0644 src/transcript.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search
 	(cd doc ; find API -type f) | xargs -IX $(INSTALL) -m0644 doc/X $(docdir)/X
 	$(INSTALL) -m0644 COPYING $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
+	LD_LIBRARY_PATH="$(libdir)" src.util/linkltc/linkltc $(libdir)/transcript/*.ltc
+
+install-moddev: install
+	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) src.util/linkltc/linkltc $(bindir)
-	LD_LIBRARY_PATH="$(libdir)" $(bindir)/linkltc $(libdir)/transcript/*.ltc
 	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir) ; fi
 
 uninstall:
