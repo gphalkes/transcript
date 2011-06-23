@@ -71,5 +71,5 @@ dist-clean: clean
 	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
 

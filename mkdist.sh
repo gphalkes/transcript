@@ -36,12 +36,16 @@ TABLES="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 
 OBJECTS_LINKLTC="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src\.util/linkltc/.*\.c$' | sed -r 's/\.c\>/.o/g' | tr '\n' ' '`"
 OBJECTS_UCM2LTC="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src\.util/ucm2ltc/.*\.cc?$' | sed -r 's/\.cc?\>/.o/g' | tr '\n' ' '`"
 
-make -C src -p > ${TMPDIR}/rules.txt
+make -C src -p -n > ${TMPDIR}/rules.txt
 MODULES="`egrep '^MODULES\>' ${TMPDIR}/rules.txt | head -n1 | sed -r 's/.*=//'`"
 MODULETARGETS="`echo \"${MODULES}\" | sed -r 's%(\<[^ \t]+\>)%src/modules/\1.la%g'`"
 
+#FIXME: somehow verify binary compatibility, and print an error if not compatible
+VERSIONINFO="0:0:0"
+
 sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${OBJECTS_LIBTRANSCRIPT}%g;\
-s%<TABLES>%${TABLES}%g;s%<MODULES>%${MODULETARGETS}%g" ${TOPDIR}/mk/libtranscript.in
+s%<TABLES>%${TABLES}%g;s%<MODULES>%${MODULETARGETS}%g;\
+s%<VERSIONINFO>%${VERSIONINFO}%g" ${TOPDIR}/mk/libtranscript.in
 sed -r -i "s%<OBJECTS_LINKLTC>%${OBJECTS_LINKLTC}%g" ${TOPDIR}/mk/linkltc.in
 sed -r -i "s%<OBJECTS_UCM2LTC>%${OBJECTS_UCM2LTC}%g" ${TOPDIR}/mk/ucm2ltc.in
 

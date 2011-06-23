@@ -11,41 +11,26 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-EXTENSIONS="c libtool cxx pkgconfig verbose_compile"
+EXTENSIONS="c libtool cxx pkgconfig verbose_compile gettext"
 MAKEFILES="Makefile mk/libtranscript mk/linkltc mk/ucm2ltc"
 
-SWITCHES="+gettext -ucm2ltc"
-OPTIONS="localedir"
-
-SUFFIXES="${SUFFIXES} .mo .po"
-DEFAULT_LINGUAS="nl"
+SWITCHES="-ucm2ltc"
+DEFAULT_LINGUAS=nl
 LTSHARED=1
 
-USERRULES=print_rules
 USERHELP=print_help
 PRECHECKFUNC=precheck
-SEDEXTRA=sed_extra
 
 print_help() {
 	cat <<EOF
-  --without-gettext  Disable gettext translations
   --with-ucm2ltc     Build converter specification compiler (ucm2ltc)
                            Requires a working C++ compiler
-  --localedir=<dir>  Installation directory for locales [prefix/share/locale]
-EOF
-}
-
-print_rules() {
-	cat <<EOF
-.po.mo:
-	msgfmt -o \$@ \$<
-
 EOF
 }
 
 precheck() {
 	if [ "no" = "${with_ucm2ltc}" ] ; then
-		EXTENSIONS="c libtool pkgconfig"
+		EXTENSIONS="`echo \"${EXTENSIONS}\" | sed 's/[^ ]*cxx//g'`"
 	fi
 }
 
@@ -78,11 +63,13 @@ config() {
 
 	cat > .config.c <<EOF
 #include <sys/types.h>
+#include <stdint.h>
 #include <dirent.h>
 
 int main(int argc, char *argv[]) {
 	DIR *dir;
 	struct dirent *entry;
+	uint16_t foo;
 
 	dir = opendir(".");
 	entry = readdir(dir);
@@ -93,7 +80,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "opendir/readdir/closedir" || error "!! A required function is not available (see config.log for details)."
+	test_link "opendir/readdir/closedir/dirent.h/stdint.h" || error "!! Some required functionality is not available. See config.log for details."
 
 	cat > .config.c <<EOF
 #include <sys/types.h>
@@ -111,7 +98,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "symlink/unlink/lstat" || error "!! A required function is not available (see config.log for details)."
+	test_link "symlink/unlink/lstat" || error "!! Some required functionality is not available. See config.log for details."
 
 	cat > .config.c <<EOF
 #include <ltdl.h>
@@ -129,7 +116,7 @@ int main(int argc, char *argv[]) {
 EOF
 
 	clean .config.o
-	test_link "libltdl" "TESTLIBS=-lltdl" || error "!! Please install libltdl and its development files"
+	test_link "libltdl" "TESTLIBS=-lltdl" || error "!! Can not find libltdl. libltdl is required to compile libtranscript."
 
 	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
@@ -156,67 +143,6 @@ int main(int argc, char *argv[]) {
 EOF
 	test_compile "inline keyword" && CONFIGFLAGS="${CONFIGFLAGS} -DHAS_INLINE"
 
-	unset GETTEXTFLAGS GETTEXTLIBS linguas LOCALEDIR
-	# Check for gettext functionality
-	if [ "yes" = "${with_gettext}" ] ; then
-		[ "${HAS_SETLOCALE}" = "yes" ] || checkfunction "setlocale" "setlocale(LC_ALL, \"\");" "<locale.h>" || \
-			error "!! Gettext support unavailable. Try configuring with --without-gettext"
-
-#FIXME: need to change to check for functions specifically used in library
-		cat > .config.c <<EOF
-#include <locale.h>
-#include <libintl.h>
-
-int main(int argc, char *argv[]) {
-	bindtextdomain("libtranscript", "/usr/share/locale");
-	dgettext("libtranscript", "string");
-	return 0;
-}
-EOF
-		{
-			test_compile "gettext and related functions" && {
-				test_link "gettext in standard library" ||
-				{ test_link "gettext in -lintl" TESTLIBS=-lintl && GETTEXTLIBS=-lintl ; } ||
-				{ test_link "gettext in -lintl -liconv" "TESTLIBS=-lintl -liconv" && GETTEXTLIBS="-lintl -liconv" ; }
-			} && {
-				GETTEXTFLAGS="-DUSE_GETTEXT"
-
-				clean .config.po .config.mo
-				cat > .config.po <<EOF
-msgid  "msg"
-msgstr "translation"
-EOF
-				check_message "Checking for msgfmt... "
-				if test_make .config.mo >> config.log 2>&1 ; then
-					check_message_result "yes"
-					true
-				else
-					check_message_result "no"
-					false
-				fi
-			}
-		} || {
-			clean .config.po .config.mo
-			error "!! Could not compile with gettext. Try configuring with --without-gettext."
-		}
-		GETTEXTFLAGS="-DUSE_GETTEXT"
-		clean .config.po .config.mo
-
-		unset linguas
-		if [ -n "${LINGUAS+set}" ] ; then
-			check_message "Checking for available selected translations... "
-			for lingua in ${LINGUAS}
-			do
-				if [ -f "po/${lingua}.po" ] && echo "${linguas}" | not grep "^\\(.* \\)*${lingua}\\( .*\\)*$" > /dev/null ; then
-					linguas="${linguas}${linguas:+ }${lingua}"
-				fi
-			done
-			check_message_result "done [${linguas}]"
-		else
-			linguas="${DEFAULT_LINGUAS}"
-		fi
-	fi
-
 	if [ yes = "${with_ucm2ltc}" ] ; then
 		cat > .configcxx.cc <<EOF
 #include <stdio.h>
@@ -237,11 +163,5 @@ dist-clean:
 EOF
 	fi
 
-	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "GETTEXTFLAGS=${GETTEXTFLAGS}" "GETTEXTLIBS=${GETTEXTLIBS}" \
-	"LINGUAS=${linguas}" ${option_localedir:+"LOCALEDIR=${option_localedir}"}
-}
-
-sed_extra() {
-	echo "/^pkgconfigdir=/c\\
-pkgconfigdir=${pkgconfigdir}"
+	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}"
 }

@@ -436,11 +436,11 @@ long transcript_get_version(void) {
 */
 char *_transcript_strdup(const char *str) {
 	char *result;
-	size_t len = strlen(str);
+	size_t len = strlen(str) + 1;
 
-	if ((result = malloc(len + 1)) == NULL)
+	if ((result = malloc(len)) == NULL)
 		return NULL;
-	memcpy(result, str, len + 1);
+	memcpy(result, str, len);
 	return result;
 }
 #endif
