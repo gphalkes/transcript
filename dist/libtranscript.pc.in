@@ -3,7 +3,7 @@ libdir=${prefix}/lib
 includedir=${prefix}/include
 
 Name: libtranscript
-Description: libtranscript character-set conversion library
+Description: Character-set conversion library
 Version: <VERSION>
 URL: http://os.ghalkes.nl/libtranscript.html
 Cflags: -I${includedir}/transcript
