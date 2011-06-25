@@ -1,0 +1,15 @@
+- testsuite passes correctly
+- changelog updated [tested in mkdist.sh]
+- copyright notices on all new files
+- run fix_copyright.sh to update copyright years
+- DEFAULT_LINGUAS in config.pkg up to date
+- install instructions and README up to date
+- documentation (doxygen, man) up to date
+
+- sufficient testing of distribution (configure/make)
+	- Makefile installs _all_ required files, including documentation and
+	  translations
+
+After upload to website:
+- update web page
+- update other references [freshmeat?, mailing list?, transifex?]
