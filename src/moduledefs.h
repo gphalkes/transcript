@@ -16,10 +16,10 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "transcript.h"
-#include "api.h"
-#include "handle.h"
-#include "utf.h"
+#include <transcript/transcript.h>
+#include <transcript/api.h>
+#include <transcript/handle.h>
+#include <transcript/utf.h>
 
 #ifdef __cplusplus
 extern "C" {

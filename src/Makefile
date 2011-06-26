@@ -71,12 +71,7 @@ $(patsubst %.c, .objects/%.lo, $(TABLESOURCES)): | links
 
 links:
 	$(if $(VERBOSE), @echo [SH] making links ;,)
-	@[ -d transcript ] || mkdir transcript
-	@[ -L transcript/moduledefs.h ] || ln -s ../moduledefs.h transcript
-	@[ -L transcript/api.h ] || ln -s ../api.h transcript
-	@[ -L transcript/bool.h ] || ln -s ../bool.h transcript
-	@[ -L transcript/handle.h ] || ln -s ../handle.h transcript
-	@[ -L transcript/static_assert.h ] || ln -s ../static_assert.h transcript
+	@[ -L transcript ] || ln -s . transcript
 
 converter-links: | linkltc $(LTTARGETS)
 	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc

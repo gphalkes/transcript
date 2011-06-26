@@ -13,7 +13,7 @@
 */
 #ifndef TRANSCRIPT_HANDLE_H
 #define TRANSCRIPT_HANDLE_H
-#include "bool.h"
+#include <transcript/bool.h>
 
 typedef transcript_error_t (*conversion_func_t)(transcript_t *handle, const char **inbuf, const char *inbuflimit,
 	char **outbuf, const char *outbuflimit, int flags);

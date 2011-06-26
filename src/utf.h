@@ -14,9 +14,9 @@
 #ifndef TRANSCRIPT_UTF_H
 #define TRANSCRIPT_UTF_H
 
-#include "api.h"
-#include "bool.h"
-#include "handle.h"
+#include <transcript/api.h>
+#include <transcript/bool.h>
+#include <transcript/handle.h>
 
 #define TRANSCRIPT_UTF_ILLEGAL UINT32_C(0xffffffff)
 #define TRANSCRIPT_UTF_INCOMPLETE UINT32_C(0xfffffffe)

@@ -21,7 +21,7 @@ extern "C" {
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "api.h"
+#include <transcript/api.h>
 
 /** @defgroup transcript Native transcript interface. */
 /** @addtogroup transcript */
