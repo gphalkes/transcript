@@ -65,7 +65,7 @@ clean:
 dist-clean: clean
 
 .c.lo:
-	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -c -o $@ $<
+	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -DDB_DIRECTORY=\"$(libdir)/transcript\" -c -o $@ $<
 
 .lo.la:
 	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript

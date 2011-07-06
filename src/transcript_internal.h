@@ -19,7 +19,7 @@
 #include "moduledefs.h"
 
 #ifndef DB_DIRECTORY
-#define DB_DIRECTORY "/usr/local/share/libtranscript"
+#define DB_DIRECTORY "/usr/local/lib/transcript"
 #endif
 
 #define NORMALIZE_NAME_MAX 160
