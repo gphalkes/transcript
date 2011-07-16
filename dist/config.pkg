@@ -163,5 +163,5 @@ dist-clean:
 EOF
 	fi
 
-	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}"
+	create_makefile "CONFIGFLAGS=${CONFIGFLAGS} -lltdl"
 }

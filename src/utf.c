@@ -35,6 +35,11 @@
 #define swapl_a(value) (value)
 #define swapl_b(value) swapl(value)
 
+/* GCC will recognize this as a byte swap, and will optimize (uses rolw $8, <reg> on IA-32) */
+static _TRANSCRIPT_INLINE uint16_t swaps(uint16_t value) {
+	return (value << 8) | (value >> 8);
+}
+
 #if __GNUC__ > 4 || (__GNUC__ == 4 &&  __GNUC_MINOR__ >= 3)
 #define swapl(value) __builtin_bswap32(value)
 #else
@@ -42,11 +47,6 @@ static _TRANSCRIPT_INLINE uint32_t swapl(uint32_t value) {
 	return swaps(value) << 16 | swaps(value >> 16);
 }
 #endif
-
-/* GCC will recognize this as a byte swap, and will optimize (uses rolw $8, <reg> on IA-32) */
-static _TRANSCRIPT_INLINE uint16_t swaps(uint16_t value) {
-	return (value << 8) | (value >> 8);
-}
 #endif
 
 /** Simplification macro to check whether a codepoint is valid, and return an error if not. */
