@@ -31,8 +31,8 @@ Of course this problem can be circumvented by building a list of known aliases
 for each character set, but this set then has to be provided with each program
 that uses the iconv interface.
 
-The second problem of the iconv interface is that specification of the iconv
-function itself is not unambiguous. For example, the POSIX standard says:
+The second problem of the iconv interface is that the specification of the
+iconv function itself is not unambiguous. For example, the POSIX standard says:
 
 > If iconv() encounters a character in the input buffer that is valid, but for
 > which an identical character does not exist in the target codeset, iconv()
@@ -48,9 +48,9 @@ iconv stopped converting. If the latter is the case, the number of non-identical
 conversions performed is lost.
 
 Finally, there is no definition of what a non-identical conversion is. For
-example, the GNU iconv implementation will not report a non-identical conversion
-for a full-width to half-width/normal-width conversion, eventhough the reverse
-conversion will not result in the original full-width form.
+example, the GNU iconv implementation will not report a non-identical
+conversion for a full-width to half-width/normal-width conversion, eventhough
+the reverse conversion will not result in the original full-width form.
 
 For a program which cares about the conversion fidelity, these issues are
 show-stopping.
@@ -97,7 +97,7 @@ several drawbacks:
   expression matching and formatting/parsing of numbers and dates. I prefer
   libraries which adhere to the Unix principle: "do one thing, and do it well".
 * ICU is based on IBM's character conversion tables, which do not always align
-  well with other's tables.
+  well with other tables.
 * The converter alias definitions tend to bunch several related converters
   together, even though they are not actually the same (e.g. the Shift-JIS
   variants).
@@ -105,7 +105,7 @@ several drawbacks:
 
 Admittedly, these reasons are not as strong as the reasons cited for iconv and
 recode. The last of these, for example, can be easily worked around by
-providing wrapper routines which perform the second conversion step to UTF-8 or
+providing wrapper routines which perform a second conversion step to UTF-8 or
 UTF-32/UCS-4.
 
 Conclusion

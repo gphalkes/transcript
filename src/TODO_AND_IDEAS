@@ -4,12 +4,11 @@ HIGH PRIORITY
   incorrect input!
 - aliases.txt should be updated to reflect the state of affairs according to
   me.
-- provide pkg-config stuf for our own library
 
 - report bug in glibc iconv: U0080-U009F are encoded as 1B 2E 41 1B 4E [00 - 1F]
   which is wrong. The 1B 2E 41 shifts in the ISO-8859-1 set into G2, but G2 only
   includes the 96 graphics characters, and not the C1 set! The C1 set should be
-  encoded as 1B [40 - 5F]
+  encoded as 1B [40 - 5F] (DONE!)
 - report above bug to GNU libiconv as well
 
 MEDIUM PRIORITY
@@ -48,11 +47,5 @@ LOW PRIORITY
 
 RELEASE ENGINEERING
 ===================
-- testing for
-	- HAS_INLINE
-	- HAS_NL_LANGINFO
-	- HAS_STRDUP
-	- USE_ENDIAN
-	- USE_GETTEXT (don't forget to set LOCALEDIR! see dwdiff Makefile.dist.in)
 - provide translations
 - set the copyright years correctly
