@@ -1,6 +1,6 @@
-jis-x-0208: other/jis-x-0208-1978.ucm other/jis-x-0208-1983.ucm other/jis-x-0208-1990.ucm
+iso-2022-jisx0208: other/iso-2022-jisx0208-1978.ucm other/iso-2022-jisx0208-1983.ucm other/iso-2022-jisx0208-1990.ucm
 
-jis-x-0213: other/jis-x-0213-2000-1.ucm other/jis-x-0213-2004-1.ucm -c other/jis-x-0213-2000-2.ucm
+iso-2022-jisx0213: other/iso-2022-jisx0213-2000-1.ucm other/iso-2022-jisx0213-2004-1.ucm -c other/iso-2022-jisx0213-2000-2.ucm
 
 gb18030table: -ngb18030table ibm/gb18030.ucm
 

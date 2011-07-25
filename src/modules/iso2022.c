@@ -144,19 +144,19 @@ static stc_descriptor_t ascii = { "iso-2022-ascii", 1, '\x42', 0 };
 static stc_descriptor_t iso8859_1 = { "iso-2022-88591", 1, '\x41', STC_FLAG_LARGE_SET };
 static stc_descriptor_t jis_x_0201_1976_kana = { "iso-2022-jisx0201kana", 1, '\x49', 0 };
 static stc_descriptor_t jis_x_0201_1976_roman = { "iso-2022-jisx0201roman", 1, '\x4a', 0 };
-static stc_descriptor_t jis_x_0208_1978 = { "jis-x-0208-1978", 2, '\x40', 0 };
-static stc_descriptor_t jis_x_0208_1983 = { "jis-x-0208-1983", 2, '\x42', 0 };
+static stc_descriptor_t jis_x_0208_1978 = { "iso-2022-jisx0208-1978", 2, '\x40', 0 };
+static stc_descriptor_t jis_x_0208_1983 = { "iso-2022-jisx0208-1983", 2, '\x42', 0 };
 /* Note that this set should be used for reading only, and then only in ISO-2022-JP-3/2004.
    This is because it uses the same escape sequence as the 1983 version, which is
    the only one mandated by any standard. However, to be able to read non-standard
    compliant output, we add this set for reading. Note that because JIS X 0213
    is an extension of the 1990 version, this poses no problem when writing. */
-static stc_descriptor_t jis_x_0208_1990 = { "jis-x-0208-1990", 2, '\x42', 0 };
-static stc_descriptor_t jis_x_0212_1990 = { "jis-x-0212-1990", 2, '\x44', 0 };
+static stc_descriptor_t jis_x_0208_1990 = { "iso-2022-jisx0208-1990", 2, '\x42', 0 };
+static stc_descriptor_t jis_x_0212_1990 = { "iso-2022-jisx0212-1990", 2, '\x44', 0 };
 
-static stc_descriptor_t jis_x_0213_2000_1 = { "jis-x-0213-2000-1", 2, '\x4f', 0 };
-static stc_descriptor_t jis_x_0213_2000_2 = { "jis-x-0213-2000-2", 2, '\x50', 0 };
-static stc_descriptor_t jis_x_0213_2004_1 = { "jis-x-0213-2004-1", 2, '\x51', 0 };
+static stc_descriptor_t jis_x_0213_2000_1 = { "iso-2022-jisx0213-2000-1", 2, '\x4f', 0 };
+static stc_descriptor_t jis_x_0213_2000_2 = { "iso-2022-jisx0213-2000-2", 2, '\x50', 0 };
+static stc_descriptor_t jis_x_0213_2004_1 = { "iso-2022-jisx0213-2004-1", 2, '\x51', 0 };
 static stc_descriptor_t iso8859_7 = { "iso-2022-88597", 1, '\x46', STC_FLAG_LARGE_SET };
 static stc_descriptor_t ksc5601_1987 = { "iso-2022-ksc5601", 2, '\x43', 0 };
 

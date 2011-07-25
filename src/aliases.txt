@@ -173,6 +173,7 @@ ibm-37_P100-1995 *IBM-37 ebcdic-cp-us ebcdic-cp-ca
 	ebcdic-cp-wt ebcdic-cp-nl csIBM037 cp037 037 cpibm37
 ibm-1047_P100-1995 *IBM-1047 cp1047 1047
 ibm-1167_P100-2002 *IBM-1167 KOI8-RU
+jis-x-0201-1969 ibm-897_P100-1995 *IBM-897 *JIS-X-0201 X0201 csHalfWidthKatakana
 iso-8859_16-2001 *ISO-8859-16 iso-ir-226 *Latin10 l10 # ISO_8859-16:2001
 
 # Windows-21866 is KOI8-U according to MS, but uses letters from KOI8-RU. However
@@ -180,3 +181,5 @@ iso-8859_16-2001 *ISO-8859-16 iso-ir-226 *Latin10 l10 # ISO_8859-16:2001
 # Unfortunately, the changed non-alnum characters in KOI8-RU are often overlooked
 # making that name ambiguous.
 windows-21866-2000 *Windows-21866
+
+viscii *VISCII iso-ir-180
