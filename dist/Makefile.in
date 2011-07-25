@@ -29,7 +29,7 @@ mandir=$(prefix)/share/man
 includedir=$(prefix)/include
 pkgconfigdir=$(libdir)/pkgconfig
 
-all: lib linkltc ucm2ltc
+all: lib linkltc ucm2ltc libtranscript.pc
 
 lib:
 	@$(MAKE) -f mk/libtranscript
@@ -60,7 +60,7 @@ libtranscript.pc: libtranscript.pc.in
 	@echo 'prefix=$(prefix)' >> .sedscript
 	sed -f .sedscript $< > $@
 
-install: all libtranscript.pc
+install: all
 	$(INSTALL) -d $(libdir)/transcript
 	$(LIBTOOL) --mode=install $(INSTALL) -s src/libtranscript.la $(libdir)
 	chmod 0644 $(libdir)/libtranscript.la
@@ -72,7 +72,7 @@ install: all libtranscript.pc
 	$(INSTALL) -m0644 COPYING $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
-	LD_LIBRARY_PATH="$(libdir)" src.util/linkltc/linkltc $(libdir)/transcript/*.ltc
+	LD_LIBRARY_PATH="$(libdir):$(LD_LIBRARY_PATH)" src.util/linkltc/linkltc $(libdir)/transcript/*.ltc
 
 install-moddev: install
 	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
