@@ -69,7 +69,7 @@ install: all
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search
 	(cd doc ; find API -type f) | xargs -IX $(INSTALL) -m0644 doc/X $(docdir)/X
-	$(INSTALL) -m0644 COPYING $(docdir)
+	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
 	LD_LIBRARY_PATH="$(libdir):$(LD_LIBRARY_PATH)" src.util/linkltc/linkltc $(libdir)/transcript/*.ltc
