@@ -17,6 +17,7 @@ MAKEFILES="Makefile mk/libtranscript mk/linkltc mk/ucm2ltc"
 SWITCHES="-ucm2ltc"
 DEFAULT_LINGUAS=nl
 LTSHARED=1
+INSTALLDIRS="bindir libdir docdir mandir includedir pkgconfigdir"
 
 USERHELP=print_help
 PRECHECKFUNC=precheck
