@@ -52,7 +52,7 @@ sed -r -i "s%<OBJECTS_UCM2LTC>%${OBJECTS_UCM2LTC}%g" ${TOPDIR}/mk/ucm2ltc.in
 for MODULE in ${MODULES} ; do
 	MODULEOBJECTS="`egrep \"^modules/${MODULE}.la\" ${TMPDIR}/rules.txt | head -n1 | sed -r 's%modules/%src/modules/%g;s%\.objects/%%g;s/\|.*//;s/.*://'`"
 	echo "src/modules/${MODULE}.la: ${MODULEOBJECTS} src/libtranscript.la"
-	echo "	\$(SILENTLDLT) \$(LIBTOOL) \$(SILENCELT) --mode=link --tag=CC \$(CC) -shared -module -avoid-version -shrext .ltc \$(CFLAGS) \$(LDFLAGS) -o \$@ ${MODULEOBJECTS} -Lsrc/.libs -ltranscript \$(LDLIBS) -rpath \$(libdir)/transcript"
+	echo "	\$(SILENTLDLT) \$(LIBTOOL) \$(SILENCELT) --mode=link --tag=CC \$(CC) -shared -module -avoid-version -shrext .ltc \$(CFLAGS) \$(LDFLAGS) -o \$@ ${MODULEOBJECTS} \$(LDLIBS) -rpath \$(libdir)/transcript"
 done >> ${TOPDIR}/mk/libtranscript.in
 
 # Modify parser output to look for files in current directory iso .objects

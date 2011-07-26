@@ -65,6 +65,7 @@ install: all
 	$(LIBTOOL) --mode=install $(INSTALL) -s src/libtranscript.la $(libdir)
 	chmod 0644 $(libdir)/libtranscript.la
 	$(INSTALL) -s src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
+	$(INSTALL) -m0644 src/aliases.txt $(libdir)/transcript
 	$(INSTALL) -d $(includedir)/transcript/transcript
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search

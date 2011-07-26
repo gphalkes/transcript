@@ -6,8 +6,7 @@
 # the aliases is marked as display name, the name of the converter is used.
 # Note that names will be normalized, so for example the names IBM-1201 and
 # ibm1201 will be considered equal (see the libtranscript documentation for
-# details on normalization). The converter name has to match the file-system
-# name of the converter except that it is first translated to lowercase.
+# details on normalization).
 
 # Converter names must start in column 1. Lines can be continued by indenting
 # the second and later lines with any amount of white-space.
