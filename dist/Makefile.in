@@ -61,11 +61,11 @@ libtranscript.pc: libtranscript.pc.in
 	sed -f .sedscript $< > $@
 
 install: all
-	$(INSTALL) -d $(libdir)/transcript
-	$(LIBTOOL) --mode=install $(INSTALL) -s src/libtranscript.la $(libdir)
+	$(INSTALL) -d $(libdir)/transcript<LIBVERSION>
+	$(LIBTOOL) --mode=install $(INSTALL) -s -m0644 src/libtranscript.la $(libdir)
 	chmod 0644 $(libdir)/libtranscript.la
-	$(INSTALL) -s src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript
-	$(INSTALL) -m0644 src/aliases.txt $(libdir)/transcript
+	$(INSTALL) -s -m0644 src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript<LIBVERSION>
+	$(INSTALL) -m0644 src/aliases.txt $(libdir)/transcript<LIBVERSION>
 	$(INSTALL) -d $(includedir)/transcript/transcript
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search

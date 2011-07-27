@@ -42,17 +42,19 @@ MODULETARGETS="`echo \"${MODULES}\" | sed -r 's%(\<[^ \t]+\>)%src/modules/\1.la%
 
 #FIXME: somehow verify binary compatibility, and print an error if not compatible
 VERSIONINFO="0:0:0"
+LIBVERSION="${VERSIONINFO%%:*}"
 
 sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${OBJECTS_LIBTRANSCRIPT}%g;\
 s%<TABLES>%${TABLES}%g;s%<MODULES>%${MODULETARGETS}%g;\
 s%<VERSIONINFO>%${VERSIONINFO}%g" ${TOPDIR}/mk/libtranscript.in
 sed -r -i "s%<OBJECTS_LINKLTC>%${OBJECTS_LINKLTC}%g" ${TOPDIR}/mk/linkltc.in
 sed -r -i "s%<OBJECTS_UCM2LTC>%${OBJECTS_UCM2LTC}%g" ${TOPDIR}/mk/ucm2ltc.in
+sed -r -i "s%<LIBVERSION>%${LIBVERSION}%g" ${TOPDIR}/Makefile.in ${TOPDIR}/mk/libtranscript.in
 
 for MODULE in ${MODULES} ; do
 	MODULEOBJECTS="`egrep \"^modules/${MODULE}.la\" ${TMPDIR}/rules.txt | head -n1 | sed -r 's%modules/%src/modules/%g;s%\.objects/%%g;s/\|.*//;s/.*://'`"
 	echo "src/modules/${MODULE}.la: ${MODULEOBJECTS} src/libtranscript.la"
-	echo "	\$(SILENTLDLT) \$(LIBTOOL) \$(SILENCELT) --mode=link --tag=CC \$(CC) -shared -module -avoid-version -shrext .ltc \$(CFLAGS) \$(LDFLAGS) -o \$@ ${MODULEOBJECTS} \$(LDLIBS) -rpath \$(libdir)/transcript"
+	echo "	\$(SILENTLDLT) \$(LIBTOOL) \$(SILENCELT) --mode=link --tag=CC \$(CC) -shared -module -avoid-version -shrext .ltc \$(CFLAGS) \$(LDFLAGS) -o \$@ ${MODULEOBJECTS} \$(LDLIBS) -rpath \$(libdir)/transcript${LIBVERSION}"
 done >> ${TOPDIR}/mk/libtranscript.in
 
 # Modify parser output to look for files in current directory iso .objects

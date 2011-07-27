@@ -65,10 +65,10 @@ clean:
 dist-clean: clean
 
 .c.lo:
-	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -DDB_DIRECTORY=\"$(libdir)/transcript\" -c -o $@ $<
+	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -DDB_DIRECTORY=\"$(libdir)/transcript<LIBVERSION>\" -c -o $@ $<
 
 .lo.la:
-	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript<LIBVERSION>
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
 	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
