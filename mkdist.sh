@@ -19,7 +19,7 @@ get_sources_hg
 make_tmpdir
 copy_sources ${SOURCES} ${GENSOURCES} ${AUXSOURCES}
 copy_dist_files
-copy_files doc/API doc/motivation.txt
+copy_files doc/API doc/motivation.txt `hg manifest | egrep ^man/`
 create_configure
 
 if [[ "${VERSION}" =~ [0-9]{8} ]] ; then
@@ -28,7 +28,7 @@ else
 	VERSION_BIN="$(printf "0x%02x%02x%02x" $(echo ${VERSION} | tr '.' ' '))"
 fi
 
-sed -i "s/<VERSION>/${VERSION}/g" `find ${TOPDIR} -type f`
+sed -i "s/<VERSION>/${VERSION}/g;s/<DATE>/${DATE}/g" `find ${TOPDIR} -type f`
 sed -i "/#define TRANSCRIPT_VERSION/c #define TRANSCRIPT_VERSION ${VERSION_BIN}" ${TOPDIR}/src/transcript.h
 
 OBJECTS_LIBTRANSCRIPT="`echo \"${SOURCES} ${GENSOURCES} ${AUXSOURCES}\" | tr ' ' '\n' | sed -r 's%\.objects/%%' | egrep '^src/[^/]*\.c$' | sed -r 's/\.c\>/.lo/g' | tr '\n' ' '`"

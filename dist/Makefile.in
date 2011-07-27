@@ -79,7 +79,9 @@ install-moddev: install
 	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(bindir)
 	$(INSTALL) src.util/linkltc/linkltc $(bindir)
-	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir) ; fi
+	$(INSTALL) -d $(mandir)/man1
+	$(INSTALL) -m0644 man/linkltc $(mandir)/man1
+	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir) ; $(INSTALL) -m0644 man/ucm2ltc $(mandir)/man1 ; fi
 
 uninstall:
 	$(LIBTOOL) --mode=uninstall rm $(libdir)/libtranscript.la
