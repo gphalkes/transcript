@@ -89,8 +89,7 @@ several drawbacks:
   to 1C, 7F and 1A respectively. The cited reason is that IBM-PC operating
   systems use 1A as the end of file marker. However, this only holds for the
   *-DOS family of operating systems, and the rest of the world (e.g. iconv)
-  does not think the changed mapping is a good idea (except for IBM-437 which
-  is IBM-PC specific).
+  does not think the changed mapping is a good idea.
 * ICU is a _huge_ library, which provides not only character set conversions,
   but also a plethora of Unicode string manipulation functions. Examples of
   these functions range from case conversion, to normalization, regular

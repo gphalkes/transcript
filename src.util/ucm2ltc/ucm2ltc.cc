@@ -342,8 +342,6 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	if (ucms.size() > 1) {
 		if (option_output_name == NULL)
 			fatal("--output/-o is required when using multiple input files\n");
-		if (option_converter_name != NULL)
-			fatal("--name/-n is only allowed with a single input file\n");
 	}
 
 	ucm = ucms.front();
@@ -480,6 +478,7 @@ PARSE_FUNCTION(parse_options)
 
 		ucms.push_back(ucm);
 		fclose(yyin);
+		option_converter_name = NULL;
 	END_OPTIONS
 	if (ucms.empty()) {
 		if (completed_ucms.empty())
