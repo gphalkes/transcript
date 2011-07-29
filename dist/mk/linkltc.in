@@ -38,5 +38,5 @@ dist-clean: clean
 	$(SILENTCC) $(CC) $(CFLAGS) -Isrc -c -o $@ $<
 
 src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
-	$(SILENTLD) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript
+	$(SILENTLD) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript -lltdl
 

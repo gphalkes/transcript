@@ -56,8 +56,11 @@ dist-clean:
 	rm -rf Makefile mk/libtranscript mk/linkltc mk/ucm2ltc config.log libtranscript.pc
 
 libtranscript.pc: libtranscript.pc.in
-	@echo '/^prefix=/c\' > .sedscript
-	@echo 'prefix=$(prefix)' >> .sedscript
+	@{ echo '/^prefix=/c\' ; echo 'prefix=$(prefix)' ; } > .sedscript
+	@LIBDIR=$(libdir); if [ "$${LIBDIR#$(prefix)}" != "$${LIBDIR}" ] ; then LIBDIR="\$${prefix}$${LIBDIR#$(prefix)}" ; fi ; \
+		{ echo '/^libdir=/c\' ; echo "libdir=$${LIBDIR}" ; } >> .sedscript
+	@INCLUDEDIR=$(includedir); if [ "$${INCLUDEDIR#$(prefix)}" != "$${INCLUDEDIR}" ] ; then INCLUDEDIR="\$${prefix}$${INCLUDEDIR#$(prefix)}" ; fi ; \
+		{ echo '/^includedir=/c\' ; echo "includedir=$${INCLUDEDIR}" ; } >> .sedscript
 	sed -f .sedscript $< > $@
 
 install: all
@@ -73,7 +76,7 @@ install: all
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
-	LD_LIBRARY_PATH="$(libdir):$(LD_LIBRARY_PATH)" src.util/linkltc/linkltc $(libdir)/transcript/*.ltc
+	LD_LIBRARY_PATH="$(libdir):$(LD_LIBRARY_PATH)" src.util/linkltc/linkltc $(libdir)/transcript<LIBVERSION>/*.ltc
 
 install-moddev: install
 	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
