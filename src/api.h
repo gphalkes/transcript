@@ -14,12 +14,12 @@
 #ifndef TRANSCRIPT_API_H
 #define TRANSCRIPT_API_H
 
-#if defined _WIN32 || defined __CYGWIN__
+#if defined(_WIN32) || defined(__CYGWIN__)
 	#define TRANSCRIPT_EXPORT __declspec(dllexport)
 	#define TRANSCRIPT_IMPORT __declspec(dllimport)
 	#define TRANSCRIPT_LOCAL
 #else
-	#if __GNUC__ >= 4
+	#if __GNUC__ >= 4 || defined(__clang__)
 		#define TRANSCRIPT_EXPORT __attribute__((visibility("default")))
 		#define TRANSCRIPT_IMPORT __attribute__((visibility("default")))
 		#define TRANSCRIPT_LOCAL __attribute__((visibility("hidden")))

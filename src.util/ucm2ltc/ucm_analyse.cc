@@ -300,7 +300,7 @@ void Ucm::calculate_item_costs(void) {
 		}
 
 		if (size + 0.99 < best_size) {
-			best_size = size + 0.99;
+			best_size = (int) (size + 0.99);
 			single_bytes = i;
 		}
 	}
