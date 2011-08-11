@@ -73,7 +73,7 @@ install: all
 	$(INSTALL) -d $(includedir)/transcript/transcript
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(includedir)/transcript/transcript
 	$(INSTALL) -d $(docdir)/API/search
-	(cd doc ; find API -type f) | xargs -IX $(INSTALL) -m0644 doc/X $(docdir)/X
+	( cd doc ; find API -type f ) | while read X ; do $(INSTALL) -m0644 doc/$${X} $(docdir)/$${X} ; done
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)

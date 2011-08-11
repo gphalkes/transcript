@@ -1,4 +1,4 @@
-# UCM based on JIS0201.TXT from ftp://unicode.org/MAPPINGS/VENDORS/MICSFT/WINDOWS/CP932.TXT
+# UCM based on CP932.TXT from ftp://unicode.org/MAPPINGS/VENDORS/MICSFT/WINDOWS/
 
 # Adds fallbacks which allows conversion from Unicode if the original was Shift-JIS
 
