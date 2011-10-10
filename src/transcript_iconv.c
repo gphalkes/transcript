@@ -42,6 +42,10 @@ transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcod
 	retval->from = NULL;
 	retval->to = NULL;
 
+	/* We need to be sure that transcript_init is called before anything else,
+	   so we simply call it here. There is no harm in calling it more than once. */
+	transcript_init();
+
 	if ((retval->from = transcript_open_converter(fromcode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
 		if (error == TRANSCRIPT_OUT_OF_MEMORY)
 			ERROR(ENOMEM);

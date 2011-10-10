@@ -66,7 +66,7 @@ static bool_t add_converter_name(const char *name) {
 	if (is_display_name)
 		name++;
 
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if (normalized_name[0] == 0) {
 		_transcript_log("error: converter name '%s' is invalid\n", name);
@@ -139,7 +139,7 @@ static bool_t add_converter_alias(const char *name) {
 	if (is_display_name)
 		name++;
 
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if (*normalized_name == 0) {
 		_transcript_log("error: alias name '%s' is invalid\n", name);
@@ -194,7 +194,7 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
 	char normalized_name[NORMALIZE_NAME_MAX];
 
 	if (need_normalization) {
-		_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+		transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 		name = normalized_name;
 	}
 
@@ -263,7 +263,6 @@ static void init_availability(void) {
     @return An array of ::transcript_name_t structures listing the known converters.
 */
 const transcript_name_t *transcript_get_names(int *count) {
-	_transcript_init();
 	init_availability();
 	if (count != NULL)
 		*count = display_names_used;

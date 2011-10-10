@@ -56,6 +56,10 @@ pthread_mutex_t _transcript_lock = PTHREAD_MUTEX_INITIALIZER;
 const char **_transcript_search_path;
 static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
 
+static void init_char_info(void);
+static char *ts_strtok(char *string, const char *separators, char **state);
+static void add_search_dir(const char *dir);
+
 /*================ API functions ===============*/
 /** Check if a named converter is available.
     @param name The name of the converter to check.
@@ -64,7 +68,6 @@ static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
 int transcript_probe_converter(const char *name) {
 	int result;
 
-	_transcript_init();
 	ACQUIRE_LOCK();
 	result = transcript_probe_converter_nolock(name);
 	RELEASE_LOCK();
@@ -85,7 +88,6 @@ int transcript_probe_converter(const char *name) {
 transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	transcript_t *result;
 
-	_transcript_init();
 	ACQUIRE_LOCK();
 	result = transcript_open_converter_nolock(name, utf_type, flags, error);
 	RELEASE_LOCK();
@@ -118,9 +120,8 @@ int transcript_equal(const char *name_a, const char *name_b) {
 	transcript_name_desc_t *converter;
 	char normalized_name_a[NORMALIZE_NAME_MAX], normalized_name_b[NORMALIZE_NAME_MAX];
 
-	_transcript_init();
-	_transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
-	_transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
 
 	if (strcmp(normalized_name_a, normalized_name_b) == 0)
 		return 1;
@@ -352,8 +353,21 @@ const char *transcript_strerror(transcript_error_t error) {
     terminated.
 */
 void transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
-	_transcript_init();
-	_transcript_normalize_name(name, normalized_name, normalized_name_max);
+	size_t write_idx = 0;
+	bool_t last_was_digit = FALSE;
+
+	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
+		/* Skip any character that is not alphanumeric. */
+		if (!_transcript_isalnum(*name)) {
+			last_was_digit = FALSE;
+		} else {
+			if (!last_was_digit && *name == '0')
+				continue;
+			normalized_name[write_idx++] = _transcript_tolower(*name);
+			last_was_digit = _transcript_isdigit(*name);
+		}
+	}
+	normalized_name[write_idx] = 0;
 }
 
 /** Get a character string describing the current character set indicated by the environment.
@@ -390,6 +404,60 @@ const char *transcript_get_codeset(void) {
 */
 long transcript_get_version(void) {
 	return TRANSCRIPT_VERSION;
+}
+
+/** Initialize the library.
+
+    This function must be called before calling any other function of the
+    library. It is safe to call this function more than once.
+
+    @internal This function initializes the gettext domain for the library,
+    the character info for ::transcript_normalize_name and the list of aliases.
+    Note that it does not load the availability of the aliases.
+*/
+void transcript_init(void) {
+	static bool_t initialized = FALSE;
+
+	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
+	ACQUIRE_LOCK();
+	if (!initialized) {
+		char *transcript_path, *search_path_element, *state;
+		/* Initialize aliases defined in the aliases.txt file. This does not
+		   check availability, nor does it build the complete set of display
+		   names. That will be done when that list is requested. */
+		#ifdef USE_GETTEXT
+		bindtextdomain("libtranscript", LOCALEDIR);
+		#endif
+		init_char_info();
+		lt_dlinit();
+
+/* Disabled because of security risks! */
+#if 0
+		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
+			if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
+				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+						search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+					add_search_dir(search_path_element);
+			}
+		}
+		if ((transcript_path = getenv("HOME")) != NULL) {
+			if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
+				strcpy(search_path_element, transcript_path);
+				strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
+				strcat(search_path_element, ".transcript");
+				add_search_dir(search_path_element);
+			}
+		}
+#endif
+		if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
+			for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+					search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+				add_search_dir(search_path_element);
+		}
+		_transcript_init_aliases_from_file();
+	}
+	initialized = TRUE;
+	RELEASE_LOCK();
 }
 
 /*================ Internal functions ===============*/
@@ -443,32 +511,6 @@ int _transcript_isspace(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c]
 int _transcript_isidchr(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & (IS_IDCHR_EXTRA | IS_ALNUM)); }
 /** @internal @brief Execution-character-set tolower. */
 int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
-
-/** @internal
-    @brief Perform the action described at ::transcript_normalize_name.
-
-    This function does not call ::_transcript_init, which ::transcript_normalize_name
-    does. However, ::_transcript_init only needs to be called once, so if we
-    know it has already been called, we don't need to check again. Therefore,
-    in the library itself we use this stripped down version.
-*/
-void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
-	size_t write_idx = 0;
-	bool_t last_was_digit = FALSE;
-
-	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
-		/* Skip any character that is not alphanumeric. */
-		if (!_transcript_isalnum(*name)) {
-			last_was_digit = FALSE;
-		} else {
-			if (!last_was_digit && *name == '0')
-				continue;
-			normalized_name[write_idx++] = _transcript_tolower(*name);
-			last_was_digit = _transcript_isdigit(*name);
-		}
-	}
-	normalized_name[write_idx] = 0;
-}
 
 /** Get the minimum of two @c size_t values. */
 static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
@@ -567,59 +609,6 @@ static void add_search_dir(const char *dir) {
 	/* Note that we always allocate one extra element for this purpose, which is
 	   not accounted for in path_size. */
 	_transcript_search_path[path_idx] = NULL;
-}
-
-/** @internal
-    @brief Initialize the parts of the library that can not be handled in a
-         thread-safe manner.
-
-    This function initializes the gettext domain for the library, the character
-    info for ::transcript_normalize_name and the list of aliases. Note that it
-    does not load the availability of the aliases.
-*/
-void _transcript_init(void) {
-	static bool_t initialized = FALSE;
-
-	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
-	ACQUIRE_LOCK();
-	if (!initialized) {
-		char *transcript_path, *search_path_element, *state;
-		/* Initialize aliases defined in the aliases.txt file. This does not
-		   check availability, nor does it build the complete set of display
-		   names. That will be done when that list is requested. */
-		#ifdef USE_GETTEXT
-		bindtextdomain("libtranscript", LOCALEDIR);
-		#endif
-		init_char_info();
-		lt_dlinit();
-
-/* Disabled because of security risks! */
-#if 0
-		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
-			if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
-				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-						search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
-					add_search_dir(search_path_element);
-			}
-		}
-		if ((transcript_path = getenv("HOME")) != NULL) {
-			if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
-				strcpy(search_path_element, transcript_path);
-				strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
-				strcat(search_path_element, ".transcript");
-				add_search_dir(search_path_element);
-			}
-		}
-#endif
-		if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
-			for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-					search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
-				add_search_dir(search_path_element);
-		}
-		_transcript_init_aliases_from_file();
-	}
-	initialized = TRUE;
-	RELEASE_LOCK();
 }
 
 /** @internal

@@ -72,7 +72,6 @@ TRANSCRIPT_LOCAL void _transcript_log(const char *fmt, ...);
 
 TRANSCRIPT_LOCAL transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_normalization);
 
-TRANSCRIPT_LOCAL void _transcript_init(void);
 TRANSCRIPT_LOCAL void *_transcript_db_open(const char *name, const char *ext, open_func_t open_func, transcript_error_t *error);
 
 TRANSCRIPT_LOCAL int _transcript_isalnum(int c);
@@ -80,7 +79,6 @@ TRANSCRIPT_LOCAL int _transcript_isdigit(int c);
 TRANSCRIPT_LOCAL int _transcript_isspace(int c);
 TRANSCRIPT_LOCAL int _transcript_isidchr(int c);
 TRANSCRIPT_LOCAL int _transcript_tolower(int c);
-TRANSCRIPT_LOCAL void _transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max);
 
 TRANSCRIPT_LOCAL void _transcript_init_aliases_from_file(void);
 TRANSCRIPT_LOCAL void *_transcript_open_state_table_converter(const converter_tables_v1_t *tables, int flags, transcript_error_t *error);

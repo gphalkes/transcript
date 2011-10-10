@@ -60,19 +60,16 @@ static bool_t probe_converter(const char *normalized_name, bool_t probe_load) {
 	}
 }
 
-/** @internal
-    @brief Perform the action described at ::transcript_probe_converter.
+/** Perform the action described at ::transcript_probe_converter.
 
-    This function does not call ::_transcript_init, which ::transcript_probe_converter
-    does. However, ::_transcript_init only needs to be called once, so if we
-    know it has already been called, we don't need to check again. Therefore,
-    in the library itself we use this stripped down version.
+    @note This function is only provided for use in modules. It should @b not be
+    called from client programs!
 */
 int transcript_probe_converter_nolock(const char *name) {
 	transcript_name_desc_t *converter;
 	char normalized_name[NORMALIZE_NAME_MAX];
 
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
 		if (converter->flags & NAME_DESC_FLAG_DISABLED)
@@ -189,7 +186,7 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
 		return NULL;
 	}
 
-	_transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
 	if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
 		if (converter->flags & NAME_DESC_FLAG_DISABLED) {
