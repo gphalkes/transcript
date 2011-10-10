@@ -13,8 +13,9 @@ the file COPYING for details.
 Prerequisites and installation
 ==============================
 
-libtranscript requires the GNU libtool utility to be compiled, and the libltdl
-library distributed with GNU libtool.
+libtranscript requires the GNU libtool utility to be compiled, the libltdl
+library distributed with GNU libtool, and a Pthread library (on Windows
+pthread-win32 can be used).
 
 libtranscript relies on the GNU gettext library for providing localised
 messages. libtranscript can be compiled without support the gettext libraries,

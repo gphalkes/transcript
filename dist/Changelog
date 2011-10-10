@@ -1,2 +1,10 @@
+Version 0.2.0:
+	New features:
+	- Added dependency on Pthreads, to allow threading to work properly in all
+	  circumstances.
+	- Removed auto-initialization, because it was not providing the benefits
+	  that were envisaged. Now the library requires calling of transcript_init
+	  before any other function.
+
 Version 0.1.1:
 	Initial release
