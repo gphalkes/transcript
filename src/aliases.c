@@ -225,12 +225,6 @@ static void init_availability(void) {
 	struct dirent *entry;
 	size_t i;
 
-	if (availability_initialized)
-		return;
-
-	/* The initial check is to ensure that in the most common case, we skip the
-	   locking of the mutex. This is possible because we only set the value to
-	   TRUE, never to FALSE. Now we do the properly mutex protected check. */
 	ACQUIRE_LOCK();
 	if (availability_initialized) {
 		RELEASE_LOCK();

@@ -15,6 +15,7 @@
 #define TRANSCRIPT_INTERNAL_H
 
 #include <stdio.h>
+#include <pthread.h>
 #include "transcript.h"
 #include "moduledefs.h"
 
@@ -35,12 +36,12 @@
 TRANSCRIPT_LOCAL char *_transcript_strdup(const char *str);
 #endif
 
-#define ACQUIRE_LOCK() do { if (_transcript_acquire_lock != NULL) _transcript_acquire_lock(_transcript_lock); } while (0)
-#define RELEASE_LOCK() do { if (_transcript_release_lock != NULL) _transcript_release_lock(_transcript_lock); } while (0)
+#define ACQUIRE_LOCK() pthread_mutex_lock(&_transcript_lock);
+#define RELEASE_LOCK() pthread_mutex_unlock(&_transcript_lock);
 
 TRANSCRIPT_LOCAL extern void (*_transcript_acquire_lock)(void *);
 TRANSCRIPT_LOCAL extern void (*_transcript_release_lock)(void *);
-TRANSCRIPT_LOCAL extern void *_transcript_lock;
+TRANSCRIPT_LOCAL extern pthread_mutex_t _transcript_lock;
 
 struct _transcript_iconv_t {
 	transcript_t *from, *to;

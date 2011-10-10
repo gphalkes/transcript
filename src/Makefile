@@ -45,6 +45,7 @@ EXTRATARGETS := converter-links
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
+CFLAGS += -pthread
 CFLAGS += -DDB_DIRECTORY=\"$(CURDIR)/modules/.libs:$(CURDIR)/tables/.libs:$(CURDIR)\" #-O2
 CFLAGS += -DUSE_ENDIAN
 CFLAGS += -DHAS_INLINE

@@ -23,7 +23,8 @@
 #else
 #include <locale.h>
 #endif
-#include "ltdl.h"
+#include <pthread.h>
+#include <ltdl.h>
 
 #include "transcript_internal.h"
 #include "utf.h"
@@ -50,48 +51,12 @@
 /** @internal */
 #define IS_IDCHR_EXTRA (1<<4)
 static char char_info[CHAR_MAX];
-void (*_transcript_acquire_lock)(void *);
-void (*_transcript_release_lock)(void *);
-void *_transcript_lock;
+pthread_mutex_t _transcript_lock = PTHREAD_MUTEX_INITIALIZER;
 
 const char **_transcript_search_path;
 static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
 
 /*================ API functions ===============*/
-/** Set the locking callbacks for libtranscript.
-    @param acquire The function to call to acquire the lock.
-    @param release The function to call to release the lock.
-    @param lock The data to pass to @a acquire and @a release.
-
-    This function should be called before calling any other function in the
-    library, if the library is used in more than one thread, or if the
-    dynamic linker is invoked in another thread then the functions in this
-    library.
-
-    For an environment where locking is performed using the pthread library,
-    the following code provides an example of how to set the callbacks.
-
-    @code
-    #include <pthread.h>
-    static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
-    static void acquire_lock(void *data) { (void) data; pthread_mutex_lock(&lock); }
-    static void release_lock(void *data) { (void) data; pthread_mutex_unlock(&lock); }
-
-    transcript_set_lock_callbacks(acquire_lock, release_lock, NULL);
-    @endcode
-*/
-void transcript_set_lock_callbacks(void (*acquire)(void *), void (*release)(void *), void *lock) {
-	if (acquire == NULL || release == NULL) {
-		_transcript_acquire_lock = NULL;
-		_transcript_release_lock = NULL;
-		_transcript_lock = NULL;
-	} else {
-		_transcript_acquire_lock = acquire;
-		_transcript_release_lock = release;
-		_transcript_lock = lock;
-	}
-}
-
 /** Check if a named converter is available.
     @param name The name of the converter to check.
     @return 1 if the converter is avaible, 0 otherwise.
@@ -615,56 +580,46 @@ static void add_search_dir(const char *dir) {
 void _transcript_init(void) {
 	static bool_t initialized = FALSE;
 
-	/* We check the initialized variable first without locking the mutex. We can
-	   safely do this, because once it has been set, it will never be reset. So
-	   if this check determines that the library has been initialized, it really
-	   has been. On the other hand, if the test determines that the library has
-	   not been initialized, this does not mean that it can safely start
-	   initialization. Then we lock the mutex to ensure proper exclusion. This
-	   way we avoid the (possibly expensive) mutex lock almost always, without
-	   sacrificing thread-safety.
-	*/
+	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
+	ACQUIRE_LOCK();
 	if (!initialized) {
-		ACQUIRE_LOCK();
-		if (!initialized) {
-			char *transcript_path, *search_path_element, *state;
-			/* Initialize aliases defined in the aliases.txt file. This does not
-			   check availability, nor does it build the complete set of display
-			   names. That will be done when that list is requested. */
-			#ifdef USE_GETTEXT
-			bindtextdomain("libtranscript", LOCALEDIR);
-			#endif
-			init_char_info();
-			lt_dlinit();
+		char *transcript_path, *search_path_element, *state;
+		/* Initialize aliases defined in the aliases.txt file. This does not
+		   check availability, nor does it build the complete set of display
+		   names. That will be done when that list is requested. */
+		#ifdef USE_GETTEXT
+		bindtextdomain("libtranscript", LOCALEDIR);
+		#endif
+		init_char_info();
+		lt_dlinit();
 
 /* Disabled because of security risks! */
 #if 0
-			if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
-				if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
-					for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-							search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
-						add_search_dir(search_path_element);
-				}
-			}
-			if ((transcript_path = getenv("HOME")) != NULL) {
-				if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
-					strcpy(search_path_element, transcript_path);
-					strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
-					strcat(search_path_element, ".transcript");
-					add_search_dir(search_path_element);
-				}
-			}
-#endif
-			if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
+		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
+			if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
 				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
 						search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
 					add_search_dir(search_path_element);
 			}
-			_transcript_init_aliases_from_file();
 		}
-		initialized = TRUE;
-		RELEASE_LOCK();
+		if ((transcript_path = getenv("HOME")) != NULL) {
+			if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
+				strcpy(search_path_element, transcript_path);
+				strcat(search_path_element, "/"); /* Windows also recognises / as directory separator internally. */
+				strcat(search_path_element, ".transcript");
+				add_search_dir(search_path_element);
+			}
+		}
+#endif
+		if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
+			for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+					search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+				add_search_dir(search_path_element);
+		}
+		_transcript_init_aliases_from_file();
 	}
+	initialized = TRUE;
+	RELEASE_LOCK();
 }
 
 /** @internal

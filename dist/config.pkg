@@ -36,7 +36,7 @@ precheck() {
 }
 
 checkfunction() {
-	clean .config.o
+	clean_c
 
 	CHECKFOR="$1"
 	CODE="$2"
@@ -54,7 +54,6 @@ int main(int argc, char *argv[]) {
 EOF
 	} > .config.c
 
-	clean .config.o
 	test_link "${CHECKFOR}"
 }
 
@@ -62,6 +61,7 @@ config() {
 	unset CONFIGFLAGS
 	# Test for all required functionality
 
+	clean_c
 	cat > .config.c <<EOF
 #include <sys/types.h>
 #include <stdint.h>
@@ -80,9 +80,9 @@ int main(int argc, char *argv[]) {
 }
 EOF
 
-	clean .config.o
 	test_link "opendir/readdir/closedir/dirent.h/stdint.h" || error "!! Some required functionality is not available. See config.log for details."
 
+	clean_c
 	cat > .config.c <<EOF
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -98,9 +98,39 @@ int main(int argc, char *argv[]) {
 }
 EOF
 
-	clean .config.o
 	test_link "symlink/unlink/lstat" || error "!! Some required functionality is not available. See config.log for details."
 
+	clean_c
+	unset PTHREADFLAGS PTHREADLIBS
+	cat > .config.c <<EOF
+#include <stdlib.h>
+#include <pthread.h>
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+int main(int argc, char *argv[]) {
+	pthread_mutex_lock(&mutex);
+	pthread_mutex_unlock(&mutex);
+	return 0;
+}
+EOF
+	test_compile "pthreads" || error "!! Pthreads are required to compile libtranscript. See config.log for compile details."
+	test_compile "-pthread flag" && PTHREADFLAGS=-pthread
+	# Libtool sometimes adds -nostdlib, which then requires that -lpthread is specified
+	# separately. Therefore, we first test for -pthread -lpthread, then for
+	# -pthread, then -lpthread and if all else fails without anything
+	if [ -n "${PTHREADFLAGS}" ] && test_link "pthreads in ${PTHREADFLAGS} -lpthread" "TESTLIBS=${PTHREADFLAGS} -lpthread" ; then
+		PTHREADLIBS="${PTHREADFLAGS} -lpthread"
+	elif [ -n "${PTHREADFLAGS}" ] && test_link "pthreads in ${PTHREADFLAGS}" "TESTLIBS=${PTHREADFLAGS}" ; then
+		PTHREADLIBS="${PTHREADFLAGS}"
+	elif test_link "pthreads in -lpthread" TESTLIBS=-lpthread ; then
+		PTHREADLIBS=-lpthread
+	elif test_link "pthreads in standard library" "TESTLIBS=" ; then
+		:
+	else
+		error "!! Can not find required linker flags for pthreads. Pthreads are required to compile libtranscript. See config.log for compile details."
+	fi
+
+	clean_c
 	cat > .config.c <<EOF
 #include <ltdl.h>
 
@@ -116,7 +146,6 @@ int main(int argc, char *argv[]) {
 }
 EOF
 
-	clean .config.o
 	test_link "libltdl" "TESTLIBS=-lltdl" || error "!! Can not find libltdl. libltdl is required to compile libtranscript."
 
 	HAS_SETLOCALE=unknown
@@ -136,6 +165,7 @@ EOF
 		CONFIGFLAGS="${CONFIGFLAGS} -DUSE_ENDIAN"
 	fi
 
+	clean_c
 	cat > .config.c <<EOF
 static inline int foo() { return 4; }
 int main(int argc, char *argv[]) {
@@ -145,6 +175,7 @@ EOF
 	test_compile "inline keyword" && CONFIGFLAGS="${CONFIGFLAGS} -DHAS_INLINE"
 
 	if [ yes = "${with_ucm2ltc}" ] ; then
+		clean_cxx
 		cat > .configcxx.cc <<EOF
 #include <stdio.h>
 
@@ -153,7 +184,6 @@ int main(int argc, char *argv[]) {
 	snprintf(test, sizeof(test), "foo");
 }
 EOF
-		clean .configcxx.o
 		test_link_cxx "snprintf" || error "!! Function required for ucm2ltc not found. Try configuring without --with-ucm2ltc."
 	else
 		MAKEFILES="Makefile mk/libtranscript mk/linkltc"
@@ -164,5 +194,5 @@ dist-clean:
 EOF
 	fi
 
-	create_makefile "CONFIGFLAGS=${CONFIGFLAGS} -lltdl"
+	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "PTHREADFLAGS=${PTHREADFLAGS}" "PTHREADLIBS=${PTHREADLIBS}"
 }

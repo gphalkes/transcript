@@ -21,6 +21,10 @@ CFLAGS=-O2
 #    -DHAS_NL_LANGINFO
 CONFIGFLAGS=-DHAS_STRDUP -DHAS_NL_LANGINFO
 
+# Flags and libraries required for compilation with Pthreads
+PTHREADFLAGS=-pthread
+PTHREADLIBS=-pthread -lpthread
+
 # The libtool executable
 LIBTOOL=libtool
 
@@ -65,11 +69,15 @@ clean:
 dist-clean: clean
 
 .c.lo:
-	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc $(CONFIGFLAGS) $(GETTEXTFLAGS) -DTRANSCRIPT_BUILD_DSO -DLOCALEDIR=\"$(LOCALEDIR)\" -DDB_DIRECTORY=\"$(libdir)/transcript<LIBVERSION>\" -c -o $@ $<
+	$(SILENTCCLT) $(LIBTOOL) $(SILENCELT) --mode=compile --tag=CC $(CC) -shared $(CFLAGS) -Isrc \
+		$(CONFIGFLAGS) $(GETTEXTFLAGS) $(PTHREADFLAGS) -DTRANSCRIPT_BUILD_DSO \
+		-DLOCALEDIR=\"$(LOCALEDIR)\" -DDB_DIRECTORY=\"$(libdir)/transcript<LIBVERSION>\" -c -o $@ $<
 
 .lo.la:
-	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version -shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript<LIBVERSION>
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -module -avoid-version \
+		-shrext .ltc $(CFLAGS) $(LDFLAGS) -o $@ $< $(LDLIBS) -rpath $(libdir)/transcript<LIBVERSION>
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
-	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(GETTEXTLIBS) -lltdl -rpath $(libdir)
-
+	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> \
+		$(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(PTHREADLIBS) $(GETTEXTLIBS) -lltdl \
+		-rpath $(libdir)
