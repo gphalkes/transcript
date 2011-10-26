@@ -497,6 +497,8 @@ int main(int argc, char *argv[]) {
 
 	parse_options(argc, argv);
 
+	transcript_init();
+
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);
 	} else {

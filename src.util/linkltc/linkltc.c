@@ -145,8 +145,7 @@ static void make_links(const char *name) {
 	sym_name = strcat_autoalloc(sym_name, normalized_name);
 
 	if ((get_namelist = lt_dlsym(handle, sym_name)) == NULL) {
-		if (option_verbose)
-			fprintf(stderr, "%s: converter does not provide a name list %s\n", name, sym_name);
+		fprintf(stderr, "%s: converter does not provide a name list %s\n", name, sym_name);
 		lt_dlclose(handle);
 		free(sym_name);
 		return;
@@ -182,6 +181,9 @@ static void make_links(const char *name) {
 
 int main(int argc, char *argv[]) {
 	parse_args(argc, argv);
+
+	transcript_init();
+
 	if (lt_dlinit() != 0)
 		fatal("Error initializing dynamic linker: %s\n", lt_dlerror());
 #ifdef LT_DIRSEP_CHAR
