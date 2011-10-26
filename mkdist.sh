@@ -41,7 +41,6 @@ MODULES="`egrep '^MODULES\>' ${TMPDIR}/rules.txt | head -n1 | sed -r 's/.*=//'`"
 MODULETARGETS="`echo \"${MODULES}\" | sed -r 's%(\<[^ \t]+\>)%src/modules/\1.la%g'`"
 
 #FIXME: somehow verify binary compatibility, and print an error if not compatible
-VERSIONINFO="1:0:0"
 LIBVERSION="${VERSIONINFO%%:*}"
 
 sed -r -i "s%<OBJECTS_LIBTRANSCRIPT>%${OBJECTS_LIBTRANSCRIPT}%g;\
