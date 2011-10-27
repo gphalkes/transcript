@@ -130,6 +130,17 @@ static void make_links(const char *name) {
 		base_name = strcat_autoalloc(base_name, name);
 	}
 
+	if (lstat(base_name, &statbuf) != 0) {
+		fprintf(stderr, "%s: could not get file meta information: %s\n", name, strerror(errno));
+		free(base_name);
+		return;
+	}
+
+	if (S_ISLNK(statbuf.st_mode)) {
+		free(base_name);
+		return;
+	}
+
 	if ((handle = lt_dlopen(base_name)) == NULL) {
 		fprintf(stderr, "%s: error loading converter: %s\n", name, lt_dlerror());
 		free(base_name);
