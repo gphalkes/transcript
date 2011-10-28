@@ -24,7 +24,7 @@ LIBTOOL=libtool
 # Miscelaneous install paths
 bindir=$(prefix)/bin
 libdir=$(prefix)/lib
-docdir=$(prefix)/share/doc/libtranscript-<VERSION>
+docdir=$(prefix)/share/doc/libtranscript
 mandir=$(prefix)/share/man
 includedir=$(prefix)/include
 pkgconfigdir=$(libdir)/pkgconfig
@@ -63,34 +63,45 @@ libtranscript.pc: libtranscript.pc.in
 		{ echo '/^includedir=/c\' ; echo "includedir=$${INCLUDEDIR}" ; } >> .sedscript
 	sed -f .sedscript $< > $@
 
+# Macros to make DESTDIR support more readable
+_bindir=$(DESTDIR)$(bindir)
+_libdir=$(DESTDIR)$(libdir)
+_docdir=$(DESTDIR)$(docdir)
+_mandir=$(DESTDIR)$(mandir)
+_includedir=$(DESTDIR)$(includedir)
+_pkgconfigdir=$(DESTDIR)$(pkgconfigdir)
+_LOCALEDIR=$(DESTDIR)$(LOCALEDIR)
+
 install: all
-	$(INSTALL) -d $(libdir)/transcript<LIBVERSION>
-	$(LIBTOOL) --mode=install $(INSTALL) -s -m0644 src/libtranscript.la $(libdir)
-	chmod 0644 $(libdir)/libtranscript.la
-	export STRIPOPT=-s; $(INSTALL) $${STRIPOPT} -m0644 src/modules/.libs/ascii.ltc $(libdir)/transcript<LIBVERSION> || export STRIPOPT= ; \
-		$(INSTALL) $${STRIPOPT} -m0644 src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(libdir)/transcript<LIBVERSION>
-	$(INSTALL) -m0644 src/aliases.txt $(libdir)/transcript<LIBVERSION>
-	$(INSTALL) -d $(includedir)/transcript/transcript
-	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(includedir)/transcript/transcript
-	$(INSTALL) -d $(docdir)/API/search
-	( cd doc ; find API -type f ) | while read X ; do $(INSTALL) -m0644 doc/$${X} $(docdir)/$${X} ; done
-	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(docdir)
-	$(INSTALL) -d $(pkgconfigdir)
-	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
-	LD_LIBRARY_PATH="$(libdir)$${LD_LIBRARY_PATH:+:}$${LD_LIBRARY_PATH}" src.util/linkltc/linkltc $(libdir)/transcript<LIBVERSION>/*.ltc
+	$(INSTALL) -d $(_libdir)/transcript<LIBVERSION>
+	$(LIBTOOL) --mode=install $(INSTALL) -s -m0644 src/libtranscript.la $(_libdir)
+	chmod 0644 $(_libdir)/libtranscript.la
+	export STRIPOPT=-s; $(INSTALL) $${STRIPOPT} -m0644 src/modules/.libs/ascii.ltc $(_libdir)/transcript<LIBVERSION> || export STRIPOPT= ; \
+		$(INSTALL) $${STRIPOPT} -m0644 src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(_libdir)/transcript<LIBVERSION>
+	$(INSTALL) -m0644 src/aliases.txt $(_libdir)/transcript<LIBVERSION>
+	$(INSTALL) -d $(_includedir)/transcript/transcript
+	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(_includedir)/transcript/transcript
+	$(INSTALL) -d $(_docdir)/API/search
+	( cd doc ; find API -type f ) | while read X ; do $(INSTALL) -m0644 doc/$${X} $(_docdir)/$${X} ; done
+	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(_docdir)
+	$(INSTALL) -d $(_pkgconfigdir)
+	$(INSTALL) -m0644 libtranscript.pc $(_pkgconfigdir)
+	LD_LIBRARY_PATH="$(_libdir)$${LD_LIBRARY_PATH:+:}$${LD_LIBRARY_PATH}" src.util/linkltc/linkltc $(_libdir)/transcript<LIBVERSION>/*.ltc
 
 install-moddev: install
-	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript
-	$(INSTALL) -d $(bindir)
-	$(INSTALL) src.util/linkltc/linkltc $(bindir)
-	$(INSTALL) -d $(mandir)/man1
-	$(INSTALL) -m0644 man/linkltc.1 $(mandir)/man1
-	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(bindir) ; $(INSTALL) -m0644 man/ucm2ltc.1 $(mandir)/man1 ; fi
+	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(_includedir)/transcript/transcript
+	$(INSTALL) -d $(_bindir)
+	$(INSTALL) src.util/linkltc/linkltc $(_bindir)
+	$(INSTALL) -d $(_mandir)/man1
+	$(INSTALL) -m0644 man/linkltc.1 $(_mandir)/man1
+	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(_bindir) ; $(INSTALL) -m0644 man/ucm2ltc.1 $(_mandir)/man1 ; fi
 
 uninstall:
-	$(LIBTOOL) --mode=uninstall rm $(libdir)/libtranscript.la
-	rm -rf $(libdir)/transcript
-	rm -rf $(docdir)
-	rm -f $(bindir)/linkltc $(bindir)/ucm2ltc $(pkgconfigdir)/libtranscript.pc
-	rm -rf $(includedir)/transcript
-	rm -f $(mandir)/man1/linkltc.1 $(mandir)/man1/ucm2ltc.1
+	$(LIBTOOL) --mode=uninstall rm $(_libdir)/libtranscript.la
+	rm -rf $(_libdir)/transcript
+	rm -rf $(_docdir)
+	rm -f $(_bindir)/linkltc $(_bindir)/ucm2ltc $(_pkgconfigdir)/libtranscript.pc
+	rm -rf $(_includedir)/transcript
+	rm -f $(_mandir)/man1/linkltc.1 $(_mandir)/man1/ucm2ltc.1
+
+# LIBVERSION=<LIBVERSION>
