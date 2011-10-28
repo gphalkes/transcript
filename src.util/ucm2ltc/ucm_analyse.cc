@@ -513,7 +513,8 @@ void Ucm::merge_variants(Ucm *other) {
 		variants.insert(variants.end(), other->variants.begin(), other->variants.end());
 		other->variants.clear();
 	}
-	delete other;
+	/* We used to delete the other Ucm here, but because we may need info that is
+	   contained in it when checking for name clashes, we just leave it. */
 }
 
 void Ucm::variants_done(void) {

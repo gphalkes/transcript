@@ -16,7 +16,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
-#include <transcript.h>
 
 #include "ucm2ltc.h"
 
@@ -146,10 +145,8 @@ void Ucm::write_simple(FILE *output) {
 	uint16_t byte_to_codepoint[256];
 	uint8_t *level0_indices;
 	vector<Mapping *>::const_iterator iter;
-	char normalized_name[160];
 
 	unique++;
-	transcript_normalize_name(variant.id, normalized_name, sizeof(normalized_name));
 
 	memset(byte_to_codepoint, 0xff, sizeof(byte_to_codepoint));
 	for (iter = simple_mappings.begin(); iter != simple_mappings.end(); iter++) {
@@ -199,7 +196,7 @@ void Ucm::write_simple(FILE *output) {
 		parse_byte_sequence(tag_values[Ucm::SUBCHAR].str, subchar);
 	fprintf(output, " },\n\t0x%02x, 0x%02x\n};\n\n", !!(flags & INTERNAL_TABLE), subchar[0]);
 
-	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_SBCS_TABLE_V1; }\n", normalized_name);
+	fprintf(output, "TRANSCRIPT_EXPORT int transcript_get_iface_%s(void) { return TRANSCRIPT_SBCS_TABLE_V1; }\n", variant.normalized_id);
 	fprintf(output, "TRANSCRIPT_EXPORT const sbcs_converter_v1_t *transcript_get_table_%s(void) { return &sbcs_converter_%d; }\n\n",
-		normalized_name, unique);
+		variant.normalized_id, unique);
 }

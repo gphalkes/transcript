@@ -13,17 +13,18 @@
 */
 #include <cstring>
 #include <algorithm>
+#include <transcript.h>
 
 #include "ucm2ltc.h"
 
 Variant::Variant(Ucm *_base, const char *_id, bool internal) : base(_base) {
+	char normalized_id_buffer[161];
 	size_t len;
 
 	while (strpbrk(_id, DIRSEPS) != NULL)
 		_id = strpbrk(_id, DIRSEPS) + 1;
 
-	if ((id = safe_strdup(_id)) == NULL)
-		OOM();
+	id = safe_strdup(_id);
 
 	len = strlen(id);
 	if (len < 4 || strcmp(id + len - 4, ".ucm") == 0) {
@@ -31,12 +32,14 @@ Variant::Variant(Ucm *_base, const char *_id, bool internal) : base(_base) {
 		id[len] = 0;
 	}
 
+	transcript_normalize_name(id, normalized_id_buffer, sizeof(normalized_id_buffer));
+	if (strlen(normalized_id_buffer) > 159)
+		fatal("%s: Variant name %s too long\n", file_name, id);
+	normalized_id = safe_strdup(normalized_id_buffer);
+
 	flags = (base->flags & Ucm::INTERNAL_TABLE);
 	if (internal)
 		flags |= Ucm::INTERNAL_TABLE;
-
-	if (len > 255)
-		fatal("%s: Variant name %s too long\n", file_name, id);
 }
 
 int Variant::check_codepage_bytes(vector<uint8_t> &bytes) {

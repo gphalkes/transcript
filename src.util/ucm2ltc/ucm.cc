@@ -596,7 +596,7 @@ bool Ucm::UnicodeStateMachineInfo::unassigned_needs_flags(void) {
 void Ucm::add_variant(Variant *_variant) {
 	for (deque<Variant *>::const_iterator iter = variants.begin(); iter != variants.end(); iter++)
 		if (_variant->id == (*iter)->id)
-			fatal("%s:%d: Multiple _variants with the same ID specified\n", file_name, line_number);
+			fatal("%s:%d: Multiple variants with the same ID specified\n", file_name, line_number);
 	variants.push_back(_variant);
 }
 

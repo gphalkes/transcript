@@ -144,7 +144,7 @@ class Ucm;
 class Variant : public UcmBase {
 	public:
 		Ucm *base;
-		char *id;
+		char *id, *normalized_id;
 		uint8_t flags;
 
 	public:

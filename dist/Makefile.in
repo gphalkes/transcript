@@ -77,7 +77,7 @@ install: all
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(docdir)
 	$(INSTALL) -d $(pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(pkgconfigdir)
-	LD_LIBRARY_PATH="$(libdir):$(LD_LIBRARY_PATH)" src.util/linkltc/linkltc $(libdir)/transcript<LIBVERSION>/*.ltc
+	LD_LIBRARY_PATH="$(libdir)$${LD_LIBRARY_PATH:+:}$${LD_LIBRARY_PATH}" src.util/linkltc/linkltc $(libdir)/transcript<LIBVERSION>/*.ltc
 
 install-moddev: install
 	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(includedir)/transcript/transcript

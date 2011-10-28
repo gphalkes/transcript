@@ -19,12 +19,11 @@
 #include <arpa/inet.h>
 #include <climits>
 #include <transcript.h>
+#include <map>
 
 #include "ucm2ltc.h"
 #include "ucmparser.h"
 #include "optionMacros.h"
-
-#warning FIXME: check names in different UCM sets against each other for clashes
 
 int option_verbose;
 bool option_internal_table, option_dump, option_allow_ibm_rotate;
@@ -36,6 +35,11 @@ const char *option_converter_name;
 extern FILE *yyin;
 
 static vector<Ucm *> completed_ucms;
+static bool compare_string(const char *a, const char *b);
+
+typedef map<const char *, Variant *, bool (*)(const char *, const char *)> VariantMap;
+
+static VariantMap variant_map(compare_string);
 
 /** Alert the user of a fatal error and quit.
     @param fmt The format string for the message. See fprintf(3) for details.
@@ -52,6 +56,10 @@ void fatal(const char *fmt, ...) {
 		abort();
 #endif
 	exit(EXIT_FAILURE);
+}
+
+static bool compare_string(const char *a, const char *b) {
+	return strcmp(a, b) < 0;
 }
 
 Ucm::tag_t string_to_tag(const char *str) {
@@ -336,6 +344,25 @@ uint8_t create_mask(uint8_t used_flags) {
 	return used_flags | (1 << i);
 }
 
+static void check_name_clashes(Ucm *ucm) {
+	VariantMap::iterator item;
+
+	if (ucm->variants.size() == 0) {
+		if ((item = variant_map.find(ucm->variant.normalized_id)) != variant_map.end())
+			fatal("%s:%s: Multiple variants with the same normalized ID (%s, %s, %s) specified\n",
+				ucm->name, item->second->base->name, ucm->variant.normalized_id, ucm->variant.id, item->first);
+		variant_map[ucm->variant.normalized_id] = &ucm->variant;
+		return;
+	}
+
+	for (deque<Variant *>::iterator iter = ucm->variants.begin(); iter != ucm->variants.end(); iter++) {
+		if ((item = variant_map.find((*iter)->normalized_id)) != variant_map.end())
+			fatal("%s:%s: Multiple variants with the same normalized ID (%s, %s, %s) specified\n",
+				(*iter)->base->name, item->second->base->name, (*iter)->normalized_id, (*iter)->id, item->first);
+		variant_map[(*iter)->normalized_id] = *iter;
+	}
+}
+
 static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	Ucm *ucm;
 
@@ -377,6 +404,7 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 	}
 
 	if (ucms.size() == 1 && ucm->is_simple_table()) {
+		check_name_clashes(ucm);
 		completed_ucms.push_back(ucm);
 		ucms.clear();
 		return;
@@ -400,6 +428,8 @@ static void analyse_ucm_set(vector<Ucm *> &ucms) {
 
 	ucm->find_shift_sequences();
 	ucm->check_base_mul_ranges();
+
+	check_name_clashes(ucm);
 	completed_ucms.push_back(ucm);
 	ucms.clear();
 }
@@ -495,9 +525,9 @@ int main(int argc, char *argv[]) {
 	char normalized_output_name[160];
 	char *output_name, *base_name;
 
-	parse_options(argc, argv);
-
 	transcript_init();
+
+	parse_options(argc, argv);
 
 	if (option_output_name != NULL) {
 		output_name = safe_strdup(option_output_name);
