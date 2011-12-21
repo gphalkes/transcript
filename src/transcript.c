@@ -524,8 +524,7 @@ uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
 	return codepoint < UINT32_C(0x10000) ? get_generic_fallback(codepoint) : UINT32_C(0xffff);
 }
 
-/** @internal
-    @brief Handle an unassigned codepoint in a from-Unicode conversion.
+/** Handle an unassigned codepoint in a from-Unicode conversion.
 
     This function does a lookup in the generic fall-back table. If no generic
     fall-back is found, this function simply returns ::TRANSCRIPT_UNASSIGNED.

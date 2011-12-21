@@ -133,7 +133,12 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 				   0xf0000-0xffffd and 0x100000-0x10fffd. Furthermore, we don't have
 				   to check for the end of the Unicode range either. */
 				codepoint >= UINT32_C(0xf0000)) && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE))
-			return TRANSCRIPT_PRIVATE_USE;
+		{
+			if (flags & TRANSCRIPT_SUBST_UNASSIGNED)
+				codepoint = 0xfffd;
+			else
+				return TRANSCRIPT_PRIVATE_USE;
+		}
 
 		if ((result = put_unicode(handle, codepoint, outbuf, outbuflimit)) != 0)
 			return result;
