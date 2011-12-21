@@ -1,3 +1,8 @@
+Version 0.2.1:
+	Bug fixes:
+	- Fix handling of private use handling in unicode to unicode conversions,
+	  such that it is in line with the other converters.
+
 Version 0.2.0:
 	New features:
 	- Added dependency on Pthreads, to allow threading to work properly in all
