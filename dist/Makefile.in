@@ -91,10 +91,10 @@ install: all
 install-moddev: install
 	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(_includedir)/transcript/transcript
 	$(INSTALL) -d $(_bindir)
-	$(INSTALL) src.util/linkltc/linkltc $(_bindir)
+	$(INSTALL) -s src.util/linkltc/linkltc $(_bindir)
 	$(INSTALL) -d $(_mandir)/man1
 	$(INSTALL) -m0644 man/linkltc.1 $(_mandir)/man1
-	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) src.util/ucm2ltc/ucm2ltc $(_bindir) ; $(INSTALL) -m0644 man/ucm2ltc.1 $(_mandir)/man1 ; fi
+	if [ -f src.util/ucm2ltc/ucm2ltc ] ; then $(INSTALL) -s src.util/ucm2ltc/ucm2ltc $(_bindir) ; $(INSTALL) -m0644 man/ucm2ltc.1 $(_mandir)/man1 ; fi
 
 uninstall:
 	$(LIBTOOL) --mode=uninstall rm $(_libdir)/libtranscript.la
