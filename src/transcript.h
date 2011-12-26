@@ -110,6 +110,7 @@ typedef enum {
 	TRANSCRIPT_DLOPEN_FAILURE, /**< Opening if the plugin failed. */
 	TRANSCRIPT_CONVERTER_DISABLED, /**< The converter has been explicitly disabled. */
 	TRANSCRIPT_PACKAGE_FILE, /**< The converter name references a converter package file, not an actual converter. */
+	TRANSCRIPT_INIT_DLFCN, /**< Could not initialize dynamic module loading functionality. */
 
 	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 
@@ -145,7 +146,7 @@ typedef struct {
 /** Required size of a buffer for saving converter state. */
 #define TRANSCRIPT_SAVE_STATE_SIZE 32
 
-TRANSCRIPT_API void transcript_init(void);
+TRANSCRIPT_API transcript_error_t transcript_init(void);
 TRANSCRIPT_API void transcript_finalize(void);
 TRANSCRIPT_API int transcript_probe_converter(const char *name);
 TRANSCRIPT_API transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error);

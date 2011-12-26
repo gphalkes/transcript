@@ -24,9 +24,9 @@
 #include <locale.h>
 #endif
 #include <pthread.h>
-#include <ltdl.h>
 
 #include "transcript_internal.h"
+#include "transcript_dlfcn.h"
 #include "utf.h"
 #include "generic_fallbacks.h"
 
@@ -342,6 +342,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("Converter has been disabled");
 		case TRANSCRIPT_PACKAGE_FILE:
 			return _("Name specifies a converter package file");
+		case TRANSCRIPT_INIT_DLFCN:
+			return _("Could not initialize dynamic module loading functionality");
 	}
 }
 
@@ -418,7 +420,7 @@ long transcript_get_version(void) {
     the character info for ::transcript_normalize_name and the list of aliases.
     Note that it does not load the availability of the aliases.
 */
-void transcript_init(void) {
+transcript_error_t transcript_init(void) {
 
 	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
 	ACQUIRE_LOCK();
@@ -428,8 +430,10 @@ void transcript_init(void) {
 		bindtextdomain("libtranscript", LOCALEDIR);
 		#endif
 		init_char_info();
-		lt_dlinit();
-
+		if (lt_dlinit() != 0) {
+			RELEASE_LOCK();
+			return TRANSCRIPT_DLOPEN_FAILURE;
+		}
 /* Disabled because of security risks! */
 #if 0
 		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
@@ -461,6 +465,7 @@ void transcript_init(void) {
 	if (initialized_count < INT_MAX)
 		initialized_count++;
 	RELEASE_LOCK();
+	return TRANSCRIPT_SUCCESS;
 }
 
 /** Finalize the library use.

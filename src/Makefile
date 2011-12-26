@@ -13,7 +13,6 @@
 
 SOURCES.libtranscript.la := transcript.c transcript_io.c utf.c transcript_iconv.c \
 	state_table_converter.c aliases.c generic_fallbacks.c sbcs_table_converter.c
-LDFLAGS.libtranscript.la := -lltdl
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
@@ -51,6 +50,11 @@ CFLAGS += -DUSE_ENDIAN
 CFLAGS += -DHAS_INLINE
 CFLAGS += -DHAS_NL_LANGINFO
 CFLAGS += -DHAS_STRDUP
+
+CFLAGS += -DHAS_DLFCN
+LDFLAGS.libtranscript.la := -ldl
+#~ LDFLAGS.libtranscript.la := -lltdl
+
 #~ CFLAGS += -DUSE_GETTEXT -DLOCALEDIR=\"locales\"
 #~ CFLAGS += -std=c89
 

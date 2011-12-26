@@ -13,15 +13,23 @@
 */
 #include <errno.h>
 #include <string.h>
-#include <ltdl.h>
 
 #include "transcript_internal.h"
+#include "transcript_dlfcn.h"
 #include "utf.h"
 
 #define ERROR(value) do { if (error != NULL) *error = value; goto end_error; } while (0)
 
 /** Wrapper around fopen such that it can be passed to ::_transcript_db_open. */
 static FILE *fopen_wrapper(const char *name) { return fopen(name, "r"); }
+
+static lt_dlhandle do_dlopen(const char *file) {
+#ifdef HAS_DLFCN
+	return dlopen(file, RTLD_LOCAL);
+#else
+	return lt_dlopen(file);
+#endif
+}
 
 /** Load a suffixed symbol from a plugin. */
 static void *get_sym(lt_dlhandle handle, const char *sym, const char *converter_name) {
@@ -43,7 +51,7 @@ static bool_t probe_converter(const char *normalized_name, bool_t probe_load) {
 		lt_dlhandle handle;
 		int result = 0;
 
-		if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) lt_dlopen, NULL)) == NULL)
+		if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) do_dlopen, NULL)) == NULL)
 			return 0;
 
 		if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL)
@@ -114,7 +122,7 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
 	int (*get_iface)(void);
 	transcript_t *result = NULL;
 
-	if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) lt_dlopen, error)) == NULL) {
+	if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) do_dlopen, error)) == NULL) {
 		FILE *test_handle;
 		transcript_error_t local_error;
 		if ((test_handle = _transcript_db_open(normalized_name, "ltc", (open_func_t) fopen_wrapper, &local_error)) == NULL)

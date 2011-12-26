@@ -130,14 +130,38 @@ EOF
 		error "!! Can not find required linker flags for pthreads. Pthreads are required to compile libtranscript. See config.log for compile details."
 	fi
 
+
+	unset HAS_DYNAMIC DL_FLAGS DL_LIBS
 	clean_c
 	cat > .config.c <<EOF
+#include <dlfcn.h>
+
+int main(int argc, char *argv[]) {
+	void *handle = dlopen("name", RTLD_LOCAL);
+	dlsym(handle, "func");
+	dlclose(handle);
+	return 0;
+}
+EOF
+	if test_compile "dlopen/dlsym/dlclose in dlfcn.h" ; then
+		if test_link "dlopen/dlsym/dlclose in standard library" ; then
+			HAS_DYNAMIC=y
+			DL_FLAGS=-DHAS_DLFCN
+		elif test_link "dlopen/dlsym/dlclose in -ldl" ; then
+			HAS_DYNAMIC=y
+			DL_FLAGS=-DHAS_DLFCN
+			DL_LIB=-ldl
+		fi
+	fi
+
+	if [ -z "$HAS_DYNAMIC" ] ; then
+		clean_c
+		cat > .config.c <<EOF
 #include <ltdl.h>
 
 int main(int argc, char *argv[]) {
 	lt_dlhandle handle;
 	handle = lt_dlopen("name");
-	lt_dlerror();
 	lt_dlsym(handle, "sym_name");
 	lt_dlclose(handle);
 	lt_dlinit();
@@ -145,8 +169,13 @@ int main(int argc, char *argv[]) {
 	return 0;
 }
 EOF
+		if test_link "libltdl" "TESTLIBS=-lltdl" ; then
+			HAS_DYNAMIC=y
+			DL_LIB=-ltdl
+		fi
+	fi
 
-	test_link "libltdl" "TESTLIBS=-lltdl" || error "!! Can not find libltdl. libltdl is required to compile libtranscript."
+	[ -z "$HAS_DYNAMIC" ] && error "!! Can not find dlfcn functions or libltdl. Either dlfcn functions or libltdl are/is required to compile libtranscript."
 
 	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
