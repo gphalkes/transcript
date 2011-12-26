@@ -81,6 +81,7 @@ TRANSCRIPT_LOCAL int _transcript_isidchr(int c);
 TRANSCRIPT_LOCAL int _transcript_tolower(int c);
 
 TRANSCRIPT_LOCAL void _transcript_init_aliases_from_file(void);
+TRANSCRIPT_LOCAL void _transcript_free_aliases(void);
 TRANSCRIPT_LOCAL void *_transcript_open_state_table_converter(const converter_tables_v1_t *tables, int flags, transcript_error_t *error);
 TRANSCRIPT_LOCAL void *_transcript_open_sbcs_table_converter(const sbcs_converter_v1_t *tables, int flags, transcript_error_t *error);
 

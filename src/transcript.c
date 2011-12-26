@@ -55,6 +55,9 @@ pthread_mutex_t _transcript_lock = PTHREAD_MUTEX_INITIALIZER;
 
 const char **_transcript_search_path;
 static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
+static char *transcript_path;
+static int initialized_count = 0;
+
 
 static void init_char_info(void);
 static char *ts_strtok(char *string, const char *separators, char **state);
@@ -416,15 +419,11 @@ long transcript_get_version(void) {
     Note that it does not load the availability of the aliases.
 */
 void transcript_init(void) {
-	static bool_t initialized = FALSE;
 
 	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
 	ACQUIRE_LOCK();
-	if (!initialized) {
-		char *transcript_path, *search_path_element, *state;
-		/* Initialize aliases defined in the aliases.txt file. This does not
-		   check availability, nor does it build the complete set of display
-		   names. That will be done when that list is requested. */
+	if (!initialized_count) {
+		char *search_path_element, *state;
 		#ifdef USE_GETTEXT
 		bindtextdomain("libtranscript", LOCALEDIR);
 		#endif
@@ -454,9 +453,34 @@ void transcript_init(void) {
 					search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
 				add_search_dir(search_path_element);
 		}
+		/* Initialize aliases defined in the aliases.txt file. This does not
+		   check availability, nor does it build the complete set of display
+		   names. That will be done when that list is requested. */
 		_transcript_init_aliases_from_file();
 	}
-	initialized = TRUE;
+	if (initialized_count < INT_MAX)
+		initialized_count++;
+	RELEASE_LOCK();
+}
+
+/** Finalize the library use.
+
+    This function will release all memory used by the library when this function
+    has been called as many times as transcript_init has been called. Calling
+    this function is not necessary, but may be useful when trying to find
+    memory leaks.
+*/
+void transcript_finalize(void) {
+	ACQUIRE_LOCK();
+	if (initialized_count == INT_MAX || initialized_count == 0 || --initialized_count != 0) {
+		RELEASE_LOCK();
+		return;
+	}
+
+	free(transcript_path);
+	free(_transcript_search_path);
+	_transcript_free_aliases();
+	lt_dlexit();
 	RELEASE_LOCK();
 }
 

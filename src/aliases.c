@@ -35,6 +35,8 @@ static transcript_name_desc_t *converters, /**< The SL-list of known converters.
 static transcript_name_t *display_names; /**< The array of names that may be used for display purposes. */
 static int display_names_allocated, /**< The number of elements allocated in the ::display_names array. */
 	display_names_used; /**< The number of elements in the ::display_names array that is currently in use. */
+/** Boolean indicating whether the @c available member of #display_names has been initialized. */
+static bool_t availability_initialized = FALSE;
 
 /** Add a name to the ::display_names array, resizing the array if necessary. */
 static void add_display_name(const char *name, int available) {
@@ -219,8 +221,6 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
     the list built by ::init_availability is available.
 */
 static void init_availability(void) {
-	static bool_t availability_initialized = FALSE;
-
 	DIR *dir;
 	struct dirent *entry;
 	size_t i;
@@ -285,7 +285,6 @@ static void *read_alias_file(const char *name) {
 	size_t idx = 0;
 	char id[MAX_ID + 1];
 	int c, line_number = 1;
-	bool_t comma_seen = FALSE;
 
 	enum {
 		LINE_START,
@@ -368,7 +367,6 @@ static void *read_alias_file(const char *name) {
 					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
 					state = SKIP_REST;
 				}
-				comma_seen = FALSE;
 				break;
 			case AFTER_ID:
 				if (_transcript_isspace(c))
@@ -408,4 +406,35 @@ static void *read_alias_file(const char *name) {
 */
 void _transcript_init_aliases_from_file(void) {
 	_transcript_db_open("aliases", "txt", read_alias_file, NULL);
+}
+
+/** @internal
+    @brief Release memory for aliases list.
+
+    This function should be called with the lock acquired.
+*/
+void _transcript_free_aliases(void) {
+	transcript_name_desc_t *desc_ptr;
+	transcript_alias_name_t *alias_ptr;
+	int i;
+
+	availability_initialized = FALSE;
+	for (i = 0; i < display_names_used; i++)
+		free(display_names[i].name);
+	free(display_names);
+	display_names = NULL;
+	display_names_allocated = 0;
+	display_names_used = 0;
+
+	for (desc_ptr = converters; desc_ptr != NULL; desc_ptr = converters) {
+		converters = converters->next;
+		free(desc_ptr->real_name);
+		free(desc_ptr->name);
+		for (alias_ptr = desc_ptr->aliases; alias_ptr != NULL; alias_ptr = desc_ptr->aliases) {
+			desc_ptr->aliases = desc_ptr->aliases->next;
+			free(alias_ptr->name);
+			free(alias_ptr);
+		}
+		free(desc_ptr);
+	}
 }
