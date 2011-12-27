@@ -22,6 +22,8 @@ TARGETS := linkltc
 include ../../../makesys/rules.mk
 #================================================#
 
+CFLAGS += -DHAS_DLFCN
+
 linkltc: | library
 
 library:

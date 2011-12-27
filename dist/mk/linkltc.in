@@ -15,6 +15,12 @@
 # C-compiler flags
 CFLAGS=-O2
 
+# Configuration flags
+# - If your platform provides dlopen/dlsym/dlclose add -DHAS_DLFCN and replace
+#    -lltdl with the appropriate libraries to CONFIGLIBS
+CONFIGFLAGS=
+CONFIGLIBS=-lltdl
+
 # Installation prefix
 prefix=/usr/local
 
@@ -35,8 +41,8 @@ clean:
 dist-clean: clean
 
 .c.o:
-	$(SILENTCC) $(CC) $(CFLAGS) -Isrc -c -o $@ $<
+	$(SILENTCC) $(CC) $(CFLAGS) $(CONFIGFLAGS) -Isrc -c -o $@ $<
 
 src.util/linkltc/linkltc: $(OBJECTS_LINKLTC) src/libtranscript.la
-	$(SILENTLD) $(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) $(LDLIBS) -Lsrc/.libs -ltranscript -lltdl
-
+	$(SILENTLD) $(CC) $(CFLAGS) $(CONFIGFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LINKLTC) \
+		$(LDLIBS) -Lsrc/.libs -ltranscript $(CONFIGLIBS)

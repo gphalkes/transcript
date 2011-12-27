@@ -140,17 +140,18 @@ int main(int argc, char *argv[]) {
 	void *handle = dlopen("name", RTLD_LOCAL);
 	dlsym(handle, "func");
 	dlclose(handle);
+	dlerror();
 	return 0;
 }
 EOF
-	if test_compile "dlopen/dlsym/dlclose in dlfcn.h" ; then
-		if test_link "dlopen/dlsym/dlclose in standard library" ; then
+	if test_compile "dlopen/dlsym/dlclose/dlerror in dlfcn.h" ; then
+		if test_link "dlopen/dlsym/dlclose/dlerror in standard library" ; then
 			HAS_DYNAMIC=y
 			DL_FLAGS=-DHAS_DLFCN
-		elif test_link "dlopen/dlsym/dlclose in -ldl" TESTLIBS=-ldl ; then
+		elif test_link "dlopen/dlsym/dlclose/dlerror in -ldl" TESTLIBS=-ldl ; then
 			HAS_DYNAMIC=y
 			DL_FLAGS=-DHAS_DLFCN
-			DL_LIB=-ldl
+			DL_LIBS=-ldl
 		fi
 	fi
 
@@ -166,16 +167,19 @@ int main(int argc, char *argv[]) {
 	lt_dlclose(handle);
 	lt_dlinit();
 	lt_dlexit();
+	lt_dlerror();
 	return 0;
 }
 EOF
 		if test_link "libltdl" "TESTLIBS=-lltdl" ; then
 			HAS_DYNAMIC=y
-			DL_LIB=-ltdl
+			DL_LIBS=-ltdl
 		fi
 	fi
 
 	[ -z "$HAS_DYNAMIC" ] && error "!! Can not find dlfcn functions or libltdl. Either dlfcn functions or libltdl are/is required to compile libtranscript."
+	CONFIGFLAGS="${CONFIGFLAGS} ${DL_FLAGS}"
+	CONFIGLIBS="${CONFIGLIBS} ${DL_LIBS}"
 
 	HAS_SETLOCALE=unknown
 	if checkfunction "nl_langinfo" "nl_langinfo(CODESET);" "<langinfo.h>" ; then
@@ -223,5 +227,5 @@ dist-clean:
 EOF
 	fi
 
-	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "PTHREADFLAGS=${PTHREADFLAGS}" "PTHREADLIBS=${PTHREADLIBS}"
+	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "CONFIGLIBS=${CONFIGLIBS}" "PTHREADFLAGS=${PTHREADFLAGS}" "PTHREADLIBS=${PTHREADLIBS}"
 }

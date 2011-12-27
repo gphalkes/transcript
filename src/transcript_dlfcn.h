@@ -20,8 +20,10 @@ typedef void *lt_dlhandle;
 #define LT_PATHSEP_CHAR '/'
 #define lt_dlinit() 0
 #define lt_dlexit()
+#define lt_dlopen(name) dlopen(name, RTLD_NOW | RTLD_LOCAL)
 #define lt_dlsym dlsym
 #define lt_dlclose dlclose
+#define lt_dlerror dlerror
 #else
 #include <ltdl.h>
 #endif

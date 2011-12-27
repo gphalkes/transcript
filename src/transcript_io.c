@@ -24,11 +24,7 @@
 static FILE *fopen_wrapper(const char *name) { return fopen(name, "r"); }
 
 static lt_dlhandle do_dlopen(const char *file) {
-#ifdef HAS_DLFCN
-	return dlopen(file, RTLD_LOCAL);
-#else
 	return lt_dlopen(file);
-#endif
 }
 
 /** Load a suffixed symbol from a plugin. */

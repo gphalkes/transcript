@@ -22,10 +22,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <ltdl.h>
 #include <transcript.h>
 
 #include "optionMacros.h"
+#include "transcript_dlfcn.h"
 
 #define OOM() fatal("Out of memory\n")
 

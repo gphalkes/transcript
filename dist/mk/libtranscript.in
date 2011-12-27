@@ -19,7 +19,10 @@ CFLAGS=-O2
 # - If strdup is not provided by the library, remove -DHAS_STRDUP.
 # - If your platform does not support the nl_langinfo function, remove
 #    -DHAS_NL_LANGINFO
+# - If your platform provides dlopen/dlsym/dlclose add -DHAS_DLFCN and replace
+#    -lltdl with the appropriate libraries to CONFIGLIBS
 CONFIGFLAGS=-DHAS_STRDUP -DHAS_NL_LANGINFO
+CONFIGLIBS=-lltdl
 
 # Flags and libraries required for compilation with Pthreads
 PTHREADFLAGS=-pthread
@@ -79,5 +82,5 @@ dist-clean: clean
 
 src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
 	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> \
-		$(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(PTHREADLIBS) $(GETTEXTLIBS) -lltdl \
+		$(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(CONFIGLIBS) $(PTHREADLIBS) $(GETTEXTLIBS) \
 		-rpath $(libdir)
