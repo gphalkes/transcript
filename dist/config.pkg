@@ -147,7 +147,7 @@ EOF
 		if test_link "dlopen/dlsym/dlclose in standard library" ; then
 			HAS_DYNAMIC=y
 			DL_FLAGS=-DHAS_DLFCN
-		elif test_link "dlopen/dlsym/dlclose in -ldl" ; then
+		elif test_link "dlopen/dlsym/dlclose in -ldl" TESTLIBS=-ldl ; then
 			HAS_DYNAMIC=y
 			DL_FLAGS=-DHAS_DLFCN
 			DL_LIB=-ldl

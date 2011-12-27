@@ -1,3 +1,9 @@
+Version 0.2.2:
+	New features:
+	- Allow finalizing of the library, to allow release of all memory for
+	  debugging purposes.
+	- Use dlopen/dlsym/dlclose directly if available, instead of using libltdl.
+
 Version 0.2.1:
 	Bug fixes:
 	- Fix handling of private use handling in unicode to unicode conversions,
