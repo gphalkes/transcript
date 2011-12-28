@@ -29,7 +29,7 @@ mandir=$(prefix)/share/man
 includedir=$(prefix)/include
 pkgconfigdir=$(libdir)/pkgconfig
 
-all: lib linkltc ucm2ltc libtranscript.pc
+all: lib linkltc ucm2ltc
 
 lib:
 	@$(MAKE) -f mk/libtranscript
@@ -47,21 +47,12 @@ clean:
 	@$(MAKE) -f mk/libtranscript clean
 	@$(MAKE) -f mk/linkltc clean
 	@$(MAKE) -f mk/ucm2ltc clean
-	rm -rf libtranscript.pc
 
 dist-clean:
 	@$(MAKE) -f mk/libtranscript dist-clean
 	@$(MAKE) -f mk/linkltc dist-clean
 	@$(MAKE) -f mk/ucm2ltc dist-clean
 	rm -rf Makefile mk/libtranscript mk/linkltc mk/ucm2ltc config.log libtranscript.pc
-
-libtranscript.pc: libtranscript.pc.in
-	@{ echo '/^prefix=/c\' ; echo 'prefix=$(prefix)' ; } > .sedscript
-	@LIBDIR=$(libdir); if [ "$${LIBDIR#$(prefix)}" != "$${LIBDIR}" ] ; then LIBDIR="\$${prefix}$${LIBDIR#$(prefix)}" ; fi ; \
-		{ echo '/^libdir=/c\' ; echo "libdir=$${LIBDIR}" ; } >> .sedscript
-	@INCLUDEDIR=$(includedir); if [ "$${INCLUDEDIR#$(prefix)}" != "$${INCLUDEDIR}" ] ; then INCLUDEDIR="\$${prefix}$${INCLUDEDIR#$(prefix)}" ; fi ; \
-		{ echo '/^includedir=/c\' ; echo "includedir=$${INCLUDEDIR}" ; } >> .sedscript
-	sed -f .sedscript $< > $@
 
 # Macros to make DESTDIR support more readable
 _bindir=$(DESTDIR)$(bindir)

@@ -227,5 +227,12 @@ dist-clean:
 EOF
 	fi
 
+	PKGCONFIG_DESC="Character-set conversion library"
+	PKGCONFIG_VERSION="<VERSION>"
+	PKGCONFIG_URL="http://os.ghalkes.nl/libtranscript.html"
+	PKGCONFIG_LIBS="-ltranscript"
+	PKGCONFIG_LIBS_PRIVATE="$CONFIGLIBS $PTHREADLIBS"
+
+	gen_pkgconfig libtranscript
 	create_makefile "CONFIGFLAGS=${CONFIGFLAGS}" "CONFIGLIBS=${CONFIGLIBS}" "PTHREADFLAGS=${PTHREADFLAGS}" "PTHREADLIBS=${PTHREADLIBS}"
 }
