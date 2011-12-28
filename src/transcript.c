@@ -432,7 +432,7 @@ transcript_error_t transcript_init(void) {
 		init_char_info();
 		if (lt_dlinit() != 0) {
 			RELEASE_LOCK();
-			return TRANSCRIPT_DLOPEN_FAILURE;
+			return TRANSCRIPT_INIT_DLFCN;
 		}
 /* Disabled because of security risks! */
 #if 0

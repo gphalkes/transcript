@@ -17,7 +17,11 @@
 #ifdef HAS_DLFCN
 #include <dlfcn.h>
 typedef void *lt_dlhandle;
-#define LT_PATHSEP_CHAR '/'
+#ifdef _WIN32
+#define LT_PATHSEP_CHAR ';'
+#else
+#define LT_PATHSEP_CHAR ':'
+#endif
 #define lt_dlinit() 0
 #define lt_dlexit()
 #define lt_dlopen(name) dlopen(name, RTLD_NOW | RTLD_LOCAL)
