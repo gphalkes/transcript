@@ -420,7 +420,7 @@ write_bytes:
 }
 
 /** Check if the current input is a multi-mapping for a from-Unicode conversion. */
-static transcript_error_t from_unicode_check_multi_mappings(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
+static int from_unicode_check_multi_mappings(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
 		char **outbuf, const char const *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;

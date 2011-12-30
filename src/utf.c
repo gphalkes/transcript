@@ -285,7 +285,7 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 /** @internal
     @brief Retrieve a function pointer for writing Unicode codepoints, encoded in one of the UTF-X encodings.
 */
-put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
+put_unicode_func_t _transcript_get_put_unicode(int type) {
 	switch (type) {
 		case TRANSCRIPT_UTF8:
 		case _TRANSCRIPT_UTF8_LOOSE:
@@ -314,7 +314,7 @@ put_unicode_func_t _transcript_get_put_unicode(transcript_utf_t type) {
 /** @internal
     @brief Retrieve a function pointer for reading Unicode codepoints, encoded in one of the UTF-X encodings.
 */
-get_unicode_func_t _transcript_get_get_unicode(transcript_utf_t type) {
+get_unicode_func_t _transcript_get_get_unicode(int type) {
 	switch (type) {
 		case TRANSCRIPT_UTF8:
 			return get_utf8strict;
