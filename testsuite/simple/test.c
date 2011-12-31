@@ -40,6 +40,8 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", TRANSCRIPT_UTF32BE },
 		{ "UTF-32LE", TRANSCRIPT_UTF32LE }};
 
+	transcript_init();
+
 	while ((c = getopt(argc, argv, "d:u:D")) != EOF) {
 		switch (c) {
 			case 'd':

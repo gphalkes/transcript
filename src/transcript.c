@@ -435,7 +435,7 @@ transcript_error_t transcript_init(void) {
 			return TRANSCRIPT_INIT_DLFCN;
 		}
 /* Disabled because of security risks! */
-#if 0
+#if TRANSCRIPT_DEBUG
 		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
 			if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
 				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
@@ -443,6 +443,8 @@ transcript_error_t transcript_init(void) {
 					add_search_dir(search_path_element);
 			}
 		}
+#endif
+#if 0
 		if ((transcript_path = getenv("HOME")) != NULL) {
 			if ((search_path_element = malloc(strlen(transcript_path) + 1 + 11 + 1)) != NULL) {
 				strcpy(search_path_element, transcript_path);
