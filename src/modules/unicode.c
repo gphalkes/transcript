@@ -396,7 +396,7 @@ static void close_converter(converter_state_t *handle) {
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_unicode(void) {
 	static const char * const namelist[] = {
-		"utf-8", "utf-8-bom", "utf-16", "utf-16be", "utf-16le",
+		"utf-8", "x-utf-8-bom", "utf-16", "utf-16be", "utf-16le",
 		"utf-32", "utf-32be", "utf-32le", "utf-7", "scsu", "cesu-8",
 		"gb18030", "x-utf-16le-bom", "x-utf-16be-bom", "x-utf-32le-bom",
 		"x-utf-32be-bom", NULL
