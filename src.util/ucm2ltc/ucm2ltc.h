@@ -202,6 +202,7 @@ class Ucm : public UcmBase {
 			public:
 				StateMachineInfo(Ucm &_source) : variant_iter(_source.variants.begin()), source(_source),
 					iterating_simple_mappings(true), idx(0) {}
+				virtual ~StateMachineInfo(void) {}
 				virtual const vector<State *> &get_state_machine(void) = 0;
 				virtual void replace_state_machine(vector<State *> &states) = 0;
 				virtual bool get_next_byteseq(uint8_t *bytes, size_t &length, action_t &mark_action) = 0;

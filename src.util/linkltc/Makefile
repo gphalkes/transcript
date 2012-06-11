@@ -12,7 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.linkltc := linkltc.c
-LDFLAGS.linkltc := -L../../src/.libs -ltranscript -lltdl
+LDFLAGS.linkltc := -L../../src/.libs
+LDLIBS.linkltc := -ltranscript -lltdl
 CFLAGS.linkltc := -I../../src
 
 TARGETS := linkltc

@@ -699,8 +699,11 @@ static bool_t real_load(converter_state_t *handle, stc_descriptor_t *desc, int g
 
 	flags |= desc->flags;
 
-	if ((flags & STC_FLAG_LARGE_SET) && g == 0)
-		return TRANSCRIPT_INTERNAL_ERROR;
+	if ((flags & STC_FLAG_LARGE_SET) && g == 0) {
+		if (error != NULL)
+			*error = TRANSCRIPT_INTERNAL_ERROR;
+		return FALSE;
+	}
 
 	ext_handle = transcript_open_converter_nolock(desc->name, utf_type, TRANSCRIPT_INTERNAL, error);
 
