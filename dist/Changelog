@@ -1,3 +1,9 @@
+Version 0.2.3:
+	Bug fixes:
+	- Correct naming of UTF-8 with BOM in compiled name list (is now correctly
+	  listed as X-UTF-8-BOM). This allows the UTF-8 with BOM converter to be
+	  loaded.
+
 Version 0.2.2:
 	New features:
 	- Allow finalizing of the library, to allow release of all memory for
