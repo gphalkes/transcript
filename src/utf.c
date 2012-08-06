@@ -1,4 +1,4 @@
-/* Copyright (C) 2011 G.P. Halkes
+/* Copyright (C) 2011-2012 G.P. Halkes
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 3, as
    published by the Free Software Foundation.
@@ -11,43 +11,80 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include <arpa/inet.h>
 #include <string.h>
 
 #include "transcript_internal.h"
 #include "utf.h"
 
-#if defined(USE_ENDIAN) || defined(USE_SYS_ENDIAN)
-#ifdef USE_ENDIAN
-#include <endian.h>
-#else
-#include <sys/endian.h>
-#endif
+/* Routines for writing and reading 32 and 16 bit integers of different byte orders.
+   The code below is written such that it is completely host-machine order agnostic.
+   It may not be the very fastest way of doing this, but the differences in run-time
+   are small, and this code is very readable.
 
-#define swaps_a(value) htole16(value)
-#define swaps_b(value) htobe16(value)
-#define swapl_a(value) htole32(value)
-#define swapl_b(value) htobe32(value)
-
-#else
-#define swaps_a(value) (value)
-#define swaps_b(value) swaps(value)
-#define swapl_a(value) (value)
-#define swapl_b(value) swapl(value)
-
-/* GCC will recognize this as a byte swap, and will optimize (uses rolw $8, <reg> on IA-32) */
-static _TRANSCRIPT_INLINE uint16_t swaps(uint16_t value) {
-	return (value << 8) | (value >> 8);
+   Also included are the machine-endian versions, which are essentially just a
+   memcpy. This is done to allow the put_utfXX_YY functions to be created for the
+   machine-endian versions as well.
+*/
+static void put32_le(uint32_t value, unsigned char *data) {
+	data[0] = value;
+	data[1] = value >> 8;
+	data[2] = value >> 16;
+	data[3] = value >> 24;
 }
 
-#if __GNUC__ > 4 || (__GNUC__ == 4 &&  __GNUC_MINOR__ >= 3)
-#define swapl(value) __builtin_bswap32(value)
-#else
-static _TRANSCRIPT_INLINE uint32_t swapl(uint32_t value) {
-	return swaps(value) << 16 | swaps(value >> 16);
+static void put32_me(uint32_t value, unsigned char *data) {
+	memcpy(data, &value, 4);
 }
-#endif
-#endif
+
+static void put32_be(uint32_t value, unsigned char *data) {
+	data[0] = value >> 24;
+	data[1] = value >> 16;
+	data[2] = value >> 8;
+	data[3] = value;
+}
+
+static uint32_t get32_le(const unsigned char *data) {
+	return (uint32_t) data[0] | (((uint32_t) data[1]) << 8) | (((uint32_t) data[2]) << 16) | (((uint32_t) data[3]) << 24);
+}
+
+static uint32_t get32_me(const unsigned char *data) {
+	uint32_t result;
+	memcpy(&result, data, 4);
+	return result;
+}
+
+static uint32_t get32_be(const unsigned char *data) {
+	return (uint32_t) data[3] | (((uint32_t) data[2]) << 8) | (((uint32_t) data[1]) << 16) | (((uint32_t) data[0]) << 24);
+}
+
+
+static void put16_le(uint16_t value, unsigned char *data) {
+	data[0] = value;
+	data[1] = value >> 8;
+}
+
+static void put16_me(uint16_t value, unsigned char *data) {
+	memcpy(data, &value, 2);
+}
+
+static void put16_be(uint16_t value, unsigned char *data) {
+	data[0] = value >> 8;
+	data[1] = value;
+}
+
+static uint16_t get16_le(const unsigned char *data) {
+	return (uint16_t) data[0] | (((uint16_t) data[1]) << 8);
+}
+
+static uint16_t get16_me(const unsigned char *data) {
+	uint16_t result;
+	memcpy(&result, data, 2);
+	return result;
+}
+
+static uint16_t get16_be(const unsigned char *data) {
+	return (uint16_t) data[1] | (((uint16_t) data[0]) << 8);
+}
 
 /** Simplification macro to check whether a codepoint is valid, and return an error if not. */
 #define CHECK_CODEPOINT_RANGE() do { if (codepoint > UINT32_C(0x10ffff) || \
@@ -266,7 +303,7 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 	return codepoint;
 }
 
-/* We need both a version that does, and a version that does not swap for the UTF-16 and UTF-32
+/* We need versions for big, little and machine endian for the UTF-16 and UTF-32
    routines. Of course we could add another layer of indirection, but to allow some optimization
    in these routines (which will be called frequently), we want them to be complete routines.
 
@@ -275,10 +312,13 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
    name of both the function and the swap functions they call. This way we create the necessary
    XXX_a and XXX_b routines.
 */
-#define UTF_ENDIAN_H_VERSION _a
+#define UTF_ENDIAN_H_VERSION _le
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
-#define UTF_ENDIAN_H_VERSION _b
+#define UTF_ENDIAN_H_VERSION _be
+#include "utf_endian.h"
+#undef UTF_ENDIAN_H_VERSION
+#define UTF_ENDIAN_H_VERSION _me
 #include "utf_endian.h"
 #undef UTF_ENDIAN_H_VERSION
 
@@ -291,18 +331,18 @@ put_unicode_func_t _transcript_get_put_unicode(int type) {
 		case _TRANSCRIPT_UTF8_LOOSE:
 			return put_utf8;
 		case TRANSCRIPT_UTF16:
-			return swaps_a(1) == 1 ? put_utf16_a : put_utf16_b;
+			return put_utf16_me;
 		case TRANSCRIPT_UTF32:
-			return swaps_a(1) == 1 ? put_utf32_a : put_utf32_b;
+			return put_utf32_me;
 
 		case TRANSCRIPT_UTF16BE:
-			return htons(1) == swaps_a(1) ? put_utf16_a : put_utf16_b;
+			return put_utf16_be;
 		case TRANSCRIPT_UTF16LE:
-			return htons(1) == swaps_a(1) ? put_utf16_b : put_utf16_a;
+			return put_utf16_le;
 		case TRANSCRIPT_UTF32BE:
-			return htons(1) == swaps_a(1) ? put_utf32_a : put_utf32_b;
+			return put_utf32_be;
 		case TRANSCRIPT_UTF32LE:
-			return htons(1) == swaps_a(1) ? put_utf32_b : put_utf32_a;
+			return put_utf32_le;
 
 		case _TRANSCRIPT_CESU8:
 			return put_cesu8;
@@ -319,22 +359,22 @@ get_unicode_func_t _transcript_get_get_unicode(int type) {
 		case TRANSCRIPT_UTF8:
 			return get_utf8strict;
 		case TRANSCRIPT_UTF16:
-			return swaps_a(1) == 1 ? get_utf16_a : get_utf16_b;
+			return get_utf16_me;
 		case TRANSCRIPT_UTF32:
-			return swaps_a(1) == 1 ? get_utf32_a : get_utf32_b;
+			return get_utf32_me;
 
 		case _TRANSCRIPT_UTF8_LOOSE:
 		case _TRANSCRIPT_CESU8:
 			return get_utf8;
 
 		case TRANSCRIPT_UTF16BE:
-			return htons(1) == swaps_a(1) ? get_utf16_a : get_utf16_b;
+			return get_utf16_be;
 		case TRANSCRIPT_UTF16LE:
-			return htons(1) == swaps_a(1) ? get_utf16_b : get_utf16_a;
+			return get_utf16_le;
 		case TRANSCRIPT_UTF32BE:
-			return htons(1) == swaps_a(1) ? get_utf32_a : get_utf32_b;
+			return get_utf32_be;
 		case TRANSCRIPT_UTF32LE:
-			return htons(1) == swaps_a(1) ? get_utf32_b : get_utf32_a;
+			return get_utf32_le;
 
 		case _TRANSCRIPT_UTF32_NO_CHECK:
 			return _transcript_get_utf32_no_check;
