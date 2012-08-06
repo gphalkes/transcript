@@ -24,6 +24,9 @@ testsuite/*/work
 testsuite/simple/test
 testsuite/simple/.deps
 testsuite/simple/.objects
+testsuite/simple/converters/.libs
+testsuite/simple/converters/*.la
+testsuite/simple/converters/*.c
 .backupfilter.hg
 doc/API
 

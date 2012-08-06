@@ -25,7 +25,7 @@ while [ $# -gt 1 ] ; do
 done
 
 rm -f *.txt test[0-9][0-9] 2>/dev/null
-csplit -ftest -z -s "$1" '/^--/'
+csplit -ftest -z -s "$1" '/^--/' '{*}'
 sed -i '/^--/d' test[0-9][0-9]
 
 for i in test[0-9][0-9] ; do
