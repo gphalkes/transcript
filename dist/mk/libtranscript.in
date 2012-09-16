@@ -67,7 +67,8 @@ modules: <MODULES>
 OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
 
 clean:
-	rm -rf src/*.lo src/tables/*.lo src/modules/*.lo po/*.mo src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs
+	rm -rf src/*.lo src/tables/*.lo src/modules/*.lo po/*.mo src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs \
+		src/modules/.libs
 
 dist-clean: clean
 
