@@ -12,11 +12,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.check_converter := check_converter.c
-LDFLAGS.check_converter := -L../src/.libs -ltranscript
+LDFLAGS.check_converter := -L../src/.libs
+LDLIBS.check_converter := -ltranscript
 CFLAGS.check_converter := -I../src
 
 SOURCES.generate_table := generate_table.c
-LDFLAGS.generate_table := -L../src/.libs -ltranscript
+LDFLAGS.generate_table := -L../src/.libs
+LDLIBS.generate_table := -ltranscript
 CFLAGS.generate_table := -I../src
 
 TARGETS := check_converter generate_table
