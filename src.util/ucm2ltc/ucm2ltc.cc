@@ -18,7 +18,7 @@
 #include <cstring>
 #include <arpa/inet.h>
 #include <climits>
-#include <transcript.h>
+#include <transcript/transcript.h>
 #include <map>
 
 #include "ucm2ltc.h"

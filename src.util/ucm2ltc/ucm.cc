@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <arpa/inet.h>
 #include <algorithm>
-#include "moduledefs.h"
+#include "transcript/moduledefs.h"
 #include "ucm2ltc.h"
 
 State::State(void) : flags(0), base(0), range(0), complete(false) {

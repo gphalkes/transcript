@@ -16,7 +16,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <arpa/inet.h>
-#include <transcript.h>
+#include <transcript/transcript.h>
 
 #include "ucm2ltc.h"
 

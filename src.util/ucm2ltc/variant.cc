@@ -13,7 +13,7 @@
 */
 #include <cstring>
 #include <algorithm>
-#include <transcript.h>
+#include <transcript/transcript.h>
 
 #include "ucm2ltc.h"
 

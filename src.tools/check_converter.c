@@ -7,7 +7,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include "transcript.h"
+#include "transcript/transcript.h"
 #include "optionMacros.h"
 
 static const char *option_transcript_name, *option_iconv_name;

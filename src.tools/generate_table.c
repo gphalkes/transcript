@@ -8,7 +8,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-#include "transcript.h"
+#include "transcript/transcript.h"
 #include "optionMacros.h"
 
 static const char *option_converter_name;

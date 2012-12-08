@@ -24,7 +24,7 @@ CXXTARGETS := ucm2ltc
 #================================================#
 include ../../../makesys/rules.mk
 #================================================#
-CXXFLAGS += -I. -I../../src -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
+CXXFLAGS += -I. -I../../include -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 FLFLAGS += --never-interactive --nounistd
 
 ucm2ltc: | library

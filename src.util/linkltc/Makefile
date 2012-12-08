@@ -14,7 +14,7 @@
 SOURCES.linkltc := linkltc.c
 LDFLAGS.linkltc := -L../../src/.libs
 LDLIBS.linkltc := -ltranscript -lltdl
-CFLAGS.linkltc := -I../../src
+CFLAGS.linkltc := -I../../include
 
 TARGETS := linkltc
 #================================================#

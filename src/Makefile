@@ -73,12 +73,8 @@ clean::
 	rm -rf modules/.libs modules/*.la 2>/dev/null
 	rm -rf tables/.libs tables/*.la 2>/dev/null
 
-$(patsubst %.c, .objects/%.lo, $(MODULESOURCES)): | links
-$(patsubst %.c, .objects/%.lo, $(TABLESOURCES)): | links
-
-links:
-	$(if $(VERBOSE), @echo [SH] making links ;,)
-	@[ -L transcript ] || ln -s . transcript
+$(patsubst %.c, .objects/%.lo, $(MODULESOURCES)):
+$(patsubst %.c, .objects/%.lo, $(TABLESOURCES)):
 
 converter-links: | linkltc $(LTTARGETS)
 	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc
