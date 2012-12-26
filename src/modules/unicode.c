@@ -252,8 +252,8 @@ static void load_state(converter_state_t *handle, void *state) {
 }
 
 /** Compare function for lfind. */
-static int compare(const char *key, const name_to_utftype *ptr) {
-	return strcmp(key, ptr->name);
+static int compare(const name_to_utftype *a, const name_to_utftype *b) {
+	return strcmp(a->name, b->name);
 }
 
 /** @internal
@@ -265,11 +265,12 @@ static int compare(const char *key, const name_to_utftype *ptr) {
 static transcript_t *open_unicode(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_state_t *retval;
 	name_to_utftype *ptr;
+	name_to_utftype key = { name, 0 };
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
 	(void) utf_type;
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(&key, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 	{
 		if (error != NULL)
@@ -377,9 +378,10 @@ static transcript_t *open_unicode(const char *name, transcript_utf_t utf_type, i
 
 TRANSCRIPT_EXPORT int transcript_probe_gb18030(const char *name) {
 	name_to_utftype *ptr;
+	name_to_utftype key = { name, 0 };
 	size_t array_size = TRANSCRIPT_ARRAY_SIZE(map);
 
-	if ((ptr = lfind(name, map, &array_size, sizeof(map[0]),
+	if ((ptr = lfind(&key, map, &array_size, sizeof(map[0]),
 			(int (*)(const void *, const void *)) compare)) == NULL)
 		return FALSE;
 
