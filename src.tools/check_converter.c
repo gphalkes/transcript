@@ -187,6 +187,7 @@ int main(int argc, char *argv[]) {
 	if ((iconv_revert_handle = iconv_open(htons(1) == 1 ? "UTF-32BE" : "UTF-32LE", option_iconv_name)) == (iconv_t) -1)
 		fatal("Could not open iconv revertor %s\n", option_iconv_name);
 
+	transcript_init();
 	if ((transcript_handle = transcript_open_converter(option_transcript_name,
 			htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0, &error)) == NULL)
 		fatal("Could not open transcript converter %s: %s\n", option_transcript_name, transcript_strerror(error));
