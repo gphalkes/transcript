@@ -195,7 +195,7 @@ static int check_escapes(converter_state_t *handle, const uint8_t **inbuf, const
 			goto sequence_found;
 		}
 		if (skip)
-			*inbuf = _inbuf - 1;
+			*inbuf = _inbuf;
 		return TRANSCRIPT_ILLEGAL;
 	}
 
@@ -268,9 +268,12 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 						goto state_shift_done;
 
 				state_shift_done:
-						if (handle->state.g_to[state > 3 ? state >> 2 : state] == NULL)
+						if (handle->state.g_to[state > 3 ? state >> 2 : state] != NULL)
+							handle->state.to = state;
+						else if (flags & TRANSCRIPT_SUBST_ILLEGAL)
+							PUT_UNICODE(UINT32_C(0xfffd));
+						else
 							return TRANSCRIPT_ILLEGAL;
-						handle->state.to = state;
 
 						(*inbuf) += 2;
 						continue;
@@ -284,12 +287,17 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 						goto incomplete_char;
 					case TRANSCRIPT_ILLEGAL:
 						/* Handle C1 escapes. */
-						if (handle->iso2022_type == ISO2022_JP2 && (*inbuf)[1] >= 0x40 && (*inbuf)[1] < 0x60) {
+						if ((*inbuf)[1] >= 0x40 && (*inbuf)[1] < 0x60) {
 							PUT_UNICODE((*inbuf)[1] + 0x40);
 							(*inbuf) += 2;
 							break;
 						}
-						return TRANSCRIPT_ILLEGAL;
+						if (flags & TRANSCRIPT_SUBST_ILLEGAL)
+							PUT_UNICODE(UINT32_C(0xfffd));
+						else
+							return TRANSCRIPT_ILLEGAL;
+						check_escapes(handle, inbuf, inbuflimit, TRUE);
+						continue;
 					case TRANSCRIPT_SUCCESS:
 						continue;
 					default:
@@ -297,9 +305,12 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 				}
 			} else if (**inbuf == 0xe) {
 				/* Shift out. */
-				if (handle->state.g_to[1] == NULL)
+				if (handle->state.g_to[1] != NULL)
+					handle->state.to = 1;
+				else if (flags & TRANSCRIPT_SUBST_ILLEGAL)
+					PUT_UNICODE(UINT32_C(0xfffd));
+				else
 					return TRANSCRIPT_ILLEGAL;
-				handle->state.to = 1;
 				(*inbuf)++;
 				continue;
 			} else if (**inbuf == 0xf) {
@@ -323,7 +334,12 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 			}
 		} else if (**inbuf & 0x80) {
 			/* All ISO-2022 converters implemented here are 7 bit only. */
-			return TRANSCRIPT_ILLEGAL;
+			if (flags & TRANSCRIPT_SUBST_ILLEGAL) {
+				PUT_UNICODE(UINT32_C(0xfffd));
+				(*inbuf)++;
+			} else {
+				return TRANSCRIPT_ILLEGAL;
+			}
 		} else {
 			int internal_flags = flags & ~(TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED);
 
@@ -336,11 +352,18 @@ static int to_unicode_conversion(converter_state_t *handle, const uint8_t **inbu
 			if ((result = handle->state.g_to[state]->stc->convert_to(handle->state.g_to[state]->stc, (const char **) inbuf,
 					(const char *) inbuflimit, outbuf, outbuflimit, internal_flags)) != TRANSCRIPT_SUCCESS)
 			{
-				if (result == TRANSCRIPT_ILLEGAL && **inbuf < 32) {
-					continue;
+				if (result == TRANSCRIPT_ILLEGAL) {
+					if (**inbuf < 32)
+						continue;
+					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+						return TRANSCRIPT_ILLEGAL;
+					internal_flags |= TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_SUBST_ILLEGAL;
+					if ((result = handle->state.g_to[state]->stc->convert_to(handle->state.g_to[state]->stc, (const char **) inbuf,
+							(const char *) inbuflimit, outbuf, outbuflimit, internal_flags)) != TRANSCRIPT_SUCCESS)
+						return result;
 				} else if (result == TRANSCRIPT_ILLEGAL_END || result == TRANSCRIPT_INCOMPLETE) {
 					goto incomplete_char;
-				} if (result == TRANSCRIPT_UNASSIGNED && (flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+				} else if (result == TRANSCRIPT_UNASSIGNED && (flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
 					PUT_UNICODE(0xfffd);
 					(*inbuf) += handle->state.g_to[state]->bytes_per_char;
 				} else {
