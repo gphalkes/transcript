@@ -5,8 +5,8 @@
 #include <strings.h>
 #include <string.h>
 
-#include "transcript.h"
-#include "utf.h"
+#include "transcript/transcript.h"
+#include "transcript/utf.h"
 
 void fatal(const char *fmt, ...) {
 	va_list args;
@@ -19,8 +19,8 @@ void fatal(const char *fmt, ...) {
 
 void print_usage(void) {
 	printf("Usage: test [OPTIONS] <CONVERTER NAME>\n");
-	printf("  -d<to|from>      Conversion direction (default=from)\n");
-	printf("  -u<type>         Unicode type: UTF-?\n");
+	printf("  -d<to|from>      Conversion direction (default=from Unicode)\n");
+	printf("  -u<type>         Unicode type: UTF-? (default=UTF-8)\n");
 	printf("  -D               Dump raw output\n");
 	printf("  -f               Allow fallbacks\n");
 	printf("  -l               List converters\n");
@@ -102,6 +102,7 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     or: test -l");
 
+	transcript_init();
 	if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening converter: %s\n", transcript_strerror(error));
 

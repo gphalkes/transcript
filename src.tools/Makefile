@@ -22,8 +22,9 @@ LDLIBS.generate_table := -ltranscript
 CFLAGS.generate_table := -I../include
 
 SOURCES.test := test.c
-LDFLAGS.test := -L.libs
+LDFLAGS.test := -L../src/.libs
 LDLIBS.test := -ltranscript
+CFLAGS.test := -I../include
 
 TARGETS := check_converter generate_table test
 #================================================#
