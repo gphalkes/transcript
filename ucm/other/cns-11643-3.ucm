@@ -1,4 +1,21 @@
-# UCM based on Unihan_IRGSources.txt
+# UCM based on Unihan_IRGSources.txt and Unihan-3.2.0.txt
+
+# Copyright notice from Unihan-3.2.0txt
+#       Copyright (c) 1996-2002 Unicode, Inc. All Rights reserved.
+#
+#       This file is provided as-is by Unicode, Inc. (The Unicode Consortium).
+#       No claims are made as to fitness for any particular purpose. No
+#       warranties of any kind are expressed or implied. The recipient
+#       agrees to determine applicability of information provided. If this
+#       file has been provided on magnetic media by Unicode, Inc., the sole
+#       remedy for any claim will be exchange of defective media within 90
+#       days of receipt.
+#
+#       Recipient is granted the right to make copies in any form for
+#       internal distribution and to freely use the information supplied
+#       in the creation of products supporting Unicode. Unicode, Inc.
+#       specifically excludes the right to re-distribute this file directly
+#       to third parties or other organizations whether for profit or not.
 
 # Copyright notice from Unihan_IRGSources.txt
 # Unicode Character Database
@@ -25,7 +42,6 @@ CHARMAP
 <U2172E> \x30\x53 |0
 <U21D46> \x23\x59 |0
 <U2233F> \x2A\x39 |0
-<U225D6> \x26\x23 |0
 <U225D7> \x25\x7E |0
 <U230BA> \x47\x31 |0
 <U235F3> \x47\x4B |0
@@ -6408,3 +6424,11 @@ CHARMAP
 <U9FA3> \x61\x61 |0
 <U9FA5> \x61\x77 |0
 END CHARMAP
+
+VARIANT cns-11643-1992-3
+<U5FF9> \x26\x23 |0
+END VARIANT
+
+VARIANT cns-11643-2004-3
+<U225D6> \x26\x23 |0
+END VARIANT

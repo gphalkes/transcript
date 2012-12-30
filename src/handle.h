@@ -43,8 +43,7 @@ struct transcript_t {
 	int flags;
 };
 
-/* FIXME: rename! */
 TRANSCRIPT_API transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_t utf_type,
 	int flags, transcript_error_t *error);
-
+TRANSCRIPT_API void transcript_close_converter_nolock(transcript_t *handle);
 #endif

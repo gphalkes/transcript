@@ -177,6 +177,8 @@ static void to_unicode_reset(converter_handle_t *handle);
 static void from_unicode_reset(converter_handle_t *handle);
 static void close_converter(converter_handle_t *handle);
 
+static void close_converter_internal(converter_handle_t *handle, bool_t lock);
+
 /** Check an escape sequence for validity within this converter. */
 static int check_escapes(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit, bool_t skip) {
 	stc_handle_t *ptr;
@@ -735,7 +737,7 @@ static bool_t real_load(converter_handle_t *handle, stc_descriptor_t *desc, int 
 		return FALSE;
 
 	if ((stc_handle = malloc(sizeof(stc_handle_t))) == NULL) {
-		transcript_close_converter(ext_handle);
+		transcript_close_converter_nolock(ext_handle);
 		if (error != NULL)
 			*error = TRANSCRIPT_OUT_OF_MEMORY;
 		return FALSE;
@@ -761,7 +763,7 @@ static bool_t real_load(converter_handle_t *handle, stc_descriptor_t *desc, int 
 	   the short sequence or the long sequence is used for from-Unicode conversions. */
 	if (desc->final_byte < 0x43 && desc->bytes_per_char > 1) {
 		if ((extra_handle = malloc(sizeof(stc_handle_t))) == NULL) {
-			transcript_close_converter(ext_handle);
+			transcript_close_converter_nolock(ext_handle);
 			free(stc_handle);
 			if (error != NULL)
 				*error = TRANSCRIPT_OUT_OF_MEMORY;
@@ -963,12 +965,12 @@ static void *open_iso2022(const char *name, transcript_utf_t utf_type, int flags
 	retval->reset_state = reset_state_nop;
 
 	if (!do_load(real_load, retval, ptr->iso2022_type, utf_type, error)) {
-		close_converter(retval);
+		close_converter_internal(retval, FALSE);
 		return NULL;
 	}
 	/* Load ASCII, which all converters need. */
 	if (!real_load(retval, &ascii, 0, error, utf_type, TRUE)) {
-		close_converter(retval);
+		close_converter_internal(retval, FALSE);
 		return NULL;
 	}
 	retval->ascii = retval->g_sets;
@@ -1005,11 +1007,18 @@ static bool_t probe_iso2022(const char *name) {
 
 /** close implementation for ISO-2022 converters. */
 static void close_converter(converter_handle_t *handle) {
+	close_converter_internal(handle, TRUE);
+}
+
+static void close_converter_internal(converter_handle_t *handle, bool_t lock) {
 	stc_handle_t *ptr, *next;
 
 	for (ptr = handle->g_sets; ptr != NULL; ptr = next) {
 		if (!(ptr->flags & STC_FLAGS_DUPSTC))
-			transcript_close_converter(ptr->stc);
+			if (lock)
+				transcript_close_converter(ptr->stc);
+			else
+				transcript_close_converter_nolock(ptr->stc);
 		next = ptr->next;
 		free(ptr);
 	}

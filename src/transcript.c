@@ -657,4 +657,20 @@ void _transcript_log(const char *fmt, ...) {
 	}
 }
 
+
+/** @internal Close a converter without locking.
+    @param handle The converter to close.
+
+    This function releases all memory associated with @a handle. @a handle may
+    be @c NULL.
+*/
+void transcript_close_converter_nolock(transcript_t *handle) {
+	if (handle != NULL) {
+		if (handle->close != NULL)
+			handle->close(handle);
+		lt_dlclose(handle->library_handle);
+		free(handle);
+	}
+}
+
 /** @} */

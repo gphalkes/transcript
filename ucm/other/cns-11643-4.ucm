@@ -1,4 +1,21 @@
-# UCM based on Unihan_IRGSources.txt
+# UCM based on Unihan_IRGSources.txt and Unihan-3.2.0.txt
+
+# Copyright notice from Unihan-3.2.0txt
+#       Copyright (c) 1996-2002 Unicode, Inc. All Rights reserved.
+#
+#       This file is provided as-is by Unicode, Inc. (The Unicode Consortium).
+#       No claims are made as to fitness for any particular purpose. No
+#       warranties of any kind are expressed or implied. The recipient
+#       agrees to determine applicability of information provided. If this
+#       file has been provided on magnetic media by Unicode, Inc., the sole
+#       remedy for any claim will be exchange of defective media within 90
+#       days of receipt.
+#
+#       Recipient is granted the right to make copies in any form for
+#       internal distribution and to freely use the information supplied
+#       in the creation of products supporting Unicode. Unicode, Inc.
+#       specifically excludes the right to re-distribute this file directly
+#       to third parties or other organizations whether for profit or not.
 
 # Copyright notice from Unihan_IRGSources.txt
 # Unicode Character Database
@@ -6340,7 +6357,6 @@ CHARMAP
 <U4D50> \x6C\x5A |0
 <U4D52> \x55\x5E |0
 <U4D55> \x65\x79 |0
-<U4D56> \x68\x4F |0
 <U4D57> \x68\x4C |0
 <U4D58> \x68\x4E |0
 <U4D59> \x68\x4D |0
@@ -7298,5 +7314,14 @@ CHARMAP
 <U9F8F> \x63\x2D |0
 <U9F96> \x6E\x55 |0
 <U9F9E> \x6E\x33 |0
-<U9FC3> \x39\x46 |0
 END CHARMAP
+
+VARIANT cns-11643-1992-4
+<U2FA16> \x68\x4F |0
+<U4039> \x39\x46 |0
+END VARIANT
+
+VARIANT cns-11643-2004-4
+<U4D56> \x68\x4F |0
+<U9FC3> \x39\x46 |0
+END VARIANT

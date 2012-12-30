@@ -18,32 +18,57 @@
 #include <transcript/static_assert.h>
 #include <transcript/moduledefs.h>
 
-static const char *plane_names[16] = {
+#define NR_OF_PLANES 16
+
+static const char *plane_names_2004[NR_OF_PLANES] = {
 	"ASCII",
-	"CNS-11643-1",
-	"CNS-11643-2",
-	"CNS-11643-3",
-	"CNS-11643-4",
-	"CNS-11643-5",
-	"CNS-11643-6",
-	"CNS-11643-7",
+	"CNS-11643-2004-1",
+	"CNS-11643-2004-2",
+	"CNS-11643-2004-3",
+	"CNS-11643-2004-4",
+	"CNS-11643-2004-5",
+	"CNS-11643-2004-6",
+	"CNS-11643-2004-7",
 
 	/* Planes 8, 9 and A have no codepoints, and thus do not exist as tables.
 	   We define them as NULL here, and skip them in the initialization below. */
-	NULL, /* "CNS-11643-1992-8", */
-	NULL, /* "CNS-11643-1992-9", */
-	NULL, /* "CNS-11643-1992-A", */
+	NULL,
+	NULL,
+	NULL,
 
-	"CNS-11643-B",
-	"CNS-11643-C",
-	"CNS-11643-D",
-	"CNS-11643-E",
-	"CNS-11643-F"
+	"CNS-11643-2004-B",
+	"CNS-11643-2004-C",
+	"CNS-11643-2004-D",
+	"CNS-11643-2004-E",
+	"CNS-11643-2004-F"
+};
+
+static const char *plane_names_1992[NR_OF_PLANES] = {
+	"ASCII",
+	"CNS-11643-1992-1",
+	"CNS-11643-1992-2",
+	"CNS-11643-1992-3",
+	"CNS-11643-1992-4",
+	"CNS-11643-1992-5",
+	"CNS-11643-1992-6",
+	"CNS-11643-1992-7",
+
+	/* Planes 8 through 14 have no codepoints, and thus do not exist as tables.
+	   We define them as NULL here, and skip them in the initialization below. */
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+
+	"CNS-11643-1992-F"
 };
 
 typedef struct {
 	transcript_t common;
-	transcript_t *planes[TRANSCRIPT_ARRAY_SIZE(plane_names)];
+	transcript_t *planes[NR_OF_PLANES];
 } converter_handle_t;
 
 static void close_converter(converter_handle_t *handle);
@@ -176,14 +201,16 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 	char *data_start;
 	char *data_write;
 	int internal_flags;
-	size_t i;
+	int fallback_converter;
+	int i;
 
 	while (*inbuf < inbuflimit) {
-		for (i = 0; i < TRANSCRIPT_ARRAY_SIZE(plane_names); i++) {
+		fallback_converter = -1;
+		for (i = 0; i < NR_OF_PLANES; i++) {
 			if (handle->planes[i] == NULL)
 				continue;
 
-			internal_flags = flags & ~(TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED);
+			internal_flags = flags & ~(TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_SUBST_UNASSIGNED | TRANSCRIPT_ALLOW_FALLBACK);
 			plane_handle = handle->planes[i];
 			saved_outbuf = *outbuf;
 			result = plane_handle->convert_from(plane_handle, inbuf, inbuflimit, outbuf,
@@ -216,6 +243,10 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 					break;
 				case TRANSCRIPT_UNASSIGNED:
 					break;
+				case TRANSCRIPT_FALLBACK:
+					if ((flags & TRANSCRIPT_ALLOW_FALLBACK) && fallback_converter < 0)
+						fallback_converter = i;
+					break;
 				default:
 					return result;
 			}
@@ -223,7 +254,14 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 				break;
 		}
 
-		if (i == TRANSCRIPT_ARRAY_SIZE(plane_names)) {
+		if (i == NR_OF_PLANES) {
+			if (fallback_converter >= 0) {
+				result = plane_handle->convert_from(plane_handle, inbuf, inbuflimit, outbuf,
+					*outbuf + ((outbuflimit - *outbuf) >> (i > 1)), flags | TRANSCRIPT_SINGLE_CONVERSION);
+				if (result != TRANSCRIPT_SUCCESS)
+					return result;
+			}
+
 			if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
 				return TRANSCRIPT_UNASSIGNED;
 			if (*outbuf == outbuflimit)
@@ -240,9 +278,18 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 */
 static void *open_euctw(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
 	converter_handle_t *retval;
+	const char **plane_names;
 	int i;
 
-	(void) name;
+	if (strcmp(name, "euctw2004") == 0) {
+		plane_names = plane_names_2004;
+	} else if (strcmp(name, "euctw") == 0 || strcmp(name, "euctw1992") == 0) {
+		plane_names = plane_names_1992;
+	} else {
+		if (error != NULL)
+			*error = TRANSCRIPT_INTERNAL_ERROR;
+		return NULL;
+	}
 
 	if ((retval = malloc(sizeof(converter_handle_t))) == NULL) {
 		if (error != NULL)
@@ -251,14 +298,14 @@ static void *open_euctw(const char *name, transcript_utf_t utf_type, int flags, 
 	}
 
 
-	for (i = 0; i < (int) TRANSCRIPT_ARRAY_SIZE(plane_names); i++) {
+	for (i = 0; i < NR_OF_PLANES; i++) {
 		if (plane_names[i] == NULL) {
 			retval->planes[i] = NULL;
 			continue;
 		}
 		if ((retval->planes[i] = transcript_open_converter_nolock(plane_names[i], utf_type, TRANSCRIPT_INTERNAL, error)) == NULL) {
 			for (i--; i >= 0; i--)
-				transcript_close_converter(retval->planes[i]);
+				transcript_close_converter_nolock(retval->planes[i]);
 			free(retval);
 			return NULL;
 		}
@@ -279,11 +326,17 @@ static void *open_euctw(const char *name, transcript_utf_t utf_type, int flags, 
 }
 
 static bool_t probe_euctw(const char *name) {
-	size_t i;
+	const char **plane_names;
+	int i;
 
-	(void) name;
+	if (strcmp(name, "euctw2004") == 0)
+		plane_names = plane_names_2004;
+	else if (strcmp(name, "euctw") == 0 || strcmp(name, "euctw1992") == 0)
+		plane_names = plane_names_1992;
+	else
+		return FALSE;
 
-	for (i = 0; i < TRANSCRIPT_ARRAY_SIZE(plane_names); i++) {
+	for (i = 0; i < NR_OF_PLANES; i++) {
 		if (plane_names[i] == NULL)
 			continue;
 		if (!transcript_probe_converter_nolock(plane_names[i]))
@@ -294,19 +347,24 @@ static bool_t probe_euctw(const char *name) {
 
 /** close implementation for ISO-2022 converters. */
 static void close_converter(converter_handle_t *handle) {
-	size_t i;
-	for (i = 0; i < TRANSCRIPT_ARRAY_SIZE(plane_names); i++)
+	int i;
+	for (i = 0; i < NR_OF_PLANES; i++)
 		transcript_close_converter(handle->planes[i]);
 	free(handle);
 }
 
 TRANSCRIPT_EXPORT const char * const *transcript_namelist_euctw(void) {
 	static const char * const namelist[] = {
-		"euc-tw", NULL
+		"euc-tw", "euc-tw-1992", "euc-tw-2004", NULL
 	};
 	return namelist;
 }
 
-TRANSCRIPT_ALIAS_OPEN(open_euctw, euctw)
-TRANSCRIPT_ALIAS_PROBE(probe_euctw, euctw)
-TRANSCRIPT_EXPORT int transcript_get_iface_euctw(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+#define DEFINE_INTERFACE(name) \
+TRANSCRIPT_ALIAS_OPEN(open_euctw, name) \
+TRANSCRIPT_ALIAS_PROBE(probe_euctw, name) \
+TRANSCRIPT_EXPORT int transcript_get_iface_##name(void) { return TRANSCRIPT_FULL_MODULE_V1; }
+
+DEFINE_INTERFACE(euctw)
+DEFINE_INTERFACE(euctw1992)
+DEFINE_INTERFACE(euctw2004)
