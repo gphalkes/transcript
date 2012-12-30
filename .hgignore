@@ -1,6 +1,5 @@
 syntax: glob
 configure
-src.tools/check_converter
 src.util/linkltc/linkltc
 src/modules/*.la
 src/modules/.libs
@@ -9,7 +8,6 @@ src/tables/*.la
 src/tables/.libs
 doc/motivation.html
 src*/generic_fallbacks.[ch]
-src/test
 src/libtranscript.la
 src.util/ucm2ltc/ucm2ltc
 
@@ -30,8 +28,10 @@ testsuite/simple/converters/*.c
 .backupfilter.hg
 doc/API
 
-src.tools/check_convertor
+src.tools/check_converter
 src.tools/generate_table
+src.tools/test
 
 src.util/*/.objects
 src.util/*/.deps
+notes/

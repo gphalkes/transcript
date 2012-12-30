@@ -32,11 +32,6 @@ $(foreach TABLE, $(TABLES), $(eval LDFLAGS.$(TABLE).la += $(MODULE_FLAGS)))
 MODULESOURCES := $(foreach MODULE, $(MODULES), $(SOURCES.modules/$(MODULE).la))
 TABLESOURCES := $(foreach TABLE, $(TABLES), $(SOURCES.$(TABLE).la))
 
-SOURCES.test := test.c
-LDFLAGS.test := -L.libs
-LDLIBS.test := -ltranscript
-
-TARGETS := test
 LTTARGETS := libtranscript.la $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la)
 EXTRATARGETS := converter-links
 #================================================#
