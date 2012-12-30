@@ -182,3 +182,5 @@ iso-8859_16-2001 *ISO-8859-16 iso-ir-226 *Latin10 l10 # ISO_8859-16:2001
 windows-21866-2000 *Windows-21866
 
 viscii *VISCII iso-ir-180
+
+euctw ibm-964_P110-1999 IBM-964 *EUC-TW IBM-eucTW cns11643 cp964 964 IBM-964_VPUA

@@ -68,7 +68,7 @@ static int to_unicode_conversion(converter_handle_t *handle, const uint8_t **inb
 			int plane, lead_bytes, result;
 
 			if (**inbuf == 0x8e) {
-				if ((*inbuf) + 4 >= inbuflimit)
+				if ((*inbuf) + 3 >= inbuflimit)
 					goto incomplete_char;
 				if ((*inbuf)[1] < 0xa1 || (*inbuf)[1] > 0xaf || (*inbuf)[2] < 0xa1 ||
 						(*inbuf)[2] == 0xff || (*inbuf)[3] < 0xa1 || (*inbuf)[3] == 0xff)
@@ -194,10 +194,10 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 				data_write = *outbuf + (data_start - saved_outbuf);
 				*outbuf = data_write;
 				while (data_start > saved_outbuf) {
-					*data_write-- = *data_start-- | 0x80;
-					*data_write-- = *data_start-- | 0x80;
-					*data_write-- = 0xa0 + i;
-					*data_write-- = 0x8e;
+					*--data_write = *--data_start | 0x80;
+					*--data_write = *--data_start | 0x80;
+					*--data_write = 0xa0 + i;
+					*--data_write = 0x8e;
 				}
 			} else if (i == 1) {
 				while (saved_outbuf < *outbuf)
@@ -214,13 +214,22 @@ static transcript_error_t from_unicode_conversion(converter_handle_t *handle, co
 						return TRANSCRIPT_NO_SPACE;
 					*(*outbuf)++ = 0x1a;
 					break;
-				case TRANSCRIPT_SUCCESS:
+				case TRANSCRIPT_UNASSIGNED:
 					break;
 				default:
 					return result;
 			}
 			if (saved_outbuf != *outbuf)
 				break;
+		}
+
+		if (i == TRANSCRIPT_ARRAY_SIZE(plane_names)) {
+			if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED))
+				return TRANSCRIPT_UNASSIGNED;
+			if (*outbuf == outbuflimit)
+				return TRANSCRIPT_NO_SPACE;
+			*(*outbuf)++ = 0x1a;
+			handle->common.get_unicode(inbuf, inbuflimit, TRUE);
 		}
 	}
 	return TRANSCRIPT_SUCCESS;
