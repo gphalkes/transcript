@@ -17,7 +17,7 @@
 #                 other converter with any of the names specified.
 # :probe_load     The converter must be loaded and the probe routine of the
 #                 converter must be called to establish its presence. Normal
-#                 operation merely checks the presence of the .tct file.
+#                 operation merely checks the presence of the .ltc file.
 
 # Unicode encodings:
 # ==================
@@ -183,4 +183,9 @@ windows-21866-2000 *Windows-21866
 
 viscii *VISCII iso-ir-180
 
-euctw ibm-964_P110-1999 IBM-964 *EUC-TW IBM-eucTW cns11643 cp964 964 IBM-964_VPUA
+euctw :probe_load ibm-964_P110-1999 IBM-964 *EUC-TW IBM-eucTW cns11643 cp964 964 IBM-964_VPUA
+
+# Big5 variants
+*Big5 x-big5 csbig5
+*Windows-950 Windows-950
+*Big5-HKSCS ibm-1375_P100-2007 IBM-1375 big5hk HKSCS-BIG5
