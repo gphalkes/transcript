@@ -1,0 +1,40 @@
+# UCM based on Unihan_IRGSources.txt
+
+# Copyright notice from Unihan_IRGSources.txt
+# Unicode Character Database
+# Copyright (c) 1991-2012 Unicode, Inc.
+# For terms of use, see http://www.unicode.org/terms_of_use.html
+
+<mb_cur_max>           2
+<mb_cur_min>           2
+<uconv_class>          "DBCS"
+<transcript:internal>
+<icu:state>            21-7e:1
+<icu:state>            21-7e
+
+CHARMAP
+<U2B74E> \x73\x3E |0
+<U2B74F> \x73\x23 |0
+<U2B758> \x73\x3C |0
+<U2B759> \x73\x22 |0
+<U2B75B> \x73\x2B |0
+<U2B75E> \x73\x2C |0
+<U2B77A> \x73\x24 |0
+<U2B77B> \x73\x28 |0
+<U2B77D> \x73\x35 |0
+<U2B77E> \x73\x3D |0
+<U2B7AD> \x73\x3B |0
+<U2B7B3> \x73\x2E |0
+<U2B7BB> \x73\x33 |0
+<U2B7BC> \x73\x26 |0
+<U2B7C2> \x73\x29 |0
+<U2B7CA> \x73\x2D |0
+<U2B7D7> \x73\x36 |0
+<U2B7E3> \x73\x25 |0
+<U2B7E7> \x73\x3A |0
+<U2B7EE> \x73\x32 |0
+<U2B804> \x73\x31 |0
+<U2B80E> \x73\x39 |0
+<U2B819> \x73\x37 |0
+<U2B81B> \x73\x30 |0
+END CHARMAP
