@@ -69,7 +69,11 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, cha
 		codepoint = handle->common.get_unicode((const char **) &_inbuf, inbuflimit, FALSE);
 		switch (codepoint) {
 			case TRANSCRIPT_UTF_ILLEGAL:
-				return TRANSCRIPT_ILLEGAL;
+				if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
+					return TRANSCRIPT_ILLEGAL;
+				handle->common.get_unicode((const char **) &_inbuf, inbuflimit, TRUE);
+				codepoint = 0x1a;
+				break;
 			case TRANSCRIPT_UTF_INCOMPLETE:
 				if (flags & TRANSCRIPT_END_OF_TEXT) {
 					if (!(flags & TRANSCRIPT_SUBST_ILLEGAL))
