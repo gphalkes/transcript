@@ -195,7 +195,8 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
 			codepoint_ptr = (char *) &codepoints;
 		try_again:
 			/* Try to convert. If so far the conversion is reversible, try without substitutions and fallbacks first. */
-			switch (transcript_from_unicode(cd->to, (const char **) &codepoint_ptr, (const char *) codepoints + 20 * sizeof(codepoints[0]), outbuf,
+			switch (transcript_from_unicode(cd->to, (const char **) &codepoint_ptr,
+					(const char *) codepoints + 20 * sizeof(codepoints[0]), outbuf,
 					outbuflimit, TRANSCRIPT_NO_1N_CONVERSION |
 					(non_reversible ? TRANSCRIPT_SUBST_UNASSIGNED | TRANSCRIPT_SUBST_ILLEGAL | TRANSCRIPT_ALLOW_FALLBACK : 0)))
 			{

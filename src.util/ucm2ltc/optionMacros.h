@@ -116,6 +116,7 @@ END_FUNCTION
 	for (optargind = 1; optargind < argc; optargind++) { \
 		char optcontrol = 0; \
 		char *optcurrent, *optptr; \
+		(void) optptr; \
 		optcurrent = argv[optargind]; \
 		if (optcurrent[0] == '-' && !optnomore) { \
 			size_t optlength; \

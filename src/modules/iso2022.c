@@ -1014,11 +1014,12 @@ static void close_converter_internal(converter_handle_t *handle, bool_t lock) {
 	stc_handle_t *ptr, *next;
 
 	for (ptr = handle->g_sets; ptr != NULL; ptr = next) {
-		if (!(ptr->flags & STC_FLAGS_DUPSTC))
+		if (!(ptr->flags & STC_FLAGS_DUPSTC)) {
 			if (lock)
 				transcript_close_converter(ptr->stc);
 			else
 				transcript_close_converter_nolock(ptr->stc);
+		}
 		next = ptr->next;
 		free(ptr);
 	}

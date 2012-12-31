@@ -49,7 +49,15 @@ enum action_t {
 	ACTION_FLAG_PAIR = (1<<7),
 	ACTION_FINAL_PAIR = ACTION_FINAL | ACTION_FLAG_PAIR,
 	ACTION_FINAL_PAIR_NOFLAGS = ACTION_FINAL_NOFLAGS | ACTION_FLAG_PAIR,
-	ACTION_LOOP
+	/* List the different combinations with the ACTION_FLAG_PAIR flag, to shut
+	   up the compiler. It also has the advantage that we don't define other
+	   constants with the same value accidentally. */
+	_ACTION_FINAL_PAIR_LEN1_NOFLAGS,
+	_ACTION_FINAL_PAIR_LEN2_NOFLAGS,
+	_ACTION_FINAL_PAIR_LEN3_NOFLAGS,
+	_ACTION_FINAL_PAIR_LEN4_NOFLAGS,
+
+	ACTION_LOOP = 0xff
 };
 
 struct Entry {
