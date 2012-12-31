@@ -59,6 +59,7 @@ int main(int argc, char *argv[]) {
 		{ "UTF-32BE", TRANSCRIPT_UTF32BE },
 		{ "UTF-32LE", TRANSCRIPT_UTF32LE }};
 
+	transcript_init();
 	while ((c = getopt(argc, argv, "d:u:Dlfh")) != EOF) {
 		switch (c) {
 			case 'd':
@@ -102,7 +103,6 @@ int main(int argc, char *argv[]) {
 	if (argc - optind != 1)
 		fatal("Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     or: test -l");
 
-	transcript_init();
 	if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL)
 		fatal("Error opening converter: %s\n", transcript_strerror(error));
 

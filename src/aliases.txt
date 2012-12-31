@@ -136,12 +136,15 @@ windows-936-2000 *GBK CP936 MS936 *Windows-936
 *EUC-CN *GB2312
 
 # EUC-KR and similar. Java KSC names are ignored in favor of IANA ones
-euc-kr *EUC-KR ibm-970_P110_P110-2006_U2 IBM-970 Windows-51949 csEUCKR IBM-eucKR
+EUC-KR ibm-970_P110_P110-2006_U2 IBM-970 Windows-51949 csEUCKR IBM-eucKR
 	cp970 970 IBM-970_VPUA
 
 # Windows EUC-KR variant. KSC names ignored in favor of IANA ones. CP949 is
 # normally this one
 cp949 windows-949-2000 *Windows-949 ms949
+
+EUC-TW :probe_load ibm-964_P110-1999 IBM-964 IBM-eucTW cns11643 cp964 964 IBM-964_VPUA
+EUC-TW-2004
 
 ibm-437_P100-1995 *IBM-437 cp437 437 csPC8CodePage437 Windows-437
 
@@ -183,9 +186,10 @@ windows-21866-2000 *Windows-21866
 
 viscii *VISCII iso-ir-180
 
-euctw :probe_load ibm-964_P110-1999 IBM-964 *EUC-TW IBM-eucTW cns11643 cp964 964 IBM-964_VPUA
-
 # Big5 variants
 *Big5 x-big5 csbig5
-*Windows-950 Windows-950
-*Big5-HKSCS ibm-1375_P100-2007 IBM-1375 big5hk HKSCS-BIG5
+*Windows-950
+big5-hkscs-1999 *Big5-HKSCS ibm-1375_P100-2007 IBM-1375 big5hk HKSCS-BIG5
+Big5-HKSCS-2001
+Big5-HKSCS-2004
+Big5-HKSCS-2008
