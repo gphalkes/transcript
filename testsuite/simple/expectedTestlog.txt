@@ -1,3 +1,12 @@
 ==== Testcase ../tests/ibm-1399.test ====
   - executing test 0
   - executing test 1
+==== Testcase ../tests/utf1632.test ====
+  - executing test 0
+  - executing test 1
+  - executing test 2
+  - executing test 3
+  - executing test 4
+  - executing test 5
+  - executing test 6
+  - executing test 7
