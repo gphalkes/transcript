@@ -86,4 +86,5 @@ TRANSCRIPT_LOCAL void *_transcript_open_state_table_converter(const converter_ta
 TRANSCRIPT_LOCAL void *_transcript_open_sbcs_table_converter(const sbcs_converter_v1_t *tables, int flags, transcript_error_t *error);
 
 TRANSCRIPT_LOCAL extern const char **_transcript_search_path;
+TRANSCRIPT_LOCAL extern int _transcript_initialized_count;
 #endif

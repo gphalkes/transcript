@@ -14,7 +14,8 @@ void fatal(const char *fmt, ...) {
 	va_start(args, fmt);
 	vfprintf(stderr, fmt, args);
 	va_end(args);
-	abort();
+	//~ abort();
+	exit(EXIT_FAILURE);
 }
 
 void print_usage(void) {

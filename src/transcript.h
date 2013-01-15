@@ -111,6 +111,7 @@ typedef enum {
 	TRANSCRIPT_CONVERTER_DISABLED, /**< The converter has been explicitly disabled. */
 	TRANSCRIPT_PACKAGE_FILE, /**< The converter name references a converter package file, not an actual converter. */
 	TRANSCRIPT_INIT_DLFCN, /**< Could not initialize dynamic module loading functionality. */
+	TRANSCRIPT_NOT_INITIALIZED, /**< ::transcript_init has not been called yet. */
 
 	TRANSCRIPT_PART_SUCCESS_MAX = TRANSCRIPT_INCOMPLETE /**< Highest error code which indicates success or end-of-buffer. */
 

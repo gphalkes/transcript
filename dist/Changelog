@@ -12,6 +12,8 @@ Version 0.3.0:
 	- Correctly skip over escape sequences in ISO-2022 converters if requrested.
 	- Fix locking bug in ISO-2022 converter triggered when a sub-converter is
 	  not available.
+	- Generate a separate error when transcript_init has not been called before
+	  calling functions that depend on it.
 
 Version 0.2.3:
 	Bug fixes:

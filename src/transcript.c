@@ -56,7 +56,7 @@ pthread_mutex_t _transcript_lock = PTHREAD_MUTEX_INITIALIZER;
 const char **_transcript_search_path;
 static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
 static char *transcript_path;
-static int initialized_count = 0;
+int _transcript_initialized_count = 0;
 
 
 static void init_char_info(void);
@@ -72,7 +72,10 @@ int transcript_probe_converter(const char *name) {
 	int result;
 
 	ACQUIRE_LOCK();
-	result = transcript_probe_converter_nolock(name);
+	if (!_transcript_initialized_count)
+		result = 0;
+	else
+		result = transcript_probe_converter_nolock(name);
 	RELEASE_LOCK();
 	return result;
 }
@@ -92,7 +95,13 @@ transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_t
 	transcript_t *result;
 
 	ACQUIRE_LOCK();
-	result = transcript_open_converter_nolock(name, utf_type, flags, error);
+	if (!_transcript_initialized_count) {
+		if (error != NULL)
+			*error = TRANSCRIPT_NOT_INITIALIZED;
+		result = NULL;
+	} else {
+		result = transcript_open_converter_nolock(name, utf_type, flags, error);
+	}
 	RELEASE_LOCK();
 	return result;
 }
@@ -344,6 +353,8 @@ const char *transcript_strerror(transcript_error_t error) {
 			return _("Name specifies a converter package file");
 		case TRANSCRIPT_INIT_DLFCN:
 			return _("Could not initialize dynamic module loading functionality");
+		case TRANSCRIPT_NOT_INITIALIZED:
+			return _("The transcript library has not been initialized yet");
 	}
 }
 
@@ -424,7 +435,7 @@ transcript_error_t transcript_init(void) {
 
 	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
 	ACQUIRE_LOCK();
-	if (!initialized_count) {
+	if (!_transcript_initialized_count) {
 		char *search_path_element, *state;
 		#ifdef USE_GETTEXT
 		bindtextdomain("libtranscript", LOCALEDIR);
@@ -464,8 +475,8 @@ transcript_error_t transcript_init(void) {
 		   names. That will be done when that list is requested. */
 		_transcript_init_aliases_from_file();
 	}
-	if (initialized_count < INT_MAX)
-		initialized_count++;
+	if (_transcript_initialized_count < INT_MAX)
+		_transcript_initialized_count++;
 	RELEASE_LOCK();
 	return TRANSCRIPT_SUCCESS;
 }
@@ -479,7 +490,7 @@ transcript_error_t transcript_init(void) {
 */
 void transcript_finalize(void) {
 	ACQUIRE_LOCK();
-	if (initialized_count == INT_MAX || initialized_count == 0 || --initialized_count != 0) {
+	if (_transcript_initialized_count == INT_MAX || _transcript_initialized_count == 0 || --_transcript_initialized_count != 0) {
 		RELEASE_LOCK();
 		return;
 	}

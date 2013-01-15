@@ -226,6 +226,11 @@ static void init_availability(void) {
 	size_t i;
 
 	ACQUIRE_LOCK();
+	if (!_transcript_initialized_count) {
+		RELEASE_LOCK();
+		return;
+	}
+
 	if (availability_initialized) {
 		RELEASE_LOCK();
 		return;
