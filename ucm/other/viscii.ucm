@@ -1,4 +1,4 @@
-# VISCII character set
+# VISCII character set based on libiconv's tests/VISCII.TXT
 
 <mb_cur_max>         1
 <mb_cur_min>         1
