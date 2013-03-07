@@ -14,9 +14,6 @@
 SOURCES.ucm2ltc := ucm2ltc.cc ucm.cc ucm_write_tables.cc ucm_analyse.cc minimize_state_machine.cc \
 	variant.cc ucmparser.gg ucmlexer.l ucm_write_simple.cc
 DEPS.ucmparser.gg := ucmlexer.l ucm2ltc.cc
-CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
-LDFLAGS.ucm2ltc := -L../../src/.libs -Wl,-rpath=$(CURDIR)/../../src/.libs
-LDLIBS.ucm2ltc := -ltranscript
 
 CXXTARGETS := ucm2ltc
 #================================================#
@@ -26,6 +23,10 @@ include ../../../makesys/rules.mk
 #================================================#
 CXXFLAGS += -I. -I../../include -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
 FLFLAGS += --never-interactive --nounistd
+
+CFLAGS.ucmlexer := -Wno-shadow -Wno-switch-default -Wno-unused
+LDFLAGS.ucm2ltc := $(call L, ../../src/.libs)
+LDLIBS.ucm2ltc := -ltranscript
 
 ucm2ltc: | library
 

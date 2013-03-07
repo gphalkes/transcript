@@ -12,19 +12,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.check_converter := check_converter.c
-LDFLAGS.check_converter := -L../src/.libs
-LDLIBS.check_converter := -ltranscript
-CFLAGS.check_converter := -I../include
-
 SOURCES.generate_table := generate_table.c
-LDFLAGS.generate_table := -L../src/.libs
-LDLIBS.generate_table := -ltranscript
-CFLAGS.generate_table := -I../include
-
 SOURCES.test := test.c
-LDFLAGS.test := -L../src/.libs
-LDLIBS.test := -ltranscript
-CFLAGS.test := -I../include
 
 TARGETS := check_converter generate_table test
 #================================================#
@@ -32,7 +21,9 @@ TARGETS := check_converter generate_table test
 #================================================#
 include ../../makesys/rules.mk
 #================================================#
-LDFLAGS += -Wl,-rpath=$(CURDIR)/../src/.libs
+CFLAGS += -I../include
+LDFLAGS += $(call L, ../src/.libs)
+LDLIBS += -ltranscript
 
 check_converter: | library
 generate_table: | library
