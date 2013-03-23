@@ -5,6 +5,10 @@ if [ "$1" = "-r" ] ; then
 	REGENERATE=1
 fi
 
+cd "$(dirname "$0")"
+
+[ -d ../src/tables ] || mkdir ../src/tables
+
 # The script below uses the following sed script:
 # '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}'
 # Unwrap lines with a trailing backslash. This works as follows:
@@ -47,4 +51,9 @@ fi
 		ALLTARGETS="${ALLTARGETS} ../src/tables/${out}.c"
 	done
 	echo "all:${ALLTARGETS}"
+	echo
+	echo "${ALLTARGETS}: | ucm2ltc"
+	echo
+	echo "ucm2ltc:"
+	echo '	@$(MAKE) -q -C ../src.util/ucm2ltc || $(MAKE) --no-print-directory -C ../src.util/ucm2ltc'
 } | make -f - ${REGENERATE:+-B} all && make -C ../src --no-print-directory
