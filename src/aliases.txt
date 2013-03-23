@@ -149,7 +149,7 @@ EUC-TW-2004
 ibm-437_P100-1995 *IBM-437 cp437 437 csPC8CodePage437 Windows-437
 
 ibm-878_P100-1996 IBM-878 *KOI8-R koi8 csKOI8R Windows-20866 cp878
-ibm-1168_P100-2002 IBM-1168 *KOI8-U
+ibm-1168_P100-2002 IBM-1168 *KOI8-U Windows-21866
 
 # Windows 125*
 ibm-5346_P100-1998 IBM-5346 *Windows-1250 cp1250
@@ -174,15 +174,9 @@ ISO-2022-CN-EXT :probe_load
 ibm-37_P100-1995 *IBM-37 ebcdic-cp-us ebcdic-cp-ca
 	ebcdic-cp-wt ebcdic-cp-nl csIBM037 cp037 037 cpibm37
 ibm-1047_P100-1995 *IBM-1047 cp1047 1047
-ibm-1167_P100-2002 *IBM-1167 KOI8-RU
+*KOI8-RU ibm-1167_P100-2002 *IBM-1167
 jis-x-0201-1969 ibm-897_P100-1995 *IBM-897 *JIS-X-0201 X0201 csHalfWidthKatakana
 iso-8859_16-2001 *ISO-8859-16 iso-ir-226 *Latin10 l10 # ISO_8859-16:2001
-
-# Windows-21866 is KOI8-U according to MS, but uses letters from KOI8-RU. However
-# it does not include the different non-alnum characters that KOI8-RU uses.
-# Unfortunately, the changed non-alnum characters in KOI8-RU are often overlooked
-# making that name ambiguous.
-windows-21866-2000 *Windows-21866
 
 viscii *VISCII iso-ir-180
 
