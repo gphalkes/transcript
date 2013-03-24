@@ -1,0 +1,104 @@
+:version: Version <VERSION>
+:summary: Convert a UCM file to an LTC source
+:highlight names: ucm2ltc libtranscript
+
+.hw /usr/share/doc/libtranscript-<VERSION> http://os.ghalkes.nl/libtranscript.html
+
+NAME
+====
+
+ucm2ltc - convert a UCM file to an LTC source
+
+SYNOPSIS
+========
+
+ucm2ltc [_OPTIONS_...] ([-c] [-i] [-n_NAME_] _FILE_...)
+
+DESCRIPTION
+===========
+
+ucm2ltc converts a UCM description of a character set to the C source for
+an LTC (LibTranscript Converter). The UCM description may contain several
+extra constructs specific to ucm2ltc, described below.
+
+OPTIONS
+=======
+
+ucm2ltc accepts the following options:
+
+*-D*, *--dump*::
+  Dump the input as a UCM description of the converter. Only the input files up
+  to the first -c option are considered.
+*-c*, *--concatenate*::
+  When multiple input files are specified, ucm2ltc normally creates a
+  single main converter, with several delta converters. This mode of operation is
+  desirable when the specified input files are small variations, because it can
+  save space. However, sometimes it is desirable to bunch a set of converters in
+  a single LTC because the converters may be related, but not variations of a
+  single converter. By specifying the -c option before an input file that
+  is not a variation of the previous input file, ucm2ltc will treat the
+  following input files as the specification of a separate converter, but will
+  output a single LTC source file.
+*-h*, *--help*::
+  Display a short help message.
+*-i*, *--internal*::
+  Specify that the following input file is to be considered an internal
+  converter, only to be used by another LTC module. A converter built with the
+  -i flag can not be opened by clients of the libtranscript library, only by
+  other LTC modules.
+*-I*, *--allow-ibm-rotate*::
+  Some UCM files provided by IBM map the Unicode characters U++001A, U++001C and
+  U++007F to the output bytes 7F 1A and 1C respectively. This rotated mapping is
+  IBM specific, and therefore ucm2ltc normally undoes this. However, in some
+  instances it is desirable to keep this rotated mapping. This option instructs
+  ucm2ltc to keep the rotated mapping intact.
+*-n* _name_, *--name*=_name_::
+  Set the name of the converter to _name_. Normally the name of the input
+  file is taken as the name of the converter (without the .ucm extension).
+*-o* _output_, *--output*=_output_::
+  Write the output to _output_. If not specified, the input file name is
+  used, with the .ucm extension replaced with .c. This option is required if more
+  than one input file is provided.
+*-v*, *--verbose*::
+  Produce verbose output to standard error. Specifiy this option multiple times
+  to increase verbosity.
+
+To stop ucm2ltc from interpreting file names that start with a dash as
+options, one can specify a double dash (--) after which ucm2ltc will
+interpret any following arguments as files to read.
+
+UCM EXTENSIONS
+==============
+
+ucm2ltc accepts several extensions to the basic UCM file format:
+
+- In the UCM header, the <transcript:internal> tag is accepted to indicate that
+  this converter is only to be used as an internal converter. This has the same
+  effect as the -i option.
+- M:N mappings can be included in the main CHARMAP, and do not have to be
+  separated into the second CHARMAP entry.
+- After the main CHARMAP, delta maps can be included by using
+  VARIANT [INTERNAL] <name> ... END VARIANT. If delta maps are included, the main
+  CHARMAP is not included as a converter. Only the delta converters are available
+  in the LTC. To include the CHARMAP as a separate entry, include an empty delta
+  map.
+
+BUGS
+====
+
+If you think you have found a bug, please check that you are using the latest
+version of libtranscript <http://os.ghalkes.nl/libtranscript.html>. When
+reporting bugs, please include a minimal example that demonstrates the problem.
+
+AUTHOR
+======
+
+G.P. Halkes <libtranscript@ghalkes.nl>
+
+COPYRIGHT
+=========
+
+Copyright \(co 2011-2012 G.P. Halkes +
+libtranscript is licensed under the GNU General Public License version 3. +
+For more details on the license, see the file COPYING in the documentation
+directory. On Un**x systems this is usually /usr/share/doc/libtranscript.

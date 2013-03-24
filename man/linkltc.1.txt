@@ -1,0 +1,53 @@
+:version: Version <VERSION>
+:summary: Create symbolic links for LTCs
+
+.hw /usr/share/doc/libtranscript-<VERSION> http://os.ghalkes.nl/libtranscript.html
+
+NAME
+====
+
+linkltc - create symbolic links for LibTranscript Converters (LTCs)
+
+SYNOPSIS
+========
+
+linkltc _FILE_...
+
+DESCRIPTION
+===========
+
+linkltc creates symbolic links for LibTranscript Converters (LTCs). A
+single LTC may contain multiple converters, and a symbolic link for the names
+of the alternate converters is required for libtranscript to find them.
+
+OPTIONS
+=======
+
+linkltc accepts the following options:
+
+*-v*, *--verbose*::
+  Produce verbose output to standard error.
+
+To stop linkltc from interpreting file names that start with a dash as
+options, one can specify a double dash (--) after which linkltc will
+interpret any following arguments as files to read.
+
+BUGS
+====
+
+If you think you have found a bug, please check that you are using the latest
+version of *libtranscript* <http://os.ghalkes.nl/libtranscript.html>. When
+reporting bugs, please include a minimal example that demonstrates the problem.
+
+AUTHOR
+======
+
+G.P. Halkes <libtranscript@ghalkes.nl>
+
+COPYRIGHT
+=========
+
+Copyright \(co 2011-2013 G.P. Halkes +
+libtranscript is licensed under the GNU General Public License version 3. +
+For more details on the license, see the file COPYING in the documentation
+directory. On Un**x systems this is usually /usr/share/doc/libtranscript.
