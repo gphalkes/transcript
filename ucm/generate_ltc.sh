@@ -1,13 +1,24 @@
 #!/bin/bash
 
 unset REGENERATE
-if [ "$1" = "-r" ] ; then
-	REGENERATE=1
-fi
 
-cd "$(dirname "$0")"
+for OPT ; do
+	case "$OPT" in
+		-r) REGENERATE=1 ;;
+		-n) NO_BUILD=1 ;;
+	esac
+done
 
-[ -d ../src/tables ] || mkdir ../src/tables
+die() {
+	echo "$*" >&2
+	exit 1
+}
+
+cd "$(dirname "$0")" || die "Could not cd to script dir"
+
+
+make --no-print-directory -q -C ../src.util/ucm2ltc || make --no-print-directory -C ../src.util/ucm2ltc
+[[ -d ../src/tables ]] || mkdir ../src/tables
 
 # The script below uses the following sed script:
 # '/\\$/{$ s/\\$//;$! H};/\\$/!{H;g;s/[[:space:]]+\\\n[[:space:]]+/ /g;s/^\n//;p;z;h}'
@@ -27,6 +38,7 @@ cd "$(dirname "$0")"
 # The last two commands are necessary because there is no command to clear the
 # hold space.
 {
+	echo "SHELL := /bin/bash"
 	unset HANDLED
 	while read TARGET FILES ; do
 		out="`echo \"${TARGET%:}\" | sed -r 's/\.ucm$//;s/[^a-zA-Z0-9]//g;s/(^|[^0-9])0+/\1/' | tr [:upper:] [:lower:]`"
@@ -50,10 +62,11 @@ cd "$(dirname "$0")"
 		echo "	@../src.util/ucm2ltc/ucm2ltc -o \"../src/tables/${out}.c\" $f"
 		ALLTARGETS="${ALLTARGETS} ../src/tables/${out}.c"
 	done
-	echo "all:${ALLTARGETS}"
-	echo
-	echo "${ALLTARGETS}: | ucm2ltc"
-	echo
-	echo "ucm2ltc:"
-	echo '	@$(MAKE) -q -C ../src.util/ucm2ltc || $(MAKE) --no-print-directory -C ../src.util/ucm2ltc'
-} | make -f - ${REGENERATE:+-B} all && make -C ../src --no-print-directory
+	cat <<EOF
+all:${ALLTARGETS}
+
+remove-stale:
+	@export LANG=C;REMOVE=\$\$(comm -2 -3 <( ls ../src/tables/*.c ) <( echo "${ALLTARGETS}" | tr ' ' '\n' | sort )) ; [[ -n \$\$REMOVE ]] && { echo "Removing \$\$REMOVE" ; rm \$\$REMOVE ; } || true
+EOF
+} | make -f - ${REGENERATE:+-B} all remove-stale || exit 1
+[[ -z $NO_BUILD ]] && make -C ../src --no-print-directory

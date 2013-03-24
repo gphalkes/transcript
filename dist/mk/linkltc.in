@@ -33,7 +33,7 @@ all: src.util/linkltc/linkltc
 SILENTCC=@echo '[CC]' $< ;
 SILENTLD=@echo '[LD]' $@ ;
 
-OBJECTS_LINKLTC=<OBJECTS_LINKLTC>
+OBJECTS_LINKLTC=<OBJECTS>
 
 clean:
 	rm -rf src.util/linkltc/*.o src.util/linkltc/linkltc

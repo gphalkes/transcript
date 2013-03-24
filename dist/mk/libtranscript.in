@@ -64,7 +64,7 @@ modules: <MODULES>
 .SUFFIXES: .c .o .lo .la .mo .po
 .SECONDARY: # Tell GNU make not to delete intermediate files
 
-OBJECTS_LIBTRANSCRIPT=<OBJECTS_LIBTRANSCRIPT>
+OBJECTS_LIBTRANSCRIPT=<OBJECTS>
 
 clean:
 	rm -rf src/*.lo src/tables/*.lo src/modules/*.lo po/*.mo src/.libs src/libtranscript.la src/tables/*.la src/tables/.libs \
@@ -85,3 +85,5 @@ src/libtranscript.la: $(OBJECTS_LIBTRANSCRIPT)
 	$(SILENTLDLT) $(LIBTOOL) $(SILENCELT) --mode=link --tag=CC $(CC) -shared -version-info <VERSIONINFO> \
 		$(CFLAGS) $(LDFLAGS) -o $@ $(OBJECTS_LIBTRANSCRIPT) $(LDLIBS) $(CONFIGLIBS) $(PTHREADLIBS) $(GETTEXTLIBS) \
 		-rpath $(libdir)
+
+<MODULE_RULES>

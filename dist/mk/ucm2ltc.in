@@ -34,7 +34,7 @@ SILENTCC=@echo '[CC]' $< ;
 SILENTCXX=@echo '[CXX]' $< ;
 SILENTLD=@echo '[LD]' $@ ;
 
-OBJECTS_UCM2LTC=<OBJECTS_UCM2LTC>
+OBJECTS_UCM2LTC=<OBJECTS>
 
 clean:
 	rm -rf src.util/ucm2ltc/*.o src.util/ucm2ltc/ucm2ltc
