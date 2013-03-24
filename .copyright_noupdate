@@ -1,0 +1,3 @@
+# Don't update the copyright notice on the IBM UCM files
+ucm/ibm/*
+src/Makefile

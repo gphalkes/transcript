@@ -1,5 +1,6 @@
 :version: Version <VERSION>
 :summary: Create symbolic links for LTCs
+:highlight names: linkltc libtranscript
 
 .hw /usr/share/doc/libtranscript-<VERSION> http://os.ghalkes.nl/libtranscript.html
 
@@ -36,7 +37,7 @@ BUGS
 ====
 
 If you think you have found a bug, please check that you are using the latest
-version of *libtranscript* <http://os.ghalkes.nl/libtranscript.html>. When
+version of libtranscript <http://os.ghalkes.nl/libtranscript.html>. When
 reporting bugs, please include a minimal example that demonstrates the problem.
 
 AUTHOR
@@ -48,6 +49,6 @@ COPYRIGHT
 =========
 
 Copyright \(co 2011-2013 G.P. Halkes +
-libtranscript is licensed under the GNU General Public License version 3. +
+libtranscript is licensed under the GNU General Public License version\ 3. +
 For more details on the license, see the file COPYING in the documentation
 directory. On Un**x systems this is usually /usr/share/doc/libtranscript.
