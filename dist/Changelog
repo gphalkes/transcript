@@ -1,8 +1,10 @@
 Version 0.3.1:
 	Changes:
 	- Remove support for Windows-21866 character set. This should be the same
-	  as the KOI8-U character set, although the only source we have for it
-	  differs in two characters.
+	  as the KOI8-U character set (which is supported), although the only
+	  source we have for it differs in two characters.
+	- Remove some superfluous files from the distribution, which were
+	  accidentaly included from previous iterations.
 
 Version 0.3.0:
 	New features:
