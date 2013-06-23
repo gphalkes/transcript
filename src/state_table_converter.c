@@ -94,7 +94,7 @@ typedef struct {
 	save_state_t state;
 } converter_state_t;
 
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit);
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char *inbuflimit);
 static bool_t init_flag_handler(flag_handler_t *flags, uint8_t flag_info);
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
@@ -155,8 +155,8 @@ static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *
 }
 
 /** convert_to implementation for state table converters. */
-static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
@@ -320,7 +320,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 }
 
 /** skip_to implementation for state table converters. */
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char *inbuflimit) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast8_t state = handle->state.to;
 	uint_fast32_t idx = handle->tables.converter->codepage_states[handle->state.to].base;
@@ -372,7 +372,7 @@ static void to_unicode_reset(converter_state_t *handle) {
 
 /** Write a byte sequence to the output, prepending a shift sequence if necessary. */
 static _TRANSCRIPT_INLINE transcript_error_t put_bytes(converter_state_t *handle, char **outbuf,
-		const char const *outbuflimit, size_t count, const uint8_t *bytes)
+		const char *outbuflimit, size_t count, const uint8_t *bytes)
 {
 	uint_fast8_t required_state;
 	uint_fast8_t i;
@@ -420,8 +420,8 @@ write_bytes:
 }
 
 /** Check if the current input is a multi-mapping for a from-Unicode conversion. */
-static int from_unicode_check_multi_mappings(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static int from_unicode_check_multi_mappings(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 	uint_fast32_t i;
@@ -553,8 +553,8 @@ static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t code
 }
 
 /** convert_from implementation for state table converters. */
-static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf;
 	uint_fast8_t state, state_16_bit;
@@ -695,7 +695,7 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 }
 
 /** flush_from implementation for state table converters. */
-static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf, const char *outbuflimit) {
 	if (handle->state.from != 0)
 		PUT_BYTES(0, NULL);
 	return TRANSCRIPT_SUCCESS;

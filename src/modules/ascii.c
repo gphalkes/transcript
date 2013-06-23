@@ -25,8 +25,8 @@ typedef struct {
 } converter_state_t;
 
 /** convert_to implementation for ISO-8859-1/ASCII converters. */
-static transcript_error_t to_unicode_conversion(converter_state_t *handle, char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 
@@ -49,7 +49,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, char 
 }
 
 /** skip_to implementation for ISO-8859-1/ASCII converters. */
-static transcript_error_t to_unicode_skip(transcript_t*handle, char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(transcript_t*handle, char **inbuf, const char *inbuflimit) {
 	(void) handle;
 
 	if ((*inbuf) >= inbuflimit)
@@ -59,8 +59,8 @@ static transcript_error_t to_unicode_skip(transcript_t*handle, char **inbuf, con
 }
 
 /** convert_from implementation for ISO-8859-1/ASCII converters. */
-static transcript_error_t from_unicode_conversion(converter_state_t *handle, char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 	uint8_t *_inbuf = (uint8_t *) *inbuf;

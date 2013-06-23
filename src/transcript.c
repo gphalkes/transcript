@@ -171,8 +171,8 @@ int transcript_equal(const char *name_a, const char *name_b) {
     least 20 codepoints. This is guaranteed if the size of the output buffer is
     at least 80 (::TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE) bytes.
 */
-transcript_error_t transcript_to_unicode(transcript_t *handle, const char const **inbuf, const char const *inbuflimit, char **outbuf,
-		const char const *outbuflimit, int flags)
+transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbuf, const char *inbuflimit, char **outbuf,
+		const char *outbuflimit, int flags)
 {
 	return handle->convert_to(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
 }
@@ -204,8 +204,8 @@ transcript_error_t transcript_to_unicode(transcript_t *handle, const char const 
     If M:N conversions are enabled, the output buffer must be able to hold at
     least 32 bytes (::TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE).
 */
-transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf, const char const *inbuflimit, char **outbuf,
-		const char const *outbuflimit, int flags) {
+transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf, const char *inbuflimit, char **outbuf,
+		const char *outbuflimit, int flags) {
 	return handle->convert_from(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
 }
 
@@ -221,7 +221,7 @@ transcript_error_t transcript_from_unicode(transcript_t *handle, const char **in
     next input character can not be converted (either because the input is
     corrupt, or the conversions are not permitted by the flag settings).
 */
-transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char **inbuf, const char const *inbuflimit) {
+transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit) {
 	return handle->skip_to(handle, inbuf, inbuflimit);
 }
 
@@ -259,7 +259,7 @@ transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char
     After calling this function, the from-Unicode conversion will be in the
     initial state.
 */
-transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **outbuf, const char const *outbuflimit) {
+transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **outbuf, const char *outbuflimit) {
 	switch (handle->flush_from(handle, outbuf, outbuflimit)) {
 		case TRANSCRIPT_SUCCESS:
 			break;

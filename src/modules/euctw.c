@@ -80,8 +80,8 @@ static void close_converter(converter_handle_t *handle);
 } while (0)
 
 /** convert_to implementation for EUC-TW converter. */
-static int to_unicode_conversion(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static int to_unicode_conversion(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	while (*inbuf < inbuflimit) {
 		if (**inbuf < 0x80) {
@@ -164,7 +164,7 @@ incomplete_char:
 }
 
 /** skip_to implementation for EUC-TW converter. */
-static transcript_error_t to_unicode_skip(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit) {
 	(void) handle;
 
 	if (*inbuf == inbuflimit)
@@ -192,8 +192,8 @@ static transcript_error_t to_unicode_skip(converter_handle_t *handle, const uint
 }
 
 /** convert_from implementation for EUC-TW converter. */
-static transcript_error_t from_unicode_conversion(converter_handle_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t from_unicode_conversion(converter_handle_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	transcript_error_t result;
 	transcript_t *plane_handle;

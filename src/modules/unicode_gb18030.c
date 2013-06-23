@@ -43,7 +43,7 @@ static const gb_range_map_t gb_range_map[] = {
 /** @internal
     @brief Write a Unicode codepoint in GB-18030 encoding to a buffer.
 */
-int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit) {
 #if UINT_FAST32_MAX == UINT32_MAX
 #define _codepoint codepoint;
 #else
@@ -107,7 +107,7 @@ int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, 
 /** @internal
     @brief Read a Unicode codepoint in GB-18030 encoding from a buffer.
 */
-uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
+uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool_t skip) {
 	char *codepoint_ptr;
 	size_t low, mid, high;
 	const uint8_t *_inbuf;

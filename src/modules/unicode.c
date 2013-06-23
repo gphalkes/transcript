@@ -54,19 +54,19 @@ static const name_to_utftype map[] = {
 static void close_converter(converter_state_t *handle);
 
 /** Wrapper routine for @c handle->common.put_unicode to provide a uniform interface across all @c put_xxx routines. */
-static int put_common(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static int put_common(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit) {
 	return handle->common.put_unicode(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->common.get_unicode to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_common(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
+static uint_fast32_t get_common(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool_t skip) {
 	return handle->common.get_unicode(inbuf, inbuflimit, skip);
 }
 /** Wrapper routine for @c handle->from_unicode_put to provide a uniform interface across all @c put_xxx routines. */
-static int put_from_unicode(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static int put_from_unicode(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit) {
 	return handle->from_unicode_put(codepoint, outbuf, outbuflimit);
 }
 /** Wrapper routine for @c handle->to_unicode_get to provide a uniform interface across all @c get_xxx routines. */
-static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip) {
+static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool_t skip) {
 	return handle->to_unicode_get(inbuf, inbuflimit, skip);
 }
 
@@ -82,8 +82,8 @@ static uint_fast32_t get_to_unicode(converter_state_t *handle, const char **inbu
 
     This is used both for @c to_unicode and @c from_unicode.
 */
-static transcript_error_t unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags, get_func_t get_unicode, put_func_t put_unicode)
+static transcript_error_t unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags, get_func_t get_unicode, put_func_t put_unicode)
 {
 	uint_fast32_t codepoint;
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -150,8 +150,8 @@ static transcript_error_t unicode_conversion(converter_state_t *handle, const ch
 }
 
 /** convert_to implementation for Unicode converters. */
-static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	if (flags & TRANSCRIPT_FILE_START) {
 		const uint8_t *_inbuf = (const uint8_t *) *inbuf;
@@ -193,7 +193,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 }
 
 /** skip_to implementation for Unicode converters. */
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char *inbuflimit) {
 	if (handle->to_unicode_get(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
 		return TRANSCRIPT_INCOMPLETE;
 	return TRANSCRIPT_SUCCESS;
@@ -217,8 +217,8 @@ static void to_unicode_reset(converter_state_t *handle) {
 }
 
 /** convert_from implementation for Unicode converters. */
-static int from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static int from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	if (inbuf == NULL || *inbuf == NULL)
 		return TRANSCRIPT_SUCCESS;

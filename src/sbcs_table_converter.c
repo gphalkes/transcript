@@ -27,7 +27,7 @@ typedef struct {
 	sbcs_converter_v1_t tables;
 } converter_state_t;
 
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit);
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char *inbuflimit);
 
 /** Simplification macro for calling put_unicode which returns automatically on error. */
 #define PUT_UNICODE(codepoint) do { int result; \
@@ -36,8 +36,8 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const char 
 } while (0)
 
 /** convert_to implementation for SBCS table converters. */
-static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t to_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	uint_fast32_t codepoint;
 
@@ -70,7 +70,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
 }
 
 /** skip_to implementation for SBCS table converters. */
-static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_state_t *handle, const char **inbuf, const char *inbuflimit) {
 	(void) handle;
 	(void) inbuflimit;
 	(*inbuf)++;
@@ -95,8 +95,8 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const char 
 	[(codepoint >> 5) & 0x1f]
 
 /** convert_from implementation for SBCS table converters. */
-static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t from_unicode_conversion(converter_state_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast32_t codepoint;

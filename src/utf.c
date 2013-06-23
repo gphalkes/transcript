@@ -94,7 +94,7 @@ static uint16_t get16_be(const unsigned char *data) {
 #define CHECK_OUTBYTESLEFT(_x) if ((*outbuf) + (_x) > outbuflimit) return TRANSCRIPT_NO_SPACE;
 
 /** Write a codepoint encoded as UTF-8. */
-static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const char *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -120,7 +120,7 @@ static transcript_error_t put_utf8(uint_fast32_t codepoint, char **outbuf, const
 }
 
 /** Write a codepoint encoded as CESU-8. */
-static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, const char *outbuflimit) {
 	CHECK_CODEPOINT_RANGE();
 
 	if (codepoint < 0x80) {
@@ -166,7 +166,7 @@ static transcript_error_t put_cesu8(uint_fast32_t codepoint, char **outbuf, cons
     @param skip &nbsp;
 	@param strict Whether to allow overlong sequences and high/low surrogates.
 */
-static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbuflimit, bool_t skip, bool_t strict) {
+static uint_fast32_t get_utf8internal(const char **inbuf, const char *inbuflimit, bool_t skip, bool_t strict) {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	uint_fast32_t codepoint = *_inbuf, least;
 	size_t bytes;
@@ -266,7 +266,7 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char const *inbu
     This function is a wrapper around ::get_utf8internal to make the interface
     the same as for the other @c get_xxx functions.
 */
-static uint_fast32_t get_utf8strict(const char **inbuf, const char const *inbuflimit, bool_t skip) {
+static uint_fast32_t get_utf8strict(const char **inbuf, const char *inbuflimit, bool_t skip) {
 	return get_utf8internal(inbuf, inbuflimit, skip, TRUE);
 }
 
@@ -275,7 +275,7 @@ static uint_fast32_t get_utf8strict(const char **inbuf, const char const *inbufl
     This version is permissive in what it accepts, in that it allows overlong
     sequences, and allows CESU-8 encoding using surrogate pairs.
 */
-static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, bool_t skip) {
+static uint_fast32_t get_utf8(const char **inbuf, const char *inbuflimit, bool_t skip) {
 	const char *_inbuf = *inbuf;
 	uint_fast32_t codepoint;
 
@@ -299,7 +299,7 @@ static uint_fast32_t get_utf8(const char **inbuf, const char const *inbuflimit, 
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
 	}
-	*inbuf = (const char const *) _inbuf;
+	*inbuf = (const char *) _inbuf;
 	return codepoint;
 }
 
@@ -391,7 +391,7 @@ get_unicode_func_t _transcript_get_get_unicode(int type) {
     to be valid. Should be used mainly for points in the code where this code
     will be called frequently.
 */
-uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char const *inbuflimit, bool_t skip) {
+uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char *inbuflimit, bool_t skip) {
 	uint32_t codepoint;
 
 	(void) inbuflimit;

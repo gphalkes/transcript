@@ -13,7 +13,7 @@
 
 SOURCES.linkltc := linkltc.c
 LDFLAGS.linkltc := -L../../src/.libs
-LDLIBS.linkltc := -ltranscript -lltdl
+LDLIBS.linkltc := -ltranscript
 CFLAGS.linkltc := -I../../include
 
 TARGETS := linkltc
@@ -24,6 +24,9 @@ include ../../../makesys/rules.mk
 #================================================#
 
 CFLAGS += -DHAS_DLFCN
+LDLIBS += -ldl
+#~ LDLIBS += -lltdl
+
 
 linkltc: | library
 

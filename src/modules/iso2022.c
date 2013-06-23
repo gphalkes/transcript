@@ -238,8 +238,8 @@ sequence_found:
 } while (0)
 
 /** convert_to implementation for ISO-2022 converters. */
-static int to_unicode_conversion(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static int to_unicode_conversion(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	uint_fast8_t state;
 	int result;
@@ -393,7 +393,7 @@ incomplete_char:
 }
 
 /** skip_to implementation for ISO-2022 converters. */
-static transcript_error_t to_unicode_skip(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t const *inbuflimit) {
+static transcript_error_t to_unicode_skip(converter_handle_t *handle, const uint8_t **inbuf, const uint8_t *inbuflimit) {
 	uint_fast8_t state;
 
 	if (*inbuf == inbuflimit)
@@ -447,7 +447,7 @@ static void to_unicode_reset(converter_handle_t *handle) {
     This function both updates the @a handle and write the associated sequence
     to the output.
 */
-static transcript_error_t switch_to_set(converter_handle_t *handle, stc_handle_t *stc, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t switch_to_set(converter_handle_t *handle, stc_handle_t *stc, char **outbuf, const char *outbuflimit) {
 	if (handle->state.g_from[stc->g] != stc) {
 		PUT_BYTES(stc->seq_len, stc->escape_seq);
 		handle->state.g_from[stc->g] = stc;
@@ -472,8 +472,8 @@ static transcript_error_t switch_to_set(converter_handle_t *handle, stc_handle_t
 } while (0)
 
 /** convert_from implementation for ISO-2022 converters. */
-static transcript_error_t from_unicode_conversion(converter_handle_t *handle, const char **inbuf, const char const *inbuflimit,
-		char **outbuf, const char const *outbuflimit, int flags)
+static transcript_error_t from_unicode_conversion(converter_handle_t *handle, const char **inbuf, const char *inbuflimit,
+		char **outbuf, const char *outbuflimit, int flags)
 {
 	const uint8_t *_inbuf = (const uint8_t *) *inbuf;
 	stc_handle_t *fallback_stc = NULL;
@@ -648,7 +648,7 @@ converter_found:
 }
 
 /** flush_from implementation for ISO-2022 converters. */
-static transcript_error_t from_unicode_flush(converter_handle_t *handle, char **outbuf, const char const *outbuflimit) {
+static transcript_error_t from_unicode_flush(converter_handle_t *handle, char **outbuf, const char *outbuflimit) {
 	SWITCH_TO_SET(handle->ascii);
 	return TRANSCRIPT_SUCCESS;
 }

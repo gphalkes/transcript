@@ -50,10 +50,10 @@ enum {
 };
 
 TRANSCRIPT_LOCAL int _transcript_put_utf7(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip);
-TRANSCRIPT_LOCAL int _transcript_from_unicode_flush_utf7(converter_state_t *handle, char **outbuf, const char const *outbuflimit);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf7(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool_t skip);
+TRANSCRIPT_LOCAL int _transcript_from_unicode_flush_utf7(converter_state_t *handle, char **outbuf, const char *outbuflimit);
 
 TRANSCRIPT_LOCAL int _transcript_put_gb18030(converter_state_t *handle, uint_fast32_t codepoint, char **outbuf, const char *outbuflimit);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char const *inbuflimit, bool_t skip);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_gb18030(converter_state_t *handle, const char **inbuf, const char *inbuflimit, bool_t skip);
 
 #endif
