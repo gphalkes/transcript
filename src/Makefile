@@ -74,8 +74,8 @@ $(patsubst %.c, .objects/%.lo, $(TABLESOURCES)):
 ifeq ($(NO_CONVERTER_LINKS),)
 converter-links: | linkltc $(LTTARGETS)
 	+@NO_CONVERTER_LINKS=1 ../ucm/generate_ltc.sh
-	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc
-	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc *.ltc
+	@cd modules/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc $(LINKLTC_VERBOSE) *.ltc
+	@cd tables/.libs ; LD_LIBRARY_PATH=../../.libs ../../../src.util/linkltc/linkltc $(LINKLTC_VERBOSE) *.ltc
 endif
 
 linkltc: libtranscript.la

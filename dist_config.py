@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 package = 'libtranscript'
 srcdirs = [ 'src', 'src.util' ]
@@ -58,7 +59,7 @@ def get_replacements(mkdist):
 		{
 			'tag': '^#define TRANSCRIPT_VERSION .*',
 			'replacement': '#define TRANSCRIPT_VERSION ' + mkdist.get_version_bin(),
-			'files': [ 'src/key.h' ],
+			'files': [ 'src/transcript.h' ],
 			'regex': True
 		},
 		{
@@ -68,7 +69,7 @@ def get_replacements(mkdist):
 		},
 		{
 			'tag': '<TABLES>',
-			'replacement': " ".join(mkdist.sources_to_objects(mkdist.include_by_regex(mkdist.sources, '^src/tables/'), '\.c$', '.lo')),
+			'replacement': " ".join(mkdist.sources_to_objects(mkdist.include_by_regex(mkdist.sources, '^src/tables/'), '\.c$', '.la')),
 			'files': [ 'mk/libtranscript.in' ]
 		},
 		{
@@ -109,4 +110,32 @@ def get_replacements(mkdist):
 	]
 
 def finalize(mkdist):
+	links = []
+	proc = subprocess.Popen(['make', '-C', 'src', 'LINKLTC_VERBOSE=-v'], stderr=subprocess.PIPE)
+	for line in proc.stderr:
+		parts = line.split()
+		if len(parts) != 3:
+			continue
+		if parts[1] != '->':
+			continue
+		if parts[0] == parts[2]:
+			continue
+		links.append(parts)
+	if not links:
+		sys.exit('Could not generate list of links (check output of make -C src LINKLTC_VERBOSE=-v)')
+	if proc.wait() != 0:
+		sys.exit('Generating links produced non-zero exit code')
+
+	script_path = os.path.join(mkdist.topdir, 'install_links.sh')
+	with open(script_path, 'w+') as script:
+		script.write('''\
+#!/bin/sh
+if [ $# -ne 1 ]
+then
+	exit 1
+fi
+''')
+		for link in links:
+			script.write('ln -s {0} "$1/{1}"\n'.format(link[2], link[0]))
+	os.chmod(script_path, 0755)
 	os.symlink('.', os.path.join(mkdist.topdir, 'src', 'transcript'))
