@@ -280,6 +280,8 @@ static uint_fast32_t get_utf8(const char **inbuf, const char *inbuflimit, bool_t
 	uint_fast32_t codepoint;
 
 	codepoint = get_utf8internal(&_inbuf, inbuflimit, skip, FALSE);
+	/* Check for surrogate characters. Low surrogates need to check the next codepoint as
+	   well to check for a complete surrogate pair. High surrogates are always wrong. */
 	if ((codepoint & UINT32_C(0x1ffc00)) == UINT32_C(0xd800)) {
 		uint_fast32_t next_codepoint;
 		const char *_inbuf_save = _inbuf;
@@ -298,6 +300,11 @@ static uint_fast32_t get_utf8(const char **inbuf, const char *inbuflimit, bool_t
 		codepoint -= UINT32_C(0xd800);
 		codepoint <<= 10;
 		codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
+	} else if ((codepoint & UINT32_C(0x1ffc00)) == UINT32_C(0xdc00)) {
+		if (!skip)
+			return TRANSCRIPT_UTF_ILLEGAL;
+		*inbuf = _inbuf;
+		return 0;
 	}
 	*inbuf = (const char *) _inbuf;
 	return codepoint;

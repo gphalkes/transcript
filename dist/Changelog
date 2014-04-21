@@ -1,3 +1,8 @@
+Version 0.3.2:
+	Bug fixes:
+	- Correctly mark unpaired high surrogates in a UTF-8 stream as invalid
+	  characters.
+
 Version 0.3.1:
 	Changes:
 	- Remove support for Windows-21866 character set. This should be the same
