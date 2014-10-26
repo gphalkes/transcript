@@ -19,6 +19,7 @@ CXXTARGETS := ucm2ltc
 #================================================#
 # NO RULES SHOULD BE DEFINED BEFORE THIS INCLUDE #
 #================================================#
+include ../../../makesys/extension_llnextgen.mk
 include ../../../makesys/rules.mk
 #================================================#
 CXXFLAGS += -I. -I../../include -I.objects -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS #-O2
