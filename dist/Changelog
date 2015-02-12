@@ -1,3 +1,6 @@
+Version 0.3.2:
+	Re-release of version 0.3.1 to update the configure script.
+
 Version 0.3.1:
 	Changes:
 	- Remove support for Windows-21866 character set. This should be the same
