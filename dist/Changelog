@@ -1,7 +1,5 @@
 Version 0.3.2:
-	Bug fixes:
-	- Correctly mark unpaired high surrogates in a UTF-8 stream as invalid
-	  characters.
+	Re-release of version 0.3.1 to update the configure script.
 
 Version 0.3.1:
 	Changes:
@@ -13,6 +11,10 @@ Version 0.3.1:
 	- Use a generated script to install the required symbolic links, rather than
 	  the linkltc program. This facilitates cross-compilation, where the linkltc
 	  can not be run.
+
+	Bug fixes:
+	- Correctly mark unpaired high surrogates in a UTF-8 stream as invalid
+	  characters.
 
 Version 0.3.0:
 	New features:
