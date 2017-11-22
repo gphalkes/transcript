@@ -59,9 +59,17 @@ test $(patsubst %, modules/%.la, $(MODULES)) $(TABLES:=.la): | libtranscript.la
 
 $(OBJECTS): generic_fallbacks.c
 
-generic_fallbacks.c generic_fallbacks.h: generic_fallbacks.txt
+generic_fallbacks.c: pregen/generic_fallbacks.c
+	cp $< $@
+
+generic_fallbacks.h: pregen/generic_fallbacks.h
+	cp $< $@
+
+pregen/generic_fallbacks.c pregen/generic_fallbacks.h: generic_fallbacks.txt
 	$(if $(VERBOSE),, @echo [GEN] $* ;) ../../statrie/src/statrie -fgeneric_fallbacks -nget_generic_fallback -b16 -p \
-		-r0x10000 -DFFFF -H'#include "transcript.h"' -e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks < $<
+		-r0x10000 -DFFFF -H'#include "transcript.h"' -e'TRANSCRIPT_LOCAL extern' transcript_generic_fallbacks -dpregen < $<
+
+.objects/transcript.lo: generic_fallbacks.h
 
 clean::
 	rm -rf generic_fallbacks.[ch] 2>/dev/null
