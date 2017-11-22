@@ -40,7 +40,7 @@ linkltc: lib
 ucm2ltc: lib
 	@$(MAKE) -f mk/ucm2ltc
 
-.PHONY: all clean dist-clean install install-moddev lib linkltc ucm2ltc uninstall
+.PHONY: all clean dist-clean distclean install install-moddev lib linkltc ucm2ltc uninstall
 .IGNORE: uninstall
 
 clean:
@@ -52,7 +52,9 @@ dist-clean:
 	@$(MAKE) -f mk/libtranscript dist-clean
 	@$(MAKE) -f mk/linkltc dist-clean
 	@$(MAKE) -f mk/ucm2ltc dist-clean
-	rm -rf Makefile mk/libtranscript mk/linkltc mk/ucm2ltc config.log libtranscript.pc
+	rm -rf Makefile mk/libtranscript mk/linkltc mk/ucm2ltc config.log libtranscript.pc .Makefile* .config*
+
+distclean: dist-clean
 
 # Macros to make DESTDIR support more readable
 _bindir=$(DESTDIR)$(bindir)
@@ -72,8 +74,6 @@ install: all
 	$(INSTALL) -m0644 src/aliases.txt $(_libdir)/transcript<LIBVERSION>
 	$(INSTALL) -d $(_includedir)/transcript/transcript
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(_includedir)/transcript/transcript
-	$(INSTALL) -d $(_docdir)/API/search
-	( cd doc ; find API -type f ) | while read X ; do $(INSTALL) -m0644 doc/$${X} $(_docdir)/$${X} ; done
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(_docdir)
 	$(INSTALL) -d $(_pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(_pkgconfigdir)

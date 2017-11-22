@@ -6,7 +6,7 @@ package = 'libtranscript'
 srcdirs = [ 'src', 'src.util' ]
 excludesrc = '/(Makefile|TODO.*|SciTE.*|run\.sh|test\.c|aliases_full\.txt)$'
 auxsources = [ 'src/generic_fallbacks.[ch]', 'src/tables/*.c' ]
-auxfiles = [ 'doc/API', 'doc/motivation.txt', 'doc/motivation.html' ]
+auxfiles = [ 'doc/doxygen.conf', 'doc/DoxygenLayout.xml', 'doc/main_doc.h', 'doc/motivation.txt', 'doc/motivation.html' ]
 extrabuilddirs = [ 'doc' ]
 versioninfo = '1:0:0'
 

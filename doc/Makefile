@@ -7,7 +7,7 @@ doxygen: doxygen.conf DoxygenLayout.xml
 	doxygen doxygen.conf
 
 motivation.html: motivation.txt
-	@echo [GEN] $@ ; { echo "<html><title>Motivation</title><body>" ; markdown $< ; echo "</body></html>" ; } > $@
+	@echo [GEN] $@ ; { echo "<html><title>Motivation</title><body>" && markdown $< && echo "</body></html>" ; } > $@
 
 clean:
 	rm -rf API motivation.html
