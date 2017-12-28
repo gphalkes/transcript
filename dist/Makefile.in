@@ -74,6 +74,7 @@ install: all
 	$(INSTALL) -m0644 src/aliases.txt $(_libdir)/transcript<LIBVERSION>
 	$(INSTALL) -d $(_includedir)/transcript/transcript
 	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(_includedir)/transcript/transcript
+	$(INSTALL) -d $(_docdir)
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(_docdir)
 	$(INSTALL) -d $(_pkgconfigdir)
 	$(INSTALL) -m0644 libtranscript.pc $(_pkgconfigdir)
