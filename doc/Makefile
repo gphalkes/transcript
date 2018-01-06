@@ -12,4 +12,9 @@ motivation.html: motivation.txt
 clean:
 	rm -rf API motivation.html
 
+upload: doxygen
+	find API -type f -exec chmod 0644 '{}' ';'
+	find API -type d -exec chmod 0755 '{}' ';'
+	rsync -arv --delete API/ www.ghalkes.nl:os.ghalkes.nl/doc/libtranscript/
+
 .PHONY: clean doxygen

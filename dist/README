@@ -10,6 +10,14 @@ libtranscript is licensed under the GNU General Public License version 3. See
 the file COPYING for details.
 
 
+Documentation
+=============
+
+The full documentation for libtranscript can be generated using doxygen. The
+documentation for the current version can be found at
+https://os.ghalkes.nl/doc/libtranscript.
+
+
 Prerequisites and installation
 ==============================
 
@@ -67,7 +75,7 @@ Reporting bugs
 ==============
 
 If you think you have found a bug, please check that you are using the latest
-version of libtranscript [http://os.ghalkes.nl/libtranscript.html]. When
+version of libtranscript [https://os.ghalkes.nl/libtranscript.html]. When
 reporting bugs, please include a minimal example that demonstrates the problem.
 
 
