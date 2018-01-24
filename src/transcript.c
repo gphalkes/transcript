@@ -554,11 +554,6 @@ int _transcript_isidchr(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c]
 /** @internal @brief Execution-character-set tolower. */
 int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
 
-/** Get the minimum of two @c size_t values. */
-static _TRANSCRIPT_INLINE size_t min(size_t a, size_t b) {
-	return a < b ? a : b;
-}
-
 /** @internal
     @brief Get a generic fallback.
 */

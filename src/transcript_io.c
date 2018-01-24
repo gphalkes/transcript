@@ -229,7 +229,7 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
 		ERROR(TRANSCRIPT_ERRNO);
 
 end_error:
-	_transcript_log("Tyring to open file '%s': %p\n", file_name, result);
+	_transcript_log("Trying to open file '%s': %p\n", file_name, result);
 	free(file_name);
 	return result;
 }
