@@ -16,7 +16,10 @@ SOURCES.libtranscript.la := transcript.c transcript_io.c utf.c transcript_iconv.
 CFLAGS.read_aliases := -Wno-shadow -Wno-switch-default -Wno-unused
 LCFLAGS := -DTRANSCRIPT_BUILD_DSO
 
-MODULE_FLAGS := -module -avoid-version -L.libs -ltranscript -shrext .ltc
+MODULE_FLAGS := -L.libs -ltranscript
+ifneq ($(ASAN), 1)
+MODULE_FLAGS += -module -avoid-version -shrext .ltc
+endif
 
 MODULES := ascii unicode iso2022 euctw
 
