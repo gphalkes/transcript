@@ -1,4 +1,4 @@
-/* Copyright (C) 2006-2009,2011 G.P. Halkes
+/* Copyright (C) 2006-2009 G.P. Halkes
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License version 3, as
    published by the Free Software Foundation.
@@ -52,7 +52,7 @@ PARSE_FUNCTION(parse_options)
 
     printf("Unknown option " OPTFMT "\n", OPTPRARG);
   NO_OPTION
-    printf("Non-option argument: " OPTFMT "\n", OPTPRARG);
+    printf("Non-option argument: %s\n", optcurrent);
   END_OPTIONS
 END_FUNCTION
 
@@ -65,7 +65,7 @@ END_FUNCTION
 
 #ifndef OPTION_STRDUP
 #define OPTION_STRDUP(_x) (_x)
-#define OPTION_FREE(_x) (void)0
+#define OPTION_FREE(_x) (void)optptr
 #else
 #define OPTION_FREE(_x) free(_x)
 #endif
@@ -76,7 +76,7 @@ END_FUNCTION
 #define OPTPRARG (int)optlength, optcurrent
 
 /** Define an option parsing function.
-        @param name The name of the function to define.
+    @param name The name of the function to define.
 */
 #define PARSE_FUNCTION(name)         \
   void name(int argc, char **argv) { \
@@ -85,14 +85,14 @@ END_FUNCTION
     int optnomore = 0;
 
 /** Declare a child option parsing function.
-        @param name The name of the function to define.
+    @param name The name of the function to define.
 */
 #define CHILD_PARSE_FUNCTION_DECL(name)                                             \
   int name(int argc, char **argv, char *optcurrent, char *optArg, size_t optlength, \
            ArgType opttype, int _optargind);
 
 /** Define a child option parsing function.
-        @param name The name of the function to define.
+    @param name The name of the function to define.
 */
 #define CHILD_PARSE_FUNCTION(name)                                                  \
   int name(int argc, char **argv, char *optcurrent, char *optArg, size_t optlength, \
@@ -108,7 +108,7 @@ END_FUNCTION
   }
 
 /** Call a child option parsing function.
-        @param name The name of the function to call.
+    @param name The name of the function to call.
 */
 #define CALL_CHILD(name)                                                              \
   do {                                                                                \
@@ -124,8 +124,7 @@ END_FUNCTION
 
 /** Indicate the start of option processing.
 
-        This is separte from @a PARSE_FUNCTION so that local variables can be
-        defined.
+    This is separate from @a PARSE_FUNCTION so that local variables can be defined.
 */
 #define OPTIONS                                           \
   for (optargind = 1; optargind < argc; optargind++) {    \
@@ -155,8 +154,7 @@ END_FUNCTION
       }                                                   \
       if (optlength > INT_MAX) optlength = INT_MAX;       \
     next_opt:
-/* The last line above is to make sure the cast to int in error messages does
-   not overflow. */
+/* The last line above is to make sure the cast to int in error messages does not overflow. */
 
 /** Signal the start of non-switch option processing. */
 #define NO_OPTION \
@@ -186,7 +184,7 @@ END_FUNCTION
 #define END_FUNCTION }
 
 /** Internal macro to check whether the requirements regarding option arguments
-                have been met. */
+    have been met. */
 #define CHECK_ARG(argReq)                                                      \
   switch (argReq) {                                                            \
     case NO_ARG:                                                               \
@@ -211,29 +209,29 @@ END_FUNCTION
 
 /** Check for a short style (-o) option.
     @param shortName The name of the short style option.
-    @param argReq Whether or not an argument is required/allowed. One of NO_ARG, OPTIONAL_ARG or
-        REQUIRED_ARG.
+    @param argReq Whether or not an argument is required/allowed. One of NO_ARG,
+        OPTIONAL_ARG or REQUIRED_ARG.
 */
 #define SHORT_OPTION(shortName, argReq)                 \
   if (opttype == SHORT && optcurrent[1] == shortName) { \
     CHECK_ARG(argReq) {
 /** Check for a single dash as option.
 
-    This is usually used to signal standard input/output.
+  This is usually used to signal standard input/output.
 */
 #define SINGLE_DASH SHORT_OPTION('\0', NO_ARG)
 
 /** Check for a double dash as option.
 
-    This is usually used to signal the end of options.
+  This is usually used to signal the end of options.
 */
 #define DOUBLE_DASH LONG_OPTION("", NO_ARG)
 
 /** Check for a short style (-o) or long style (--option) option.
     @param shortName The name of the short style option.
     @param longName The name of the long style option.
-    @param argReq Whether or not an argument is required/allowed. One of NO_ARG, OPTIONAL_ARG or
-        REQUIRED_ARG.
+    @param argReq Whether or not an argument is required/allowed. One of NO_ARG,
+        OPTIONAL_ARG or REQUIRED_ARG.
 */
 #define OPTION(shortName, longName, argReq)                      \
   if ((opttype == SHORT && optcurrent[1] == shortName) ||        \
@@ -242,8 +240,8 @@ END_FUNCTION
     CHECK_ARG(argReq) {
 /** Check for a long style (--option) option.
     @param longName The name of the long style option.
-    @param argReq Whether or not an argument is required/allowed. One of NO_ARG, OPTIONAL_ARG or
-        REQUIRED_ARG.
+    @param argReq Whether or not an argument is required/allowed. One of NO_ARG,
+        OPTIONAL_ARG or REQUIRED_ARG.
 */
 #define LONG_OPTION(longName, argReq)                          \
   if (opttype == LONG && strlen(longName) == optlength - 2 &&  \
@@ -271,8 +269,8 @@ END_FUNCTION
   LONG_OPTION(longName, NO_ARG) var = 1;   \
   END_OPTION
 
-/** Check for presence of a short style (-o) or long style (--option) option and set the variable
-    if so.
+/** Check for presence of a short style (-o) or long style (--option) option
+    and set the variable if so.
     @param shortName The name of the short style option.
     @param longName The name of the long style option.
     @param var The variable to set.
