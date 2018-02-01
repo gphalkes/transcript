@@ -33,4 +33,7 @@ linkltc: | library
 library:
 	@$(MAKE) -q -C ../../src libtranscript.la || $(MAKE) -C ../../src libtranscript.la
 
-.PHONY: library
+clang-format:
+	clang-format -i *.c *.h
+
+.PHONY: library clang-format

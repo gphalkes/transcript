@@ -14,202 +14,205 @@
 
 /** @file */
 
-#include <stdio.h>
-#include <string.h>
 #include <dirent.h>
 #include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 /* Make sure that for us the struct members are not constant, so we can modify
    them. */
 #define _TRANSCRIPT_CONST
 #include "transcript_internal.h"
 
-#define LOOP_LIST(type, iter, head) { type *iter; for (iter = head; iter != NULL; iter = iter->next) {
-#define END_LOOP_LIST }}
+#define LOOP_LIST(type, iter, head) \
+  {                                 \
+    type *iter;                     \
+    for (iter = head; iter != NULL; iter = iter->next) {
+#define END_LOOP_LIST \
+  }                   \
+  }
 
 /** @addtogroup transcript */
 /** @{ */
 
 static transcript_name_desc_t *converters, /**< The SL-list of known converters. */
-	*converters_tail; /**< Tail of the known converters SL-list. */
-static transcript_name_t *display_names; /**< The array of names that may be used for display purposes. */
-static int display_names_allocated, /**< The number of elements allocated in the ::display_names array. */
-	display_names_used; /**< The number of elements in the ::display_names array that is currently in use. */
+    *converters_tail;                      /**< Tail of the known converters SL-list. */
+static transcript_name_t
+    *display_names; /**< The array of names that may be used for display purposes. */
+static int
+    display_names_allocated, /**< The number of elements allocated in the ::display_names array. */
+    display_names_used; /**< The number of elements in the ::display_names array that is currently
+                           in use. */
 /** Boolean indicating whether the @c available member of #display_names has been initialized. */
 static bool_t availability_initialized = FALSE;
 
 /** Add a name to the ::display_names array, resizing the array if necessary. */
 static void add_display_name(const char *name, int available) {
-	if (display_names_allocated == 0) {
-		if ((display_names = malloc(64 * sizeof(transcript_name_t))) == NULL)
-			return;
-		display_names_allocated = 64;
-	} else if (display_names_used >= display_names_allocated) {
-		transcript_name_t *tmp;
+  if (display_names_allocated == 0) {
+    if ((display_names = malloc(64 * sizeof(transcript_name_t))) == NULL) return;
+    display_names_allocated = 64;
+  } else if (display_names_used >= display_names_allocated) {
+    transcript_name_t *tmp;
 
-		if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(transcript_name_t))) == NULL)
-			return;
-		display_names = tmp;
-		display_names_allocated *= 2;
-	}
+    if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(transcript_name_t))) ==
+        NULL)
+      return;
+    display_names = tmp;
+    display_names_allocated *= 2;
+  }
 
-	if ((display_names[display_names_used].name = _transcript_strdup(name)) == NULL)
-		return;
-	display_names[display_names_used].available = available;
-	display_names_used++;
+  if ((display_names[display_names_used].name = _transcript_strdup(name)) == NULL) return;
+  display_names[display_names_used].available = available;
+  display_names_used++;
 }
 
 /** Process the next non-alias name found in the aliases.txt file. */
 static bool_t add_converter_name(const char *name) {
-	transcript_name_desc_t *converter = NULL;
-	char normalized_name[NORMALIZE_NAME_MAX];
-	bool_t is_display_name = *name == '*';
+  transcript_name_desc_t *converter = NULL;
+  char normalized_name[NORMALIZE_NAME_MAX];
+  bool_t is_display_name = *name == '*';
 
-	if (is_display_name)
-		name++;
+  if (is_display_name) name++;
 
-	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+  transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if (normalized_name[0] == 0) {
-		_transcript_log("error: converter name '%s' is invalid\n", name);
-		goto return_error;
-	}
+  if (normalized_name[0] == 0) {
+    _transcript_log("error: converter name '%s' is invalid\n", name);
+    goto return_error;
+  }
 
-	/* Check if the name is already in use as a converter or an alias. */
-	LOOP_LIST(transcript_name_desc_t, ptr, converters)
-		if (strcmp(normalized_name, ptr->name) == 0) {
-			_transcript_log("error: converter name '%s' is already known\n", name);
-			goto return_error;
-		}
-		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-			if (strcmp(normalized_name, alias->name) == 0)
-				_transcript_log("warning: converter name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
-		END_LOOP_LIST
-	END_LOOP_LIST
+  /* Check if the name is already in use as a converter or an alias. */
+  LOOP_LIST(transcript_name_desc_t, ptr, converters)
+  if (strcmp(normalized_name, ptr->name) == 0) {
+    _transcript_log("error: converter name '%s' is already known\n", name);
+    goto return_error;
+  }
+  LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
+  if (strcmp(normalized_name, alias->name) == 0)
+    _transcript_log("warning: converter name '%s' is shadowed by an alias for '%s'\n", name,
+                    ptr->real_name);
+  END_LOOP_LIST
+  END_LOOP_LIST
 
-	if ((converter = malloc(sizeof(transcript_name_desc_t))) == NULL ||
-			(converter->real_name = _transcript_strdup(name)) == NULL ||
-			(converter->name = _transcript_strdup(normalized_name)) == NULL)
-	{
-		_transcript_log("error: out of memory while loading aliases\n");
-		/* FIXME: should really jump out of the whole parsing here. */
-		goto return_error;
-	}
+  if ((converter = malloc(sizeof(transcript_name_desc_t))) == NULL ||
+      (converter->real_name = _transcript_strdup(name)) == NULL ||
+      (converter->name = _transcript_strdup(normalized_name)) == NULL) {
+    _transcript_log("error: out of memory while loading aliases\n");
+    /* FIXME: should really jump out of the whole parsing here. */
+    goto return_error;
+  }
 
-	converter->aliases = NULL;
-	converter->next = NULL;
-	converter->flags = 0;
+  converter->aliases = NULL;
+  converter->next = NULL;
+  converter->flags = 0;
 
-	if (is_display_name) {
-		add_display_name(name, 0);
-		converter->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
-	}
+  if (is_display_name) {
+    add_display_name(name, 0);
+    converter->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
+  }
 
-	/* Link into list. */
-	if (converters_tail != NULL)
-		converters_tail->next = converter;
-	else
-		converters = converter;
-	converters_tail = converter;
-	return TRUE;
+  /* Link into list. */
+  if (converters_tail != NULL)
+    converters_tail->next = converter;
+  else
+    converters = converter;
+  converters_tail = converter;
+  return TRUE;
 
 return_error:
-	if (converter) {
-		free(converter->real_name);
-		free(converter->name);
-		free(converter);
-	}
-	return FALSE;
+  if (converter) {
+    free(converter->real_name);
+    free(converter->name);
+    free(converter);
+  }
+  return FALSE;
 }
 
 /** Handle any touch-ups of the last converter data structure. */
 static void converter_done(void) {
-	/* Check that the previous converter has at least one display name. If not
-	   make the converter name itself a display name. */
-	if (converters_tail != NULL && !(converters_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
-		add_display_name(converters_tail->real_name, 0);
-		converters_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
-	}
+  /* Check that the previous converter has at least one display name. If not
+     make the converter name itself a display name. */
+  if (converters_tail != NULL && !(converters_tail->flags & NAME_DESC_FLAG_HAS_DISPNAME)) {
+    add_display_name(converters_tail->real_name, 0);
+    converters_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
+  }
 }
 
 /** Process an alias found in the aliases.txt file. */
 static bool_t add_converter_alias(const char *name) {
-	transcript_alias_name_t *alias = NULL;
-	char normalized_name[NORMALIZE_NAME_MAX];
-	bool_t is_display_name = *name == '*';
+  transcript_alias_name_t *alias = NULL;
+  char normalized_name[NORMALIZE_NAME_MAX];
+  bool_t is_display_name = *name == '*';
 
-	if (is_display_name)
-		name++;
+  if (is_display_name) name++;
 
-	transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+  transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
-	if (*normalized_name == 0) {
-		_transcript_log("error: alias name '%s' is invalid\n", name);
-		goto return_error;
-	}
+  if (*normalized_name == 0) {
+    _transcript_log("error: alias name '%s' is invalid\n", name);
+    goto return_error;
+  }
 
-	/* Check if the name is already in use as a converter or an alias. */
-	LOOP_LIST(transcript_name_desc_t, ptr, converters)
-		if (ptr == converters_tail)
-			break;
-		if (strcmp(normalized_name, ptr->name) == 0)
-			_transcript_log("error: alias name '%s' is shadowd by a converter\n", name);
+  /* Check if the name is already in use as a converter or an alias. */
+  LOOP_LIST(transcript_name_desc_t, ptr, converters)
+  if (ptr == converters_tail) break;
+  if (strcmp(normalized_name, ptr->name) == 0)
+    _transcript_log("error: alias name '%s' is shadowd by a converter\n", name);
 
-		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-			if (strcmp(normalized_name, alias->name) == 0)
-				_transcript_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name, ptr->real_name);
-		END_LOOP_LIST
-	END_LOOP_LIST
+  LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
+  if (strcmp(normalized_name, alias->name) == 0)
+    _transcript_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name,
+                    ptr->real_name);
+  END_LOOP_LIST
+  END_LOOP_LIST
 
-	if ((alias = malloc(sizeof(transcript_name_desc_t))) == NULL) {
-		_transcript_log("error: out of memory while loading aliases\n");
-		/* FIXME: should really jump out of the whole parsing here. */
-		goto return_error;
-	}
+  if ((alias = malloc(sizeof(transcript_name_desc_t))) == NULL) {
+    _transcript_log("error: out of memory while loading aliases\n");
+    /* FIXME: should really jump out of the whole parsing here. */
+    goto return_error;
+  }
 
-	if ((alias->name = _transcript_strdup(normalized_name)) == NULL) {
-		_transcript_log("error: out of memory while loading aliases\n");
-		/* FIXME: should really jump out of the whole parsing here. */
-		goto return_error;
-	}
+  if ((alias->name = _transcript_strdup(normalized_name)) == NULL) {
+    _transcript_log("error: out of memory while loading aliases\n");
+    /* FIXME: should really jump out of the whole parsing here. */
+    goto return_error;
+  }
 
-	if (is_display_name) {
-		add_display_name(name, 0);
-		converters_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
-	}
+  if (is_display_name) {
+    add_display_name(name, 0);
+    converters_tail->flags |= NAME_DESC_FLAG_HAS_DISPNAME;
+  }
 
-	alias->next = converters_tail->aliases;
-	converters_tail->aliases = alias;
-	return TRUE;
+  alias->next = converters_tail->aliases;
+  converters_tail->aliases = alias;
+  return TRUE;
 
 return_error:
-	if (alias != NULL) {
-		free(alias->name);
-		free(alias);
-	}
-	return FALSE;
+  if (alias != NULL) {
+    free(alias->name);
+    free(alias);
+  }
+  return FALSE;
 }
 
 /** @internal
     @brief Get the descriptor for a converter by name. */
 transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_normalization) {
-	char normalized_name[NORMALIZE_NAME_MAX];
+  char normalized_name[NORMALIZE_NAME_MAX];
 
-	if (need_normalization) {
-		transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
-		name = normalized_name;
-	}
+  if (need_normalization) {
+    transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
+    name = normalized_name;
+  }
 
-	LOOP_LIST(transcript_name_desc_t, ptr, converters)
-		if (strcmp(name, ptr->name) == 0)
-			return ptr;
+  LOOP_LIST(transcript_name_desc_t, ptr, converters)
+  if (strcmp(name, ptr->name) == 0) return ptr;
 
-		LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-			if (strcmp(name, alias->name) == 0)
-				return ptr;
-		END_LOOP_LIST
-	END_LOOP_LIST
-	return NULL;
+  LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
+  if (strcmp(name, alias->name) == 0) return ptr;
+  END_LOOP_LIST
+  END_LOOP_LIST
+  return NULL;
 }
 
 /** @internal
@@ -221,46 +224,43 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
     the list built by ::init_availability is available.
 */
 static void init_availability(void) {
-	DIR *dir;
-	struct dirent *entry;
-	size_t i;
+  DIR *dir;
+  struct dirent *entry;
+  size_t i;
 
-	ACQUIRE_LOCK();
-	if (!_transcript_initialized_count) {
-		RELEASE_LOCK();
-		return;
-	}
+  ACQUIRE_LOCK();
+  if (!_transcript_initialized_count) {
+    RELEASE_LOCK();
+    return;
+  }
 
-	if (availability_initialized) {
-		RELEASE_LOCK();
-		return;
-	}
+  if (availability_initialized) {
+    RELEASE_LOCK();
+    return;
+  }
 
-	/* Probe all the converters listed as aliases from the file. */
-	for (i = 0; i < (size_t) display_names_used; i++)
-		display_names[i].available = transcript_probe_converter_nolock(display_names[i].name);
+  /* Probe all the converters listed as aliases from the file. */
+  for (i = 0; i < (size_t)display_names_used; i++)
+    display_names[i].available = transcript_probe_converter_nolock(display_names[i].name);
 
-	/* FIXME: perhaps we should add the default links for the full-type converters here. */
+  /* FIXME: perhaps we should add the default links for the full-type converters here. */
 
-	/* Add all the file names we can find in the DB dir, if they are not already present. */
-	if ((dir = opendir(DB_DIRECTORY)) != NULL) {
-		while ((entry = readdir(dir)) != NULL) {
-			size_t entry_name_len = strlen(entry->d_name);
-			if (entry_name_len < 5)
-				continue;
-			if (entry->d_name[0] == '_')
-				continue;
-			if (strcmp(entry->d_name + entry_name_len - 4, ".ltc") != 0)
-				continue;
-			entry->d_name[entry_name_len - 4] = 0;
-			if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
-				add_display_name(entry->d_name, transcript_probe_converter_nolock(entry->d_name));
-		}
-		closedir(dir);
-	}
+  /* Add all the file names we can find in the DB dir, if they are not already present. */
+  if ((dir = opendir(DB_DIRECTORY)) != NULL) {
+    while ((entry = readdir(dir)) != NULL) {
+      size_t entry_name_len = strlen(entry->d_name);
+      if (entry_name_len < 5) continue;
+      if (entry->d_name[0] == '_') continue;
+      if (strcmp(entry->d_name + entry_name_len - 4, ".ltc") != 0) continue;
+      entry->d_name[entry_name_len - 4] = 0;
+      if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
+        add_display_name(entry->d_name, transcript_probe_converter_nolock(entry->d_name));
+    }
+    closedir(dir);
+  }
 
-	availability_initialized = TRUE;
-	RELEASE_LOCK();
+  availability_initialized = TRUE;
+  RELEASE_LOCK();
 }
 
 /** Retrieve the list of display names known to this instantiation of the library.
@@ -268,10 +268,9 @@ static void init_availability(void) {
     @return An array of ::transcript_name_t structures listing the known converters.
 */
 const transcript_name_t *transcript_get_names(int *count) {
-	init_availability();
-	if (count != NULL)
-		*count = display_names_used;
-	return display_names;
+  init_availability();
+  if (count != NULL) *count = display_names_used;
+  return display_names;
 }
 
 /** @internal
@@ -285,132 +284,127 @@ const transcript_name_t *transcript_get_names(int *count) {
     @brief Read the list of converters and their aliases from the aliases.txt file.
 */
 static void *read_alias_file(const char *name) {
-	FILE *aliases;
-	int converter_found = 0;
-	size_t idx = 0;
-	char id[MAX_ID + 1];
-	int c, line_number = 1;
+  FILE *aliases;
+  int converter_found = 0;
+  size_t idx = 0;
+  char id[MAX_ID + 1];
+  int c, line_number = 1;
 
-	enum {
-		LINE_START,
-		LINE_CONTINUED,
-		ID_FIRST,
-		ID_ALIAS,
-		AFTER_ID,
-		COMMENT,
-		SKIP_REST
-	} state = LINE_START;
+  enum {
+    LINE_START,
+    LINE_CONTINUED,
+    ID_FIRST,
+    ID_ALIAS,
+    AFTER_ID,
+    COMMENT,
+    SKIP_REST
+  } state = LINE_START;
 
+  if ((aliases = fopen(name, "r")) == NULL) {
+    _transcript_log("Error opening '%s': %s\n", name, strerror(errno));
+    return NULL;
+  }
+  _transcript_log("Processing alias file %s\n", name);
 
-	if ((aliases = fopen(name, "r")) == NULL) {
-		_transcript_log("Error opening '%s': %s\n", name, strerror(errno));
-		return NULL;
-	}
-	_transcript_log("Processing alias file %s\n", name);
+  while ((c = fgetc(aliases)) != EOF) {
+    if (c == '\n') line_number++;
 
-	while ((c = fgetc(aliases)) != EOF) {
-		if (c == '\n')
-			line_number++;
+    switch (state) {
+      case LINE_START:
+      case LINE_CONTINUED:
+        if (_transcript_isspace(c)) {
+          state = LINE_CONTINUED;
+          break;
+        }
 
-		switch (state) {
-			case LINE_START:
-			case LINE_CONTINUED:
-				if (_transcript_isspace(c)) {
-					state = LINE_CONTINUED;
-					break;
-				}
+        if (c == '#') {
+          state = COMMENT;
+          break;
+        }
 
-				if (c == '#') {
-					state = COMMENT;
-					break;
-				}
+        if (!_transcript_isidchr(c) && c != '*') {
+          _transcript_log("aliases.txt:%d: invalid character\n", line_number);
+          state = SKIP_REST;
+          break;
+        }
 
-				if (!_transcript_isidchr(c) && c != '*') {
-					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
-					state = SKIP_REST;
-					break;
-				}
+        if (state == LINE_START) {
+          state = ID_FIRST;
+        } else {
+          if (converter_found)
+            state = ID_ALIAS;
+          else
+            state = SKIP_REST;
+        }
 
-				if (state == LINE_START) {
-					state = ID_FIRST;
-				} else {
-					if (converter_found)
-						state = ID_ALIAS;
-					else
-						state = SKIP_REST;
-				}
+        id[0] = c;
+        idx = 1;
+        break;
+      case ID_FIRST:
+      /* FALLTHROUGH */
+      case ID_ALIAS:
+        if (_transcript_isidchr(c)) {
+          if (idx < MAX_ID) id[idx++] = c;
+          break;
+        }
 
-				id[0] = c;
-				idx = 1;
-				break;
-			case ID_FIRST:
-				/* FALLTHROUGH */
-			case ID_ALIAS:
-				if (_transcript_isidchr(c)) {
-					if (idx < MAX_ID)
-						id[idx++] = c;
-					break;
-				}
-
-				if (_transcript_isspace(c) || c == '#') {
-					id[idx] = 0;
-					if (state == ID_FIRST) {
-						/* Finish handling the previous converter. */
-						converter_done();
-						/* Start with the new converter. */
-						converter_found = add_converter_name(id);
-					} else {
-						if (strcmp(id, ":disable") == 0)
-							converters_tail->flags |= NAME_DESC_FLAG_DISABLED;
-						else if (strcmp(id, ":probe_load") == 0)
-							converters_tail->flags |= NAME_DESC_FLAG_PROBE_LOAD;
-						else
-							add_converter_alias(id);
-					}
-					state = c == '#' ? COMMENT : AFTER_ID;
-				} else {
-					_transcript_log("aliases.txt:%d: invalid character\n", line_number);
-					state = SKIP_REST;
-				}
-				break;
-			case AFTER_ID:
-				if (_transcript_isspace(c))
-					break;
-				if (_transcript_isidchr(c) || c == '*') {
-					id[0] = c;
-					idx = 1;
-					state = ID_ALIAS;
-					break;
-				}
-				if (c == '#') {
-					state = COMMENT;
-					break;
-				}
-				_transcript_log("aliases.txt:%d: invalid character\n", line_number);
-				state = SKIP_REST;
-				break;
-			case SKIP_REST:
-			case COMMENT:
-				break;
-			default:
-				_transcript_log("Program logic error while reading aliases.txt\n");
-				fclose(aliases);
-				return NULL;
-		}
-		if (c == '\n')
-			state = LINE_START;
-	}
-	/* Finish handling the last converter. */
-	converter_done();
-	fclose(aliases);
-	return NULL;
+        if (_transcript_isspace(c) || c == '#') {
+          id[idx] = 0;
+          if (state == ID_FIRST) {
+            /* Finish handling the previous converter. */
+            converter_done();
+            /* Start with the new converter. */
+            converter_found = add_converter_name(id);
+          } else {
+            if (strcmp(id, ":disable") == 0)
+              converters_tail->flags |= NAME_DESC_FLAG_DISABLED;
+            else if (strcmp(id, ":probe_load") == 0)
+              converters_tail->flags |= NAME_DESC_FLAG_PROBE_LOAD;
+            else
+              add_converter_alias(id);
+          }
+          state = c == '#' ? COMMENT : AFTER_ID;
+        } else {
+          _transcript_log("aliases.txt:%d: invalid character\n", line_number);
+          state = SKIP_REST;
+        }
+        break;
+      case AFTER_ID:
+        if (_transcript_isspace(c)) break;
+        if (_transcript_isidchr(c) || c == '*') {
+          id[0] = c;
+          idx = 1;
+          state = ID_ALIAS;
+          break;
+        }
+        if (c == '#') {
+          state = COMMENT;
+          break;
+        }
+        _transcript_log("aliases.txt:%d: invalid character\n", line_number);
+        state = SKIP_REST;
+        break;
+      case SKIP_REST:
+      case COMMENT:
+        break;
+      default:
+        _transcript_log("Program logic error while reading aliases.txt\n");
+        fclose(aliases);
+        return NULL;
+    }
+    if (c == '\n') state = LINE_START;
+  }
+  /* Finish handling the last converter. */
+  converter_done();
+  fclose(aliases);
+  return NULL;
 }
 
 /** @internal
     @brief Read the list of converters and their aliases from the aliases.txt file.
 */
 void _transcript_init_aliases_from_file(void) {
-	_transcript_db_open("aliases", "txt", read_alias_file, NULL);
+  _transcript_db_open("aliases", "txt", read_alias_file, NULL);
 }
 
 /** @internal
@@ -419,27 +413,26 @@ void _transcript_init_aliases_from_file(void) {
     This function should be called with the lock acquired.
 */
 void _transcript_free_aliases(void) {
-	transcript_name_desc_t *desc_ptr;
-	transcript_alias_name_t *alias_ptr;
-	int i;
+  transcript_name_desc_t *desc_ptr;
+  transcript_alias_name_t *alias_ptr;
+  int i;
 
-	availability_initialized = FALSE;
-	for (i = 0; i < display_names_used; i++)
-		free(display_names[i].name);
-	free(display_names);
-	display_names = NULL;
-	display_names_allocated = 0;
-	display_names_used = 0;
+  availability_initialized = FALSE;
+  for (i = 0; i < display_names_used; i++) free(display_names[i].name);
+  free(display_names);
+  display_names = NULL;
+  display_names_allocated = 0;
+  display_names_used = 0;
 
-	for (desc_ptr = converters; desc_ptr != NULL; desc_ptr = converters) {
-		converters = converters->next;
-		free(desc_ptr->real_name);
-		free(desc_ptr->name);
-		for (alias_ptr = desc_ptr->aliases; alias_ptr != NULL; alias_ptr = desc_ptr->aliases) {
-			desc_ptr->aliases = desc_ptr->aliases->next;
-			free(alias_ptr->name);
-			free(alias_ptr);
-		}
-		free(desc_ptr);
-	}
+  for (desc_ptr = converters; desc_ptr != NULL; desc_ptr = converters) {
+    converters = converters->next;
+    free(desc_ptr->real_name);
+    free(desc_ptr->name);
+    for (alias_ptr = desc_ptr->aliases; alias_ptr != NULL; alias_ptr = desc_ptr->aliases) {
+      desc_ptr->aliases = desc_ptr->aliases->next;
+      free(alias_ptr->name);
+      free(alias_ptr);
+    }
+    free(desc_ptr);
+  }
 }

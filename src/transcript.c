@@ -15,9 +15,9 @@
 /** @file */
 
 #include <errno.h>
-#include <string.h>
 #include <limits.h>
 #include <stdarg.h>
+#include <string.h>
 #ifdef HAS_NL_LANGINFO
 #include <langinfo.h>
 #else
@@ -25,10 +25,10 @@
 #endif
 #include <pthread.h>
 
-#include "transcript_internal.h"
-#include "transcript_dlfcn.h"
-#include "utf.h"
 #include "generic_fallbacks.h"
+#include "transcript_dlfcn.h"
+#include "transcript_internal.h"
+#include "utf.h"
 
 #ifdef USE_GETTEXT
 #include <libintl.h>
@@ -41,23 +41,22 @@
 /** @{ */
 
 /** @internal */
-#define IS_ALNUM (1<<0)
+#define IS_ALNUM (1 << 0)
 /** @internal */
-#define IS_DIGIT (1<<1)
+#define IS_DIGIT (1 << 1)
 /** @internal */
-#define IS_UPPER (1<<2)
+#define IS_UPPER (1 << 2)
 /** @internal */
-#define IS_SPACE (1<<3)
+#define IS_SPACE (1 << 3)
 /** @internal */
-#define IS_IDCHR_EXTRA (1<<4)
+#define IS_IDCHR_EXTRA (1 << 4)
 static char char_info[CHAR_MAX];
 pthread_mutex_t _transcript_lock = PTHREAD_MUTEX_INITIALIZER;
 
 const char **_transcript_search_path;
-static const char path_sep[] = { LT_PATHSEP_CHAR, '\0' };
+static const char path_sep[] = {LT_PATHSEP_CHAR, '\0'};
 static char *transcript_path;
 int _transcript_initialized_count = 0;
-
 
 static void init_char_info(void);
 static char *ts_strtok(char *string, const char *separators, char **state);
@@ -69,15 +68,15 @@ static void add_search_dir(const char *dir);
     @return 1 if the converter is avaible, 0 otherwise.
 */
 int transcript_probe_converter(const char *name) {
-	int result;
+  int result;
 
-	ACQUIRE_LOCK();
-	if (!_transcript_initialized_count)
-		result = 0;
-	else
-		result = transcript_probe_converter_nolock(name);
-	RELEASE_LOCK();
-	return result;
+  ACQUIRE_LOCK();
+  if (!_transcript_initialized_count)
+    result = 0;
+  else
+    result = transcript_probe_converter_nolock(name);
+  RELEASE_LOCK();
+  return result;
 }
 
 /** Open a converter.
@@ -91,19 +90,19 @@ int transcript_probe_converter(const char *name) {
     passed through ::transcript_normalize_name first, and at most 79 characters of
     the normalized name are considered.
 */
-transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags, transcript_error_t *error) {
-	transcript_t *result;
+transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_type, int flags,
+                                        transcript_error_t *error) {
+  transcript_t *result;
 
-	ACQUIRE_LOCK();
-	if (!_transcript_initialized_count) {
-		if (error != NULL)
-			*error = TRANSCRIPT_NOT_INITIALIZED;
-		result = NULL;
-	} else {
-		result = transcript_open_converter_nolock(name, utf_type, flags, error);
-	}
-	RELEASE_LOCK();
-	return result;
+  ACQUIRE_LOCK();
+  if (!_transcript_initialized_count) {
+    if (error != NULL) *error = TRANSCRIPT_NOT_INITIALIZED;
+    result = NULL;
+  } else {
+    result = transcript_open_converter_nolock(name, utf_type, flags, error);
+  }
+  RELEASE_LOCK();
+  return result;
 }
 
 /** Close a converter.
@@ -113,14 +112,13 @@ transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_t
     be @c NULL.
 */
 void transcript_close_converter(transcript_t *handle) {
-	if (handle != NULL) {
-		if (handle->close != NULL)
-			handle->close(handle);
-		ACQUIRE_LOCK();
-		lt_dlclose(handle->library_handle);
-		RELEASE_LOCK();
-		free(handle);
-	}
+  if (handle != NULL) {
+    if (handle->close != NULL) handle->close(handle);
+    ACQUIRE_LOCK();
+    lt_dlclose(handle->library_handle);
+    RELEASE_LOCK();
+    free(handle);
+  }
 }
 
 /** Check if two names describe the same converter.
@@ -129,18 +127,16 @@ void transcript_close_converter(transcript_t *handle) {
     @return 1 if @a name_a and @a name_b describe the same converter, 0 otherwise.
 */
 int transcript_equal(const char *name_a, const char *name_b) {
-	transcript_name_desc_t *converter;
-	char normalized_name_a[NORMALIZE_NAME_MAX], normalized_name_b[NORMALIZE_NAME_MAX];
+  transcript_name_desc_t *converter;
+  char normalized_name_a[NORMALIZE_NAME_MAX], normalized_name_b[NORMALIZE_NAME_MAX];
 
-	transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
-	transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
+  transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
+  transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
 
-	if (strcmp(normalized_name_a, normalized_name_b) == 0)
-		return 1;
+  if (strcmp(normalized_name_a, normalized_name_b) == 0) return 1;
 
-	if ((converter = _transcript_get_name_desc(normalized_name_a, 0)) == NULL)
-		return 0;
-	return converter == _transcript_get_name_desc(normalized_name_b, 0);
+  if ((converter = _transcript_get_name_desc(normalized_name_a, 0)) == NULL) return 0;
+  return converter == _transcript_get_name_desc(normalized_name_b, 0);
 }
 
 /** Convert a buffer from a chararcter set to Unicode.
@@ -171,10 +167,11 @@ int transcript_equal(const char *name_a, const char *name_b) {
     least 20 codepoints. This is guaranteed if the size of the output buffer is
     at least 80 (::TRANSCRIPT_MIN_UNICODE_BUFFER_SIZE) bytes.
 */
-transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbuf, const char *inbuflimit, char **outbuf,
-		const char *outbuflimit, int flags)
-{
-	return handle->convert_to(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
+transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbuf,
+                                         const char *inbuflimit, char **outbuf,
+                                         const char *outbuflimit, int flags) {
+  return handle->convert_to(handle, inbuf, inbuflimit, outbuf, outbuflimit,
+                            flags | (handle->flags & 0xff));
 }
 
 /** Convert a buffer from Unicode to a chararcter set.
@@ -204,9 +201,11 @@ transcript_error_t transcript_to_unicode(transcript_t *handle, const char **inbu
     If M:N conversions are enabled, the output buffer must be able to hold at
     least 32 bytes (::TRANSCRIPT_MIN_CODEPAGE_BUFFER_SIZE).
 */
-transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf, const char *inbuflimit, char **outbuf,
-		const char *outbuflimit, int flags) {
-	return handle->convert_from(handle, inbuf, inbuflimit, outbuf, outbuflimit, flags | (handle->flags & 0xff));
+transcript_error_t transcript_from_unicode(transcript_t *handle, const char **inbuf,
+                                           const char *inbuflimit, char **outbuf,
+                                           const char *outbuflimit, int flags) {
+  return handle->convert_from(handle, inbuf, inbuflimit, outbuf, outbuflimit,
+                              flags | (handle->flags & 0xff));
 }
 
 /** Skip the next character in character set encoding.
@@ -221,8 +220,9 @@ transcript_error_t transcript_from_unicode(transcript_t *handle, const char **in
     next input character can not be converted (either because the input is
     corrupt, or the conversions are not permitted by the flag settings).
 */
-transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit) {
-	return handle->skip_to(handle, inbuf, inbuflimit);
+transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char **inbuf,
+                                              const char *inbuflimit) {
+  return handle->skip_to(handle, inbuf, inbuflimit);
 }
 
 /** Skip the next character in Unicode encoding.
@@ -237,10 +237,11 @@ transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char *
     the next input character can not be converted (either because the input is
     corrupt, or the conversions are not permitted by the flag settings).
 */
-transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char **inbuf, const char *inbuflimit) {
-	if (handle->get_unicode(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
-		return TRANSCRIPT_INCOMPLETE;
-	return TRANSCRIPT_SUCCESS;
+transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char **inbuf,
+                                                const char *inbuflimit) {
+  if (handle->get_unicode(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
+    return TRANSCRIPT_INCOMPLETE;
+  return TRANSCRIPT_SUCCESS;
 }
 
 /** Write out any bytes required to create a legal output in a character set.
@@ -259,17 +260,18 @@ transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char
     After calling this function, the from-Unicode conversion will be in the
     initial state.
 */
-transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **outbuf, const char *outbuflimit) {
-	switch (handle->flush_from(handle, outbuf, outbuflimit)) {
-		case TRANSCRIPT_SUCCESS:
-			break;
-		case TRANSCRIPT_NO_SPACE:
-			return TRANSCRIPT_NO_SPACE;
-		default:
-			return TRANSCRIPT_INTERNAL_ERROR;
-	}
-	handle->reset_from(handle);
-	return TRANSCRIPT_SUCCESS;
+transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **outbuf,
+                                                 const char *outbuflimit) {
+  switch (handle->flush_from(handle, outbuf, outbuflimit)) {
+    case TRANSCRIPT_SUCCESS:
+      break;
+    case TRANSCRIPT_NO_SPACE:
+      return TRANSCRIPT_NO_SPACE;
+    default:
+      return TRANSCRIPT_INTERNAL_ERROR;
+  }
+  handle->reset_from(handle);
+  return TRANSCRIPT_SUCCESS;
 }
 
 /** Reset the to-Unicode conversion to its initial state.
@@ -277,85 +279,77 @@ transcript_error_t transcript_from_unicode_flush(transcript_t *handle, char **ou
 
     @note The to-Unicode and from-Unicode conversions are reset separately.
 */
-void transcript_to_unicode_reset(transcript_t *handle) {
-	handle->reset_to(handle);
-}
+void transcript_to_unicode_reset(transcript_t *handle) { handle->reset_to(handle); }
 
 /** Reset the from-Unicode conversion to its initial state.
     @param handle The converter to reset.
 
     @note The to-Unicode and from-Unicode conversions are reset separately.
 */
-void transcript_from_unicode_reset(transcript_t *handle) {
-	handle->reset_from(handle);
-}
+void transcript_from_unicode_reset(transcript_t *handle) { handle->reset_from(handle); }
 
 /** Save a converter's state.
     @param handle The converter to save the state for.
     @param state A pointer to a buffer of at least ::TRANSCRIPT_SAVE_STATE_SIZE bytes.
 */
-void transcript_save_state(transcript_t *handle, void *state) {
-	handle->save(handle, state);
-}
+void transcript_save_state(transcript_t *handle, void *state) { handle->save(handle, state); }
 
 /** Restore a converter's state.
     @param handle The converter to restore the state for.
     @param state A pointer to a buffer of at least ::TRANSCRIPT_SAVE_STATE_SIZE bytes.
 */
-void transcript_load_state(transcript_t *handle, void *state) {
-	handle->save(handle, state);
-}
+void transcript_load_state(transcript_t *handle, void *state) { handle->save(handle, state); }
 
 /** Get a localized descriptive string for an error code.
     @param error The error code to retrieve the descriptive string for.
     @return A static string containing a localized descriptive string.
 */
 const char *transcript_strerror(transcript_error_t error) {
-	switch (error) {
-		case TRANSCRIPT_SUCCESS:
-			return _("Success");
-		case TRANSCRIPT_FALLBACK:
-			return _("Only a fallback mapping is available");
-		case TRANSCRIPT_UNASSIGNED:
-			return _("Character can not be mapped");
-		case TRANSCRIPT_ILLEGAL:
-			return _("Illegal sequence in input buffer");
-		case TRANSCRIPT_ILLEGAL_END:
-			return _("Illegal sequence at end of input buffer");
-		default:
-		case TRANSCRIPT_INTERNAL_ERROR:
-			return _("Internal error");
-		case TRANSCRIPT_PRIVATE_USE:
-			return _("Character maps to a private use codepoint");
-		case TRANSCRIPT_NO_SPACE:
-			return _("No space left in output buffer");
-		case TRANSCRIPT_INCOMPLETE:
-			return _("Incomplete character at end of input buffer");
-		case TRANSCRIPT_ERRNO:
-			return strerror(errno);
-		case TRANSCRIPT_BAD_ARG:
-			return _("Bad argument");
-		case TRANSCRIPT_OUT_OF_MEMORY:
-			return _("Out of memory");
-		case TRANSCRIPT_INVALID_FORMAT:
-			return _("Invalid map-file format");
-		case TRANSCRIPT_TRUNCATED_MAP:
-			return _("Map file is truncated");
-		case TRANSCRIPT_WRONG_VERSION:
-			return _("Map file is of an unsupported version");
-		case TRANSCRIPT_INTERNAL_TABLE:
-			return _("Map file is for internal use only");
-		case TRANSCRIPT_DLOPEN_FAILURE:
-			return _("Dynamic linker returned an error");
-		case TRANSCRIPT_CONVERTER_DISABLED:
-			return _("Converter has been disabled");
-		case TRANSCRIPT_PACKAGE_FILE:
-			return _("Name specifies a converter package file");
-		case TRANSCRIPT_INIT_DLFCN:
-			return _("Could not initialize dynamic module loading functionality");
-		case TRANSCRIPT_NOT_INITIALIZED:
-			return _("The transcript library has not been initialized yet");
-	}
+  switch (error) {
+    case TRANSCRIPT_SUCCESS:
+      return _("Success");
+    case TRANSCRIPT_FALLBACK:
+      return _("Only a fallback mapping is available");
+    case TRANSCRIPT_UNASSIGNED:
+      return _("Character can not be mapped");
+    case TRANSCRIPT_ILLEGAL:
+      return _("Illegal sequence in input buffer");
+    case TRANSCRIPT_ILLEGAL_END:
+      return _("Illegal sequence at end of input buffer");
+    default:
+    case TRANSCRIPT_INTERNAL_ERROR:
+      return _("Internal error");
+    case TRANSCRIPT_PRIVATE_USE:
+      return _("Character maps to a private use codepoint");
+    case TRANSCRIPT_NO_SPACE:
+      return _("No space left in output buffer");
+    case TRANSCRIPT_INCOMPLETE:
+      return _("Incomplete character at end of input buffer");
+    case TRANSCRIPT_ERRNO:
+      return strerror(errno);
+    case TRANSCRIPT_BAD_ARG:
+      return _("Bad argument");
+    case TRANSCRIPT_OUT_OF_MEMORY:
+      return _("Out of memory");
+    case TRANSCRIPT_INVALID_FORMAT:
+      return _("Invalid map-file format");
+    case TRANSCRIPT_TRUNCATED_MAP:
+      return _("Map file is truncated");
+    case TRANSCRIPT_WRONG_VERSION:
+      return _("Map file is of an unsupported version");
+    case TRANSCRIPT_INTERNAL_TABLE:
+      return _("Map file is for internal use only");
+    case TRANSCRIPT_DLOPEN_FAILURE:
+      return _("Dynamic linker returned an error");
+    case TRANSCRIPT_CONVERTER_DISABLED:
+      return _("Converter has been disabled");
+    case TRANSCRIPT_PACKAGE_FILE:
+      return _("Name specifies a converter package file");
+    case TRANSCRIPT_INIT_DLFCN:
+      return _("Could not initialize dynamic module loading functionality");
+    case TRANSCRIPT_NOT_INITIALIZED:
+      return _("The transcript library has not been initialized yet");
+  }
 }
 
 /** Normalize a character set name.
@@ -368,22 +362,22 @@ const char *transcript_strerror(transcript_error_t error) {
     zeros in numbers are ignored as well. The stored result will be nul
     terminated.
 */
-void transcript_normalize_name(const char *name, char *normalized_name, size_t normalized_name_max) {
-	size_t write_idx = 0;
-	bool_t last_was_digit = FALSE;
+void transcript_normalize_name(const char *name, char *normalized_name,
+                               size_t normalized_name_max) {
+  size_t write_idx = 0;
+  bool_t last_was_digit = FALSE;
 
-	for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
-		/* Skip any character that is not alphanumeric. */
-		if (!_transcript_isalnum(*name)) {
-			last_was_digit = FALSE;
-		} else {
-			if (!last_was_digit && *name == '0')
-				continue;
-			normalized_name[write_idx++] = _transcript_tolower(*name);
-			last_was_digit = _transcript_isdigit(*name);
-		}
-	}
-	normalized_name[write_idx] = 0;
+  for (; *name != 0 && write_idx < normalized_name_max - 1; name++) {
+    /* Skip any character that is not alphanumeric. */
+    if (!_transcript_isalnum(*name)) {
+      last_was_digit = FALSE;
+    } else {
+      if (!last_was_digit && *name == '0') continue;
+      normalized_name[write_idx++] = _transcript_tolower(*name);
+      last_was_digit = _transcript_isdigit(*name);
+    }
+  }
+  normalized_name[write_idx] = 0;
 }
 
 /** Get a character string describing the current character set indicated by the environment.
@@ -399,14 +393,14 @@ void transcript_normalize_name(const char *name, char *normalized_name, size_t n
 */
 const char *transcript_get_codeset(void) {
 #ifdef HAS_NL_LANGINFO
-	return nl_langinfo(CODESET);
+  return nl_langinfo(CODESET);
 #else
-	const char *lc_ctype, *codeset;
+  const char *lc_ctype, *codeset;
 
-	if ((lc_ctype = setlocale(LC_CTYPE, NULL)) == NULL || strcmp(lc_ctype, "POSIX") == 0 ||
-			strcmp(lc_ctype, "C") == 0 || (codeset = strrchr(lc_ctype, '.')) == NULL || codeset[1] == 0)
-		return "ANSI_X3.4-1968";
-	return codeset + 1;
+  if ((lc_ctype = setlocale(LC_CTYPE, NULL)) == NULL || strcmp(lc_ctype, "POSIX") == 0 ||
+      strcmp(lc_ctype, "C") == 0 || (codeset = strrchr(lc_ctype, '.')) == NULL || codeset[1] == 0)
+    return "ANSI_X3.4-1968";
+  return codeset + 1;
 #endif
 }
 
@@ -418,9 +412,7 @@ const char *transcript_get_codeset(void) {
     information, future library additions may prompt library users to want to operate
     differently depending on the available features.
 */
-long transcript_get_version(void) {
-	return TRANSCRIPT_VERSION;
-}
+long transcript_get_version(void) { return TRANSCRIPT_VERSION; }
 
 /** Initialize the library.
 
@@ -432,28 +424,27 @@ long transcript_get_version(void) {
     Note that it does not load the availability of the aliases.
 */
 transcript_error_t transcript_init(void) {
-
-	/* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
-	ACQUIRE_LOCK();
-	if (!_transcript_initialized_count) {
-		char *search_path_element, *state;
-		#ifdef USE_GETTEXT
-		bindtextdomain("libtranscript", LOCALEDIR);
-		#endif
-		init_char_info();
-		if (lt_dlinit() != 0) {
-			RELEASE_LOCK();
-			return TRANSCRIPT_INIT_DLFCN;
-		}
+  /* Removed Double-Checked Locking, as it can't work reliably (compiler dependent). */
+  ACQUIRE_LOCK();
+  if (!_transcript_initialized_count) {
+    char *search_path_element, *state;
+#ifdef USE_GETTEXT
+    bindtextdomain("libtranscript", LOCALEDIR);
+#endif
+    init_char_info();
+    if (lt_dlinit() != 0) {
+      RELEASE_LOCK();
+      return TRANSCRIPT_INIT_DLFCN;
+    }
 /* Disabled because of security risks! */
 #if TRANSCRIPT_DEBUG
-		if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
-			if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
-				for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-						search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
-					add_search_dir(search_path_element);
-			}
-		}
+    if ((transcript_path = getenv("TRANSCRIPT_PATH")) != NULL) {
+      if ((transcript_path = _transcript_strdup(transcript_path)) != NULL) {
+        for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+             search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+          add_search_dir(search_path_element);
+      }
+    }
 #endif
 #if 0
 		if ((transcript_path = getenv("HOME")) != NULL) {
@@ -465,20 +456,19 @@ transcript_error_t transcript_init(void) {
 			}
 		}
 #endif
-		if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
-			for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-					search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
-				add_search_dir(search_path_element);
-		}
-		/* Initialize aliases defined in the aliases.txt file. This does not
-		   check availability, nor does it build the complete set of display
-		   names. That will be done when that list is requested. */
-		_transcript_init_aliases_from_file();
-	}
-	if (_transcript_initialized_count < INT_MAX)
-		_transcript_initialized_count++;
-	RELEASE_LOCK();
-	return TRANSCRIPT_SUCCESS;
+    if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
+      for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
+           search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+        add_search_dir(search_path_element);
+    }
+    /* Initialize aliases defined in the aliases.txt file. This does not
+       check availability, nor does it build the complete set of display
+       names. That will be done when that list is requested. */
+    _transcript_init_aliases_from_file();
+  }
+  if (_transcript_initialized_count < INT_MAX) _transcript_initialized_count++;
+  RELEASE_LOCK();
+  return TRANSCRIPT_SUCCESS;
 }
 
 /** Finalize the library use.
@@ -489,17 +479,18 @@ transcript_error_t transcript_init(void) {
     memory leaks.
 */
 void transcript_finalize(void) {
-	ACQUIRE_LOCK();
-	if (_transcript_initialized_count == INT_MAX || _transcript_initialized_count == 0 || --_transcript_initialized_count != 0) {
-		RELEASE_LOCK();
-		return;
-	}
+  ACQUIRE_LOCK();
+  if (_transcript_initialized_count == INT_MAX || _transcript_initialized_count == 0 ||
+      --_transcript_initialized_count != 0) {
+    RELEASE_LOCK();
+    return;
+  }
 
-	free(transcript_path);
-	free(_transcript_search_path);
-	_transcript_free_aliases();
-	lt_dlexit();
-	RELEASE_LOCK();
+  free(transcript_path);
+  free(_transcript_search_path);
+  _transcript_free_aliases();
+  lt_dlexit();
+  RELEASE_LOCK();
 }
 
 /*================ Internal functions ===============*/
@@ -510,13 +501,12 @@ void transcript_finalize(void) {
     This function is provided when there is no strdup function in the C library.
 */
 char *_transcript_strdup(const char *str) {
-	char *result;
-	size_t len = strlen(str) + 1;
+  char *result;
+  size_t len = strlen(str) + 1;
 
-	if ((result = malloc(len)) == NULL)
-		return NULL;
-	memcpy(result, str, len);
-	return result;
+  if ((result = malloc(len)) == NULL) return NULL;
+  memcpy(result, str, len);
+  return result;
 }
 #endif
 
@@ -525,22 +515,23 @@ char *_transcript_strdup(const char *str) {
    rather than using the library supplied versions. */
 
 /** @internal
-    @brief Initialize the character information bitmap used for ::_transcript_isXXXXX and ::_transcript_tolower.
+    @brief Initialize the character information bitmap used for ::_transcript_isXXXXX and
+   ::_transcript_tolower.
 */
 static void init_char_info(void) {
-	static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	static const char digit[] = "0123456789";
-	static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-	static const char space[] = " \t\f\n\r\v";
-	static const char idhcr_extra[] = "-_+.:";
+  static const char alnum[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  static const char digit[] = "0123456789";
+  static const char upper[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  static const char space[] = " \t\f\n\r\v";
+  static const char idhcr_extra[] = "-_+.:";
 
-	const char *ptr;
+  const char *ptr;
 
-	for (ptr = alnum; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_ALNUM;
-	for (ptr = digit; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_DIGIT;
-	for (ptr = upper; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_UPPER;
-	for (ptr = space; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_SPACE;
-	for (ptr = idhcr_extra; *ptr != 0; ptr++) char_info[(int) *ptr] |= IS_IDCHR_EXTRA;
+  for (ptr = alnum; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_ALNUM;
+  for (ptr = digit; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_DIGIT;
+  for (ptr = upper; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_UPPER;
+  for (ptr = space; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_SPACE;
+  for (ptr = idhcr_extra; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_IDCHR_EXTRA;
 }
 
 /** @internal @brief Execution-character-set isalnum. */
@@ -549,16 +540,21 @@ int _transcript_isalnum(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c]
 int _transcript_isdigit(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_DIGIT); }
 /** @internal @brief Execution-character-set isspace. */
 int _transcript_isspace(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_SPACE); }
-/** @internal @brief Checks whether a character is considered an identifier character (used in ::_transcript_normalize_name). */
-int _transcript_isidchr(int c) { return c >= 0 && c <= CHAR_MAX && (char_info[c] & (IS_IDCHR_EXTRA | IS_ALNUM)); }
+/** @internal @brief Checks whether a character is considered an identifier character (used in
+ * ::_transcript_normalize_name). */
+int _transcript_isidchr(int c) {
+  return c >= 0 && c <= CHAR_MAX && (char_info[c] & (IS_IDCHR_EXTRA | IS_ALNUM));
+}
 /** @internal @brief Execution-character-set tolower. */
-int _transcript_tolower(int c) { return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c; }
+int _transcript_tolower(int c) {
+  return (c >= 0 && c <= CHAR_MAX && (char_info[c] & IS_UPPER)) ? 'a' + (c - 'A') : c;
+}
 
 /** @internal
     @brief Get a generic fallback.
 */
 uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
-	return codepoint < UINT32_C(0x10000) ? get_generic_fallback(codepoint) : UINT32_C(0xffff);
+  return codepoint < UINT32_C(0x10000) ? get_generic_fallback(codepoint) : UINT32_C(0xffff);
 }
 
 /** Handle an unassigned codepoint in a from-Unicode conversion.
@@ -568,83 +564,82 @@ uint32_t transcript_get_generic_fallback(uint32_t codepoint) {
     Otherwise, it handles conversion of the generic fall-back as if it were
     specified in the converter table.
 */
-transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint, char **outbuf,
-		const char *outbuflimit, int flags)
-{
-	get_unicode_func_t saved_get_unicode_func;
-	const char *fallback_ptr;
-	transcript_error_t result;
+transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t codepoint,
+                                                char **outbuf, const char *outbuflimit, int flags) {
+  get_unicode_func_t saved_get_unicode_func;
+  const char *fallback_ptr;
+  transcript_error_t result;
 
-	if (flags & TRANSCRIPT_HANDLING_UNASSIGNED || codepoint > UINT32_C(0xffff))
-		return TRANSCRIPT_UNASSIGNED;
+  if (flags & TRANSCRIPT_HANDLING_UNASSIGNED || codepoint > UINT32_C(0xffff))
+    return TRANSCRIPT_UNASSIGNED;
 
-	if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xffff)) {
-		if (!(flags & TRANSCRIPT_ALLOW_FALLBACK))
-			return TRANSCRIPT_FALLBACK;
-		saved_get_unicode_func = handle->get_unicode;
-		handle->get_unicode = _transcript_get_utf32_no_check;
-		fallback_ptr = (const char *) &codepoint;
+  if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xffff)) {
+    if (!(flags & TRANSCRIPT_ALLOW_FALLBACK)) return TRANSCRIPT_FALLBACK;
+    saved_get_unicode_func = handle->get_unicode;
+    handle->get_unicode = _transcript_get_utf32_no_check;
+    fallback_ptr = (const char *)&codepoint;
 
-		result = handle->convert_from(handle, &fallback_ptr, fallback_ptr + sizeof(uint32_t), outbuf, outbuflimit,
-			flags | TRANSCRIPT_SINGLE_CONVERSION | TRANSCRIPT_NO_1N_CONVERSION | TRANSCRIPT_HANDLING_UNASSIGNED);
-		handle->get_unicode = saved_get_unicode_func;
-		switch (result) {
-			case TRANSCRIPT_NO_SPACE:
-			case TRANSCRIPT_UNASSIGNED:
-			case TRANSCRIPT_SUCCESS:
-			case TRANSCRIPT_FALLBACK:
-				return result;
-			default:
-				return TRANSCRIPT_INTERNAL_ERROR;
-		}
-	}
-	return TRANSCRIPT_UNASSIGNED;
+    result = handle->convert_from(handle, &fallback_ptr, fallback_ptr + sizeof(uint32_t), outbuf,
+                                  outbuflimit,
+                                  flags | TRANSCRIPT_SINGLE_CONVERSION |
+                                      TRANSCRIPT_NO_1N_CONVERSION | TRANSCRIPT_HANDLING_UNASSIGNED);
+    handle->get_unicode = saved_get_unicode_func;
+    switch (result) {
+      case TRANSCRIPT_NO_SPACE:
+      case TRANSCRIPT_UNASSIGNED:
+      case TRANSCRIPT_SUCCESS:
+      case TRANSCRIPT_FALLBACK:
+        return result;
+      default:
+        return TRANSCRIPT_INTERNAL_ERROR;
+    }
+  }
+  return TRANSCRIPT_UNASSIGNED;
 }
 
 /** Reentrant version of strtok
-	@param string The string to tokenise.
-	@param separators The list of token separators.
-	@param state A user allocated character pointer.
+        @param string The string to tokenise.
+        @param separators The list of token separators.
+        @param state A user allocated character pointer.
 
-	This function emulates the functionality of the Un*x function strtok_r.
-	Note that this function destroys the contents of @a string.
+        This function emulates the functionality of the Un*x function strtok_r.
+        Note that this function destroys the contents of @a string.
 */
 static char *ts_strtok(char *string, const char *separators, char **state) {
-	char *retval;
-	if (string != NULL)
-		*state = string;
+  char *retval;
+  if (string != NULL) *state = string;
 
-	/* Skip to the first character that is not in 'separators' */
-	while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
-	retval = *state;
-	if (*retval == 0)
-		return NULL;
-	/* Skip to the first character that IS in 'separators' */
-	while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
-	if (**state != 0) {
-		/* Overwrite it with 0 */
-		**state = 0;
-		/* Advance the state pointer so we know where to start next time */
-		(*state)++;
-	}
-	return retval;
+  /* Skip to the first character that is not in 'separators' */
+  while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
+  retval = *state;
+  if (*retval == 0) return NULL;
+  /* Skip to the first character that IS in 'separators' */
+  while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
+  if (**state != 0) {
+    /* Overwrite it with 0 */
+    **state = 0;
+    /* Advance the state pointer so we know where to start next time */
+    (*state)++;
+  }
+  return retval;
 }
 
 /** Append a directory to the search path. */
 static void add_search_dir(const char *dir) {
-	static int path_idx, path_size;
+  static int path_idx, path_size;
 
-	if (path_idx >= path_size) {
-		const char **tmp;
-		if ((tmp = realloc(_transcript_search_path, sizeof(_transcript_search_path[0]) * (path_size + 8 + 1))) == NULL)
-			return;
-		_transcript_search_path = tmp;
-		path_size += 8;
-	}
-	_transcript_search_path[path_idx++] = dir;
-	/* Note that we always allocate one extra element for this purpose, which is
-	   not accounted for in path_size. */
-	_transcript_search_path[path_idx] = NULL;
+  if (path_idx >= path_size) {
+    const char **tmp;
+    if ((tmp = realloc(_transcript_search_path,
+                       sizeof(_transcript_search_path[0]) * (path_size + 8 + 1))) == NULL)
+      return;
+    _transcript_search_path = tmp;
+    path_size += 8;
+  }
+  _transcript_search_path[path_idx++] = dir;
+  /* Note that we always allocate one extra element for this purpose, which is
+     not accounted for in path_size. */
+  _transcript_search_path[path_idx] = NULL;
 }
 
 /** @internal
@@ -655,14 +650,13 @@ static void add_search_dir(const char *dir) {
     may be used.
 */
 void _transcript_log(const char *fmt, ...) {
-	if (getenv("TRANSCRIPT_LOG") != NULL) {
-		va_list ap;
-		va_start(ap, fmt);
-		vfprintf(stderr, fmt, ap);
-		va_end(ap);
-	}
+  if (getenv("TRANSCRIPT_LOG") != NULL) {
+    va_list ap;
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+  }
 }
-
 
 /** @internal Close a converter without locking.
     @param handle The converter to close.
@@ -671,12 +665,11 @@ void _transcript_log(const char *fmt, ...) {
     be @c NULL.
 */
 void transcript_close_converter_nolock(transcript_t *handle) {
-	if (handle != NULL) {
-		if (handle->close != NULL)
-			handle->close(handle);
-		lt_dlclose(handle->library_handle);
-		free(handle);
-	}
+  if (handle != NULL) {
+    if (handle->close != NULL) handle->close(handle);
+    lt_dlclose(handle->library_handle);
+    free(handle);
+  }
 }
 
 /** @} */

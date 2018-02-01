@@ -34,4 +34,7 @@ ucm2ltc: | library
 library:
 	@$(MAKE) -q -C ../../src libtranscript.la || $(MAKE) -C ../../src libtranscript.la
 
-.PHONY: library
+clang-format:
+	clang-format -i *.cc *.h
+
+.PHONY: library clang-format

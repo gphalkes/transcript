@@ -14,6 +14,6 @@
 #ifndef TRANSCRIPT_BOOL_H
 #define TRANSCRIPT_BOOL_H
 
-typedef enum {FALSE, TRUE} bool_t;
+typedef enum { FALSE, TRUE } bool_t;
 
 #endif

@@ -28,21 +28,23 @@
 #define TRANSCRIPT_UTF_NO_VALUE UINT32_C(0xfffffffc)
 
 enum {
-	_TRANSCRIPT_UTF8_LOOSE = _TRANSCRIPT_UTFLAST,
-	_TRANSCRIPT_CESU8,
-	_TRANSCRIPT_GB18030,
-	_TRANSCRIPT_SCSU,
-	_TRANSCRIPT_UTF7,
-	_TRANSCRIPT_UTF32_NO_CHECK,
-	_TRANSCRIPT_UTF16BE_BOM,
-	_TRANSCRIPT_UTF16LE_BOM,
-	_TRANSCRIPT_UTF32BE_BOM,
-	_TRANSCRIPT_UTF32LE_BOM,
-	_TRANSCRIPT_UTF8_BOM
+  _TRANSCRIPT_UTF8_LOOSE = _TRANSCRIPT_UTFLAST,
+  _TRANSCRIPT_CESU8,
+  _TRANSCRIPT_GB18030,
+  _TRANSCRIPT_SCSU,
+  _TRANSCRIPT_UTF7,
+  _TRANSCRIPT_UTF32_NO_CHECK,
+  _TRANSCRIPT_UTF16BE_BOM,
+  _TRANSCRIPT_UTF16LE_BOM,
+  _TRANSCRIPT_UTF32BE_BOM,
+  _TRANSCRIPT_UTF32LE_BOM,
+  _TRANSCRIPT_UTF8_BOM
 };
 /* FIXME: rename! */
 TRANSCRIPT_API put_unicode_func_t _transcript_get_put_unicode(int type);
 TRANSCRIPT_API get_unicode_func_t _transcript_get_get_unicode(int type);
-TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf, const char *inbuflimit, bool_t skip);
-TRANSCRIPT_LOCAL transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint, char **outbuf);
+TRANSCRIPT_LOCAL uint_fast32_t _transcript_get_utf32_no_check(const char **inbuf,
+                                                              const char *inbuflimit, bool_t skip);
+TRANSCRIPT_LOCAL transcript_error_t _transcript_put_utf16_no_check(uint_fast32_t codepoint,
+                                                                   char **outbuf);
 #endif
