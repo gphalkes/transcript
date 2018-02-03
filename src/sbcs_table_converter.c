@@ -49,25 +49,31 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
     if (codepoint < UINT32_C(0xfffe)) {
       if (handle->tables.byte_to_codepoint_flags != NULL && !(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
           (handle->tables.byte_to_codepoint_flags[(*(const uint8_t *)*inbuf) >> 3] &
-           (1 << ((*(const uint8_t *)*inbuf) & 7))))
+           (1 << ((*(const uint8_t *)*inbuf) & 7)))) {
         return TRANSCRIPT_FALLBACK;
+      }
       if (codepoint >= UINT32_C(0xe000) && codepoint < UINT32_C(0xf900) &&
-          !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE))
+          !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE)) {
         return TRANSCRIPT_PRIVATE_USE;
+      }
       PUT_UNICODE(codepoint);
     } else if (codepoint == UINT32_C(0xffff)) {
-      if (flags & TRANSCRIPT_SUBST_UNASSIGNED)
+      if (flags & TRANSCRIPT_SUBST_UNASSIGNED) {
         PUT_UNICODE(UINT32_C(0xfffd));
-      else
+      } else {
         return TRANSCRIPT_UNASSIGNED;
+      }
     } else if (codepoint == UINT32_C(0xfffe)) {
-      if (flags & TRANSCRIPT_SUBST_ILLEGAL)
+      if (flags & TRANSCRIPT_SUBST_ILLEGAL) {
         PUT_UNICODE(UINT32_C(0xfffd));
-      else
+      } else {
         return TRANSCRIPT_ILLEGAL;
+      }
     }
     (*inbuf)++;
-    if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+    if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+      return TRANSCRIPT_SUCCESS;
+    }
   }
   return TRANSCRIPT_SUCCESS;
 }
@@ -109,10 +115,14 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 
   while (*inbuf < inbuflimit) {
     GET_UNICODE();
-    if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) break;
+    if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) {
+      break;
+    }
 
     if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL;
+      }
       PUT_BYTE(handle->tables.subchar);
       *inbuf = (const char *)_inbuf;
       continue;
@@ -135,24 +145,34 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
           idx = LOOKUP_IDX(codepoint);
           byte = handle->tables.codepoint_to_byte_data[idx][codepoint & 0x1f];
           if (byte == 0) {
-            if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+            if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+              return TRANSCRIPT_UNASSIGNED;
+            }
             PUT_BYTE(handle->tables.subchar);
           } else {
-            if (!(flags & TRANSCRIPT_ALLOW_FALLBACK)) return TRANSCRIPT_FALLBACK;
+            if (!(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
+              return TRANSCRIPT_FALLBACK;
+            }
             PUT_BYTE(byte);
           }
         } else {
-          if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+          if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+            return TRANSCRIPT_UNASSIGNED;
+          }
           PUT_BYTE(handle->tables.subchar);
         }
       }
     } else {
-      if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+      if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+        return TRANSCRIPT_UNASSIGNED;
+      }
       PUT_BYTE(handle->tables.subchar);
     }
 
     *inbuf = (const char *)_inbuf;
-    if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+    if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+      return TRANSCRIPT_SUCCESS;
+    }
   }
 
   return TRANSCRIPT_SUCCESS;
@@ -169,12 +189,16 @@ void *_transcript_open_sbcs_table_converter(const sbcs_converter_v1_t *tables, i
   converter_state_t *retval;
 
   if (!(flags & TRANSCRIPT_INTERNAL) && tables->flags & INTERNAL_TABLE) {
-    if (error != NULL) *error = TRANSCRIPT_INTERNAL_TABLE;
+    if (error != NULL) {
+      *error = TRANSCRIPT_INTERNAL_TABLE;
+    }
     return NULL;
   }
 
   if ((retval = malloc(sizeof(converter_state_t))) == NULL) {
-    if (error != NULL) *error = TRANSCRIPT_OUT_OF_MEMORY;
+    if (error != NULL) {
+      *error = TRANSCRIPT_OUT_OF_MEMORY;
+    }
     return NULL;
   }
 

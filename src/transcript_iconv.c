@@ -40,7 +40,9 @@ transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcod
   transcript_iconv_t retval = NULL;
   transcript_error_t error;
 
-  if ((retval = malloc(sizeof(*retval))) == NULL) ERROR(ENOMEM);
+  if ((retval = malloc(sizeof(*retval))) == NULL) {
+    ERROR(ENOMEM);
+  }
 
   retval->from = NULL;
   retval->to = NULL;
@@ -50,24 +52,28 @@ transcript_iconv_t transcript_iconv_open(const char *tocode, const char *fromcod
   transcript_init();
 
   if ((retval->from = transcript_open_converter(fromcode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
-    if (error == TRANSCRIPT_OUT_OF_MEMORY)
+    if (error == TRANSCRIPT_OUT_OF_MEMORY) {
       ERROR(ENOMEM);
-    else if (error == TRANSCRIPT_ERRNO)
+    } else if (error == TRANSCRIPT_ERRNO) {
       ERROR(errno);
+    }
     ERROR(EINVAL);
   }
 
   if ((retval->to = transcript_open_converter(tocode, TRANSCRIPT_UTF32, 0, &error)) == NULL) {
-    if (error == TRANSCRIPT_OUT_OF_MEMORY)
+    if (error == TRANSCRIPT_OUT_OF_MEMORY) {
       ERROR(ENOMEM);
-    else if (error == TRANSCRIPT_ERRNO)
+    } else if (error == TRANSCRIPT_ERRNO) {
       ERROR(errno);
+    }
     ERROR(EINVAL);
   }
   return retval;
 
 end_error:
-  if (retval == NULL) return (transcript_iconv_t)-1;
+  if (retval == NULL) {
+    return (transcript_iconv_t)-1;
+  }
 
   transcript_close_converter(retval->from);
   transcript_close_converter(retval->to);
@@ -79,7 +85,9 @@ end_error:
     @return @c 0 on success, @c -1 on failure (sets @c errno).
 */
 int transcript_iconv_close(transcript_iconv_t cd) {
-  if (cd == NULL) return 0;
+  if (cd == NULL) {
+    return 0;
+  }
   transcript_close_converter(cd->from);
   transcript_close_converter(cd->to);
   free(cd);
@@ -190,7 +198,9 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
     if (codepoint_ptr > (char *)codepoints) {
       /* If the previous conversion yielded more than one codepoint, the
          conversion is definately non_reversible. */
-      if (codepoint_ptr > (char *)codepoints + sizeof(codepoints[0])) non_reversible = TRUE;
+      if (codepoint_ptr > (char *)codepoints + sizeof(codepoints[0])) {
+        non_reversible = TRUE;
+      }
 
       codepoint_ptr = (char *)&codepoints;
     try_again:
@@ -211,8 +221,9 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
         case TRANSCRIPT_PRIVATE_USE:
           /* Apparently, we couldn't convert (all) the characters, so this counts as
              as a non-reversible conversion. */
-          if (non_reversible) /* We shouldn't be able to get here! Return "internal error". */
+          if (non_reversible) { /* We shouldn't be able to get here! Return "internal error". */
             ERROR(EBADF);
+          }
           non_reversible = TRUE;
           goto try_again;
         case TRANSCRIPT_NO_SPACE:

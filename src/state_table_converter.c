@@ -130,18 +130,22 @@ static void find_to_unicode_variant(const variant_v1_t *variant, const uint8_t *
     mapping = variant->simple_mappings + variant->simple_mappings[mid].sort_idx;
     if (memcmp(mapping->codepage_bytes, value, 4) < 0 ||
         (memcmp(mapping->codepage_bytes, value, 4) == 0 &&
-         (mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) < length))
+         (mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) < length)) {
       low = mid + 1;
-    else
+    } else {
       high = mid;
+    }
   }
   /* Check whether we actually found a mapping. */
-  if (low == variant->nr_mappings) return;
+  if (low == variant->nr_mappings) {
+    return;
+  }
   mapping = variant->simple_mappings + variant->simple_mappings[low].sort_idx;
   if (memcmp(mapping->codepage_bytes, value, 4) != 0 ||
       (mapping->from_unicode_flags & FROM_UNICODE_LENGTH_MASK) != length ||
-      (mapping->from_unicode_flags & FROM_UNICODE_FALLBACK))
+      (mapping->from_unicode_flags & FROM_UNICODE_FALLBACK)) {
     return;
+  }
   /* Note that the items are sorted such that the first in the list has
      precision 0, the second has precision 3 and the last has precision 1
      (in as far as they exist of course). We already checked that we don't
@@ -171,7 +175,9 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
     if (entry->action == ACTION_FINAL_NOFLAGS) {
       codepoint = handle->tables.converter->codepage_mappings[idx];
       if (codepoint == UINT32_C(0xffff)) {
-        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+          return TRANSCRIPT_UNASSIGNED;
+        }
         codepoint = UINT32_C(0xfffd);
       }
       PUT_UNICODE(codepoint);
@@ -182,7 +188,9 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
     } else if (entry->action == ACTION_FINAL_PAIR_NOFLAGS) {
       codepoint = handle->tables.converter->codepage_mappings[idx];
       if (codepoint == UINT32_C(0xffff)) {
-        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+          return TRANSCRIPT_UNASSIGNED;
+        }
         codepoint = UINT32_C(0xfffd);
       } else if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
         codepoint -= UINT32_C(0xd800);
@@ -206,8 +214,10 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
         /* Note: we sorted the multi_mappings table according to bytes_length, so we will first
            check the longer mappings. This way we always find the longest match. */
         for (i = 0; i < handle->tables.nr_multi_mappings; i++) {
-          if (handle->tables.codepage_sorted_multi_mappings[i]->flags & MULTI_FROM_UNICODE_FALLBACK)
+          if (handle->tables.codepage_sorted_multi_mappings[i]->flags &
+              MULTI_FROM_UNICODE_FALLBACK) {
             continue;
+          }
 
           check_len = min(handle->tables.codepage_sorted_multi_mappings[i]->bytes_length,
                           inbuflimit - *inbuf);
@@ -215,12 +225,15 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
           /* Check if the multi-mapping is a prefix of the current input, or the
              current input is a prefix of the multi-mapping. */
           if (memcmp(handle->tables.codepage_sorted_multi_mappings[i]->bytes, *inbuf, check_len) !=
-              0)
+              0) {
             continue;
+          }
 
           /* Handle the case where the input is a prefix of the multi-mapping. */
           if (check_len != handle->tables.codepage_sorted_multi_mappings[i]->bytes_length) {
-            if (flags & (TRANSCRIPT_END_OF_TEXT | TRANSCRIPT_NO_MN_CONVERSION)) continue;
+            if (flags & (TRANSCRIPT_END_OF_TEXT | TRANSCRIPT_NO_MN_CONVERSION)) {
+              continue;
+            }
             return TRANSCRIPT_INCOMPLETE;
           }
 
@@ -239,8 +252,9 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
               codepoint += 0x10000;
             }
             if ((result = handle->common.put_unicode(codepoint, &outbuf_tmp, outbuflimit)) !=
-                TRANSCRIPT_SUCCESS)
+                TRANSCRIPT_SUCCESS) {
               return result;
+            }
           }
           *outbuf = outbuf_tmp;
 
@@ -249,13 +263,20 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
              input, so we use to_unicode_skip to update *inbuf. */
           _inbuf = (const uint8_t *)((*inbuf) + check_len);
           handle->state.to = state = entry->next_state;
-          while ((const uint8_t *)*inbuf < _inbuf)
-            if (to_unicode_skip(handle, inbuf, inbuflimit) != 0) return TRANSCRIPT_INTERNAL_ERROR;
+          while ((const uint8_t *)*inbuf < _inbuf) {
+            if (to_unicode_skip(handle, inbuf, inbuflimit) != 0) {
+              return TRANSCRIPT_INTERNAL_ERROR;
+            }
+          }
           idx = handle->tables.converter->codepage_states[handle->state.to].base;
-          if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+          if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+            return TRANSCRIPT_SUCCESS;
+          }
           break; /* Break from multi-mapping search. */
         }
-        if (i != handle->tables.nr_multi_mappings) continue;
+        if (i != handle->tables.nr_multi_mappings) {
+          continue;
+        }
       }
 
       codepoint = handle->tables.converter->codepage_mappings[idx];
@@ -265,10 +286,14 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
       }
 
       if ((conv_flags & TO_UNICODE_PRIVATE_USE) && !(flags & TRANSCRIPT_ALLOW_PRIVATE_USE)) {
-        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_PRIVATE_USE;
+        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+          return TRANSCRIPT_PRIVATE_USE;
+        }
         PUT_UNICODE(UINT32_C(0xfffd));
       } else if (codepoint == UINT32_C(0xffff)) {
-        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+        if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+          return TRANSCRIPT_UNASSIGNED;
+        }
         PUT_UNICODE(UINT32_C(0xfffd));
       } else {
         if ((codepoint & UINT32_C(0xfc00)) == UINT32_C(0xd800)) {
@@ -280,10 +305,14 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
         PUT_UNICODE(codepoint);
       }
     } else if (entry->action == ACTION_ILLEGAL) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL;
+      }
       PUT_UNICODE(UINT32_C(0xfffd));
     } else if (entry->action == ACTION_UNASSIGNED) {
-      if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) return TRANSCRIPT_UNASSIGNED;
+      if (!(flags & TRANSCRIPT_SUBST_UNASSIGNED)) {
+        return TRANSCRIPT_UNASSIGNED;
+      }
       PUT_UNICODE(UINT32_C(0xfffd));
     } else if (entry->action != ACTION_SHIFT) {
       return TRANSCRIPT_INTERNAL_ERROR;
@@ -293,13 +322,17 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
     handle->state.to = state = entry->next_state;
     idx = handle->tables.converter->codepage_states[handle->state.to].base;
 
-    if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+    if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+      return TRANSCRIPT_SUCCESS;
+    }
   }
 
   /* Check for incomplete characters at the end of the buffer. */
   if (*inbuf != inbuflimit) {
     if (flags & TRANSCRIPT_END_OF_TEXT) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL_END;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL_END;
+      }
       PUT_UNICODE(UINT32_C(0xFFFD));
       *inbuf = inbuflimit;
     } else {
@@ -379,8 +412,9 @@ static _TRANSCRIPT_INLINE transcript_error_t put_bytes(converter_state_t *handle
       for (i = 0; i < handle->tables.converter->nr_shift_states; i++) {
         if (handle->tables.converter->shift_states[i].from_state == handle->state.from &&
             handle->tables.converter->shift_states[i].to_state == required_state) {
-          if ((*outbuf) + count + handle->tables.converter->shift_states[i].len > outbuflimit)
+          if ((*outbuf) + count + handle->tables.converter->shift_states[i].len > outbuflimit) {
             return TRANSCRIPT_NO_SPACE;
+          }
           memcpy(*outbuf, handle->tables.converter->shift_states[i].bytes,
                  handle->tables.converter->shift_states[i].len);
           *outbuf += handle->tables.converter->shift_states[i].len;
@@ -392,7 +426,9 @@ static _TRANSCRIPT_INLINE transcript_error_t put_bytes(converter_state_t *handle
       }
     }
   }
-  if ((*outbuf) + count > outbuflimit) return TRANSCRIPT_NO_SPACE;
+  if ((*outbuf) + count > outbuflimit) {
+    return TRANSCRIPT_NO_SPACE;
+  }
 
 write_bytes:
   /* Using the switch here is faster than memcpy, which has to be completely general. */
@@ -439,18 +475,23 @@ static int from_unicode_check_multi_mappings(converter_state_t *handle, const ch
      the longest possible match. */
 
   GET_UNICODE();
-  if (_transcript_put_utf16_no_check(codepoint, &ptr) != 0) return TRANSCRIPT_INTERNAL_ERROR;
+  if (_transcript_put_utf16_no_check(codepoint, &ptr) != 0) {
+    return TRANSCRIPT_INTERNAL_ERROR;
+  }
 
   for (i = 0; i < handle->tables.nr_multi_mappings; i++) {
     /* Skip if the first codepoint is smaller. */
-    if (codepoints[0] < handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0]) continue;
-    /* Skip other tests if the first codepoint is larger (sorted input). */
-    else if (codepoints[0] > handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0])
+    if (codepoints[0] < handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0]) {
+      continue;
+      /* Skip other tests if the first codepoint is larger (sorted input). */
+    } else if (codepoints[0] > handle->tables.codepoint_sorted_multi_mappings[i]->codepoints[0]) {
       break;
+    }
 
     /* Skip to-unicode fallbacks. */
-    if (handle->tables.codepoint_sorted_multi_mappings[i]->flags & MULTI_TO_UNICODE_FALLBACK)
+    if (handle->tables.codepoint_sorted_multi_mappings[i]->flags & MULTI_TO_UNICODE_FALLBACK) {
       continue;
+    }
 
     mapping_check_len = handle->tables.codepoint_sorted_multi_mappings[i]->codepoints_length * 2;
     check_len = min(ptr - (char *)codepoints, mapping_check_len);
@@ -495,8 +536,9 @@ static int from_unicode_check_multi_mappings(converter_state_t *handle, const ch
         memcmp(codepoints, handle->tables.codepoint_sorted_multi_mappings[i]->codepoints,
                mapping_check_len) == 0) {
       if (handle->tables.codepoint_sorted_multi_mappings[i]->flags & MULTI_FROM_UNICODE_FALLBACK &&
-          !(flags & TRANSCRIPT_ALLOW_FALLBACK))
+          !(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
         return TRANSCRIPT_FALLBACK;
+      }
 
       /* Multi-mapping found. */
       PUT_BYTES(handle->tables.codepoint_sorted_multi_mappings[i]->bytes_length,
@@ -505,8 +547,10 @@ static int from_unicode_check_multi_mappings(converter_state_t *handle, const ch
       if ((size_t)(ptr - (char *)codepoints) != mapping_check_len) {
         /* Re-read codepoints up to the number in the mapping. */
         _inbuf = (const uint8_t *)*inbuf;
-        for (check_len = 0; mapping_check_len > check_len; check_len += codepoint > 0xffff ? 4 : 2)
+        for (check_len = 0; mapping_check_len > check_len;
+             check_len += codepoint > 0xffff ? 4 : 2) {
           GET_UNICODE();
+        }
       }
       *inbuf = (const char *)_inbuf;
       return TRANSCRIPT_SUCCESS;
@@ -532,16 +576,18 @@ static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t code
   while (low < high) {
     mid = low + ((high - low) / 2);
     mapping = variant->simple_mappings + mid;
-    if (mapping->codepoint < codepoint)
+    if (mapping->codepoint < codepoint) {
       low = mid + 1;
-    else
+    } else {
       high = mid;
+    }
   }
   mapping = variant->simple_mappings + low;
   /* Check whether we actually found a mapping. */
   if (low == variant->nr_mappings || mapping->codepoint != codepoint ||
-      (mapping->to_unicode_flags & TO_UNICODE_FALLBACK))
+      (mapping->to_unicode_flags & TO_UNICODE_FALLBACK)) {
     return;
+  }
   /* Note that the items are sorted such that the first in the list has
      precision 0, the second has precision 1 and the last has precision 3
      (in as far as they exist of course). We already checked that we don't
@@ -571,10 +617,14 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 
   while (*inbuf < inbuflimit) {
     GET_UNICODE();
-    if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) break;
+    if (codepoint == TRANSCRIPT_UTF_INCOMPLETE) {
+      break;
+    }
 
     if (codepoint == TRANSCRIPT_UTF_ILLEGAL) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL;
+      }
       PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
       *inbuf = (const char *)_inbuf;
       continue;
@@ -623,7 +673,9 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
                                                   flags)) {
           case TRANSCRIPT_SUCCESS:
             _inbuf = (const uint8_t *)*inbuf;
-            if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+            if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+              return TRANSCRIPT_SUCCESS;
+            }
             continue;
           case TRANSCRIPT_INCOMPLETE:
             return TRANSCRIPT_INCOMPLETE;
@@ -641,11 +693,13 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 
       bytes =
           &handle->tables.converter->unicode_mappings[idx * handle->tables.converter->single_size];
-      if (conv_flags & FROM_UNICODE_VARIANT)
+      if (conv_flags & FROM_UNICODE_VARIANT) {
         find_from_unicode_variant(handle->tables.variant, codepoint, &conv_flags, &bytes);
+      }
 
-      if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & TRANSCRIPT_ALLOW_FALLBACK))
+      if ((conv_flags & FROM_UNICODE_FALLBACK) && !(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
         return TRANSCRIPT_FALLBACK;
+      }
 
       if (conv_flags & FROM_UNICODE_NOT_AVAIL) {
         /* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
@@ -659,7 +713,9 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
         PUT_BYTES((conv_flags & FROM_UNICODE_LENGTH_MASK) + 1, bytes);
       }
     } else if (entry->action == ACTION_ILLEGAL) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL;
+      }
       PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
     } else if (entry->action == ACTION_UNASSIGNED) {
       /* The HANDLE_UNASSIGNED macro first checks for generic call-backs, and
@@ -671,13 +727,17 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
       return TRANSCRIPT_INTERNAL_ERROR;
     }
     *inbuf = (const char *)_inbuf;
-    if (flags & TRANSCRIPT_SINGLE_CONVERSION) return TRANSCRIPT_SUCCESS;
+    if (flags & TRANSCRIPT_SINGLE_CONVERSION) {
+      return TRANSCRIPT_SUCCESS;
+    }
   }
 
   /* Check for incomplete characters at the end of the buffer. */
   if (*inbuf < inbuflimit) {
     if (flags & TRANSCRIPT_END_OF_TEXT) {
-      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) return TRANSCRIPT_ILLEGAL_END;
+      if (!(flags & TRANSCRIPT_SUBST_ILLEGAL)) {
+        return TRANSCRIPT_ILLEGAL_END;
+      }
       PUT_BYTES(handle->tables.converter->subchar_len, handle->tables.converter->subchar);
       *inbuf = inbuflimit;
     } else {
@@ -690,7 +750,9 @@ static transcript_error_t from_unicode_conversion(converter_state_t *handle, con
 /** flush_from implementation for state table converters. */
 static transcript_error_t from_unicode_flush(converter_state_t *handle, char **outbuf,
                                              const char *outbuflimit) {
-  if (handle->state.from != 0) PUT_BYTES(0, NULL);
+  if (handle->state.from != 0) {
+    PUT_BYTES(0, NULL);
+  }
   return TRANSCRIPT_SUCCESS;
 }
 
@@ -720,12 +782,16 @@ void *_transcript_open_state_table_converter(const converter_tables_v1_t *tables
   if (!(flags & TRANSCRIPT_INTERNAL) &&
       ((tables->variant == NULL ? tables->converter->flags : tables->variant->flags) &
        (INTERNAL_TABLE | VARIANTS_AVAILABLE))) {
-    if (error != NULL) *error = TRANSCRIPT_INTERNAL_TABLE;
+    if (error != NULL) {
+      *error = TRANSCRIPT_INTERNAL_TABLE;
+    }
     return NULL;
   }
 
   if ((retval = malloc(sizeof(converter_state_t))) == NULL) {
-    if (error != NULL) *error = TRANSCRIPT_OUT_OF_MEMORY;
+    if (error != NULL) {
+      *error = TRANSCRIPT_OUT_OF_MEMORY;
+    }
     return NULL;
   }
 

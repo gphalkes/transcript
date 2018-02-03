@@ -48,13 +48,15 @@ PARSE_FUNCTION(parse_options)
 
     printf("Unknown option " OPTFMT "\n", OPTPRARG);
   NO_OPTION
-    if (option_converter_name == NULL)
+    if (option_converter_name == NULL) {
       option_converter_name = optcurrent;
-    else
+    } else {
       fatal("Only one converter name allowed\n");
+}
   END_OPTIONS
-  if (option_converter_name == NULL)
+  if (option_converter_name == NULL) {
     fatal("No converter specified\n");
+}
 END_FUNCTION
 /* clang-format on */
 
@@ -72,7 +74,9 @@ static int convert(transcript_t *handle, uint32_t codepoint, char *result, int *
       }
       break;
     case TRANSCRIPT_FALLBACK:
-      if (!option_generate_fallbacks) return -1;
+      if (!option_generate_fallbacks) {
+        return -1;
+      }
 
       *fallback = 1;
       if (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4, &result, result_limit,
@@ -101,8 +105,9 @@ int main(int argc, char *argv[]) {
 
   if ((handle = transcript_open_converter(option_converter_name,
                                           htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE,
-                                          0, NULL)) == NULL)
+                                          0, NULL)) == NULL) {
     fatal("Could not open transcript converter %s\n", option_converter_name);
+  }
 
   for (i = 0; i < 0x110000; i++) {
     char result[80];
@@ -110,12 +115,15 @@ int main(int argc, char *argv[]) {
     int fallback = 0;
 
     result_length = convert(handle, i, result, &fallback);
-    if (result_length < 0) continue;
+    if (result_length < 0) {
+      continue;
+    }
 
     printf("0x");
     for (j = option_strip_mbcs_switch && result[0] == 0x0E ? 1 : 0;
-         j < result_length - (option_strip_mbcs_switch && result[result_length - 1] == 0x0F); j++)
+         j < result_length - (option_strip_mbcs_switch && result[result_length - 1] == 0x0F); j++) {
       printf("%02X", ((unsigned char *)result)[j]);
+    }
     printf("\t0x%04" PRIX32 "\n", i);
   }
   return EXIT_SUCCESS;

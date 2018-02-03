@@ -52,7 +52,9 @@ static char *safe_strdup(const char *str) {
   char *retval;
 
   /* Not all systems may have strdup, so just implement it here based on malloc. */
-  if ((retval = (char *)malloc(len)) == NULL) OOM();
+  if ((retval = (char *)malloc(len)) == NULL) {
+    OOM();
+  }
   memcpy(retval, str, len);
   return retval;
 }
@@ -78,10 +80,11 @@ static PARSE_FUNCTION(load_files)
       NO_MORE_OPTIONS;
     END_OPTION
   NO_OPTION
-    if (strlen(optcurrent) < 5 || strcmp(optcurrent + strlen(optcurrent) - 4, ".ltc") != 0)
+    if (strlen(optcurrent) < 5 || strcmp(optcurrent + strlen(optcurrent) - 4, ".ltc") != 0) {
       fprintf(stderr, "File %s does not end in .ltc\n", optcurrent);
-    else
+    } else {
       make_links(optcurrent);
+}
   END_OPTIONS
 END_FUNCTION
 /* clang-format on */
@@ -89,10 +92,14 @@ END_FUNCTION
 static char *strcat_autoalloc(char *base, const char *append) {
   size_t orig_len = 0, len;
 
-  if (base != NULL) orig_len = strlen(base);
+  if (base != NULL) {
+    orig_len = strlen(base);
+  }
   len = strlen(append) + orig_len + 1;
 
-  if ((base = realloc(base, len)) == NULL) OOM();
+  if ((base = realloc(base, len)) == NULL) {
+    OOM();
+  }
 
   strcpy(base + orig_len, append);
   return base;
@@ -100,7 +107,9 @@ static char *strcat_autoalloc(char *base, const char *append) {
 
 static const char *strpbrk_reverse(const char *str, const char *seps) {
   const char *tmp;
-  if ((tmp = strpbrk(str, seps)) == NULL) return NULL;
+  if ((tmp = strpbrk(str, seps)) == NULL) {
+    return NULL;
+  }
 
   do {
     str = tmp;
@@ -173,10 +182,14 @@ static void make_links(const char *name) {
     base_name = strcat_autoalloc(base_name, normalized_name);
     base_name = strcat_autoalloc(base_name, ".ltc");
 
-    if (option_verbose) fprintf(stderr, "%s -> %s\n", base_name, filename(name));
+    if (option_verbose) {
+      fprintf(stderr, "%s -> %s\n", base_name, filename(name));
+    }
 
     if (lstat(base_name, &statbuf) != 0) {
-      if (errno == ENOENT) symlink(filename(name), base_name);
+      if (errno == ENOENT) {
+        symlink(filename(name), base_name);
+      }
     } else if (S_ISLNK(statbuf.st_mode)) {
       unlink(base_name);
       symlink(filename(name), base_name);
@@ -191,7 +204,9 @@ int main(int argc, char *argv[]) {
 
   transcript_init();
 
-  if (lt_dlinit() != 0) fatal("Error initializing dynamic linker: %s\n", lt_dlerror());
+  if (lt_dlinit() != 0) {
+    fatal("Error initializing dynamic linker: %s\n", lt_dlerror());
+  }
 #ifdef LT_DIRSEP_CHAR
   dirseps[1] = LT_DIRSEP_CHAR;
 #endif

@@ -71,10 +71,11 @@ int transcript_probe_converter(const char *name) {
   int result;
 
   ACQUIRE_LOCK();
-  if (!_transcript_initialized_count)
+  if (!_transcript_initialized_count) {
     result = 0;
-  else
+  } else {
     result = transcript_probe_converter_nolock(name);
+  }
   RELEASE_LOCK();
   return result;
 }
@@ -96,7 +97,9 @@ transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_t
 
   ACQUIRE_LOCK();
   if (!_transcript_initialized_count) {
-    if (error != NULL) *error = TRANSCRIPT_NOT_INITIALIZED;
+    if (error != NULL) {
+      *error = TRANSCRIPT_NOT_INITIALIZED;
+    }
     result = NULL;
   } else {
     result = transcript_open_converter_nolock(name, utf_type, flags, error);
@@ -113,7 +116,9 @@ transcript_t *transcript_open_converter(const char *name, transcript_utf_t utf_t
 */
 void transcript_close_converter(transcript_t *handle) {
   if (handle != NULL) {
-    if (handle->close != NULL) handle->close(handle);
+    if (handle->close != NULL) {
+      handle->close(handle);
+    }
     ACQUIRE_LOCK();
     lt_dlclose(handle->library_handle);
     RELEASE_LOCK();
@@ -133,9 +138,13 @@ int transcript_equal(const char *name_a, const char *name_b) {
   transcript_normalize_name(name_a, normalized_name_a, NORMALIZE_NAME_MAX);
   transcript_normalize_name(name_b, normalized_name_b, NORMALIZE_NAME_MAX);
 
-  if (strcmp(normalized_name_a, normalized_name_b) == 0) return 1;
+  if (strcmp(normalized_name_a, normalized_name_b) == 0) {
+    return 1;
+  }
 
-  if ((converter = _transcript_get_name_desc(normalized_name_a, 0)) == NULL) return 0;
+  if ((converter = _transcript_get_name_desc(normalized_name_a, 0)) == NULL) {
+    return 0;
+  }
   return converter == _transcript_get_name_desc(normalized_name_b, 0);
 }
 
@@ -239,8 +248,9 @@ transcript_error_t transcript_to_unicode_skip(transcript_t *handle, const char *
 */
 transcript_error_t transcript_from_unicode_skip(transcript_t *handle, const char **inbuf,
                                                 const char *inbuflimit) {
-  if (handle->get_unicode(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE)
+  if (handle->get_unicode(inbuf, inbuflimit, TRUE) == TRANSCRIPT_UTF_INCOMPLETE) {
     return TRANSCRIPT_INCOMPLETE;
+  }
   return TRANSCRIPT_SUCCESS;
 }
 
@@ -372,7 +382,9 @@ void transcript_normalize_name(const char *name, char *normalized_name,
     if (!_transcript_isalnum(*name)) {
       last_was_digit = FALSE;
     } else {
-      if (!last_was_digit && *name == '0') continue;
+      if (!last_was_digit && *name == '0') {
+        continue;
+      }
       normalized_name[write_idx++] = _transcript_tolower(*name);
       last_was_digit = _transcript_isdigit(*name);
     }
@@ -398,8 +410,9 @@ const char *transcript_get_codeset(void) {
   const char *lc_ctype, *codeset;
 
   if ((lc_ctype = setlocale(LC_CTYPE, NULL)) == NULL || strcmp(lc_ctype, "POSIX") == 0 ||
-      strcmp(lc_ctype, "C") == 0 || (codeset = strrchr(lc_ctype, '.')) == NULL || codeset[1] == 0)
+      strcmp(lc_ctype, "C") == 0 || (codeset = strrchr(lc_ctype, '.')) == NULL || codeset[1] == 0) {
     return "ANSI_X3.4-1968";
+  }
   return codeset + 1;
 #endif
 }
@@ -458,15 +471,18 @@ transcript_error_t transcript_init(void) {
 #endif
     if ((transcript_path = _transcript_strdup(DB_DIRECTORY)) != NULL) {
       for (search_path_element = ts_strtok(transcript_path, path_sep, &state);
-           search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state))
+           search_path_element != NULL; search_path_element = ts_strtok(NULL, path_sep, &state)) {
         add_search_dir(search_path_element);
+      }
     }
     /* Initialize aliases defined in the aliases.txt file. This does not
        check availability, nor does it build the complete set of display
        names. That will be done when that list is requested. */
     _transcript_init_aliases_from_file();
   }
-  if (_transcript_initialized_count < INT_MAX) _transcript_initialized_count++;
+  if (_transcript_initialized_count < INT_MAX) {
+    _transcript_initialized_count++;
+  }
   RELEASE_LOCK();
   return TRANSCRIPT_SUCCESS;
 }
@@ -504,7 +520,9 @@ char *_transcript_strdup(const char *str) {
   char *result;
   size_t len = strlen(str) + 1;
 
-  if ((result = malloc(len)) == NULL) return NULL;
+  if ((result = malloc(len)) == NULL) {
+    return NULL;
+  }
   memcpy(result, str, len);
   return result;
 }
@@ -527,11 +545,21 @@ static void init_char_info(void) {
 
   const char *ptr;
 
-  for (ptr = alnum; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_ALNUM;
-  for (ptr = digit; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_DIGIT;
-  for (ptr = upper; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_UPPER;
-  for (ptr = space; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_SPACE;
-  for (ptr = idhcr_extra; *ptr != 0; ptr++) char_info[(int)*ptr] |= IS_IDCHR_EXTRA;
+  for (ptr = alnum; *ptr != 0; ptr++) {
+    char_info[(int)*ptr] |= IS_ALNUM;
+  }
+  for (ptr = digit; *ptr != 0; ptr++) {
+    char_info[(int)*ptr] |= IS_DIGIT;
+  }
+  for (ptr = upper; *ptr != 0; ptr++) {
+    char_info[(int)*ptr] |= IS_UPPER;
+  }
+  for (ptr = space; *ptr != 0; ptr++) {
+    char_info[(int)*ptr] |= IS_SPACE;
+  }
+  for (ptr = idhcr_extra; *ptr != 0; ptr++) {
+    char_info[(int)*ptr] |= IS_IDCHR_EXTRA;
+  }
 }
 
 /** @internal @brief Execution-character-set isalnum. */
@@ -570,11 +598,14 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
   const char *fallback_ptr;
   transcript_error_t result;
 
-  if (flags & TRANSCRIPT_HANDLING_UNASSIGNED || codepoint > UINT32_C(0xffff))
+  if (flags & TRANSCRIPT_HANDLING_UNASSIGNED || codepoint > UINT32_C(0xffff)) {
     return TRANSCRIPT_UNASSIGNED;
+  }
 
   if ((codepoint = get_generic_fallback(codepoint)) != UINT32_C(0xffff)) {
-    if (!(flags & TRANSCRIPT_ALLOW_FALLBACK)) return TRANSCRIPT_FALLBACK;
+    if (!(flags & TRANSCRIPT_ALLOW_FALLBACK)) {
+      return TRANSCRIPT_FALLBACK;
+    }
     saved_get_unicode_func = handle->get_unicode;
     handle->get_unicode = _transcript_get_utf32_no_check;
     fallback_ptr = (const char *)&codepoint;
@@ -607,14 +638,22 @@ transcript_error_t transcript_handle_unassigned(transcript_t *handle, uint32_t c
 */
 static char *ts_strtok(char *string, const char *separators, char **state) {
   char *retval;
-  if (string != NULL) *state = string;
+  if (string != NULL) {
+    *state = string;
+  }
 
   /* Skip to the first character that is not in 'separators' */
-  while (**state != 0 && strchr(separators, **state) != NULL) (*state)++;
+  while (**state != 0 && strchr(separators, **state) != NULL) {
+    (*state)++;
+  }
   retval = *state;
-  if (*retval == 0) return NULL;
+  if (*retval == 0) {
+    return NULL;
+  }
   /* Skip to the first character that IS in 'separators' */
-  while (**state != 0 && strchr(separators, **state) == NULL) (*state)++;
+  while (**state != 0 && strchr(separators, **state) == NULL) {
+    (*state)++;
+  }
   if (**state != 0) {
     /* Overwrite it with 0 */
     **state = 0;
@@ -631,8 +670,9 @@ static void add_search_dir(const char *dir) {
   if (path_idx >= path_size) {
     const char **tmp;
     if ((tmp = realloc(_transcript_search_path,
-                       sizeof(_transcript_search_path[0]) * (path_size + 8 + 1))) == NULL)
+                       sizeof(_transcript_search_path[0]) * (path_size + 8 + 1))) == NULL) {
       return;
+    }
     _transcript_search_path = tmp;
     path_size += 8;
   }
@@ -666,7 +706,9 @@ void _transcript_log(const char *fmt, ...) {
 */
 void transcript_close_converter_nolock(transcript_t *handle) {
   if (handle != NULL) {
-    if (handle->close != NULL) handle->close(handle);
+    if (handle->close != NULL) {
+      handle->close(handle);
+    }
     lt_dlclose(handle->library_handle);
     free(handle);
   }

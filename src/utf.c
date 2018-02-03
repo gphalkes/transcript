@@ -214,8 +214,9 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char *inbuflimit
     case 176: case 177: case 178: case 179: case 180: case 181: case 182: case 183:
     case 184: case 185: case 186: case 187: case 188: case 189: case 190: case 191:
     case 192: case 193:
-      if (!skip)
+      if (!skip) {
         return TRANSCRIPT_UTF_ILLEGAL;
+}
       (*inbuf)++;
       return 0;
     case 194: case 195: case 196: case 197: case 198: case 199: case 200: case 201:
@@ -238,19 +239,24 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char *inbuflimit
       codepoint &= 0x07;
       break;
     default:
-      if (!skip)
+      if (!skip) {
         return TRANSCRIPT_UTF_ILLEGAL;
+}
       (*inbuf)++;
       return 0;
   }
   /* clang-format on */
 
-  if ((*inbuf) + bytes > inbuflimit) return TRANSCRIPT_UTF_INCOMPLETE;
+  if ((*inbuf) + bytes > inbuflimit) {
+    return TRANSCRIPT_UTF_INCOMPLETE;
+  }
 
   _inbuf++;
   for (; bytes > 1; _inbuf++, bytes--) {
     if ((*_inbuf & 0xc0) != 0x80) {
-      if (!skip) return TRANSCRIPT_UTF_ILLEGAL;
+      if (!skip) {
+        return TRANSCRIPT_UTF_ILLEGAL;
+      }
       *inbuf = (const char *)_inbuf;
       return 0;
     }
@@ -260,14 +266,18 @@ static uint_fast32_t get_utf8internal(const char **inbuf, const char *inbuflimit
 
   if (strict) {
     if (codepoint < least) {
-      if (!skip) return TRANSCRIPT_UTF_ILLEGAL;
+      if (!skip) {
+        return TRANSCRIPT_UTF_ILLEGAL;
+      }
       *inbuf = (const char *)_inbuf;
       return 0;
     }
     CHECK_CODEPOINT_SURROGATES();
   }
 
-  if (!skip) CHECK_CODEPOINT_ILLEGAL();
+  if (!skip) {
+    CHECK_CODEPOINT_ILLEGAL();
+  }
 
   *inbuf = (const char *)_inbuf;
   return codepoint;
@@ -300,10 +310,14 @@ static uint_fast32_t get_utf8(const char **inbuf, const char *inbuflimit, bool_t
 
     next_codepoint = get_utf8internal(&_inbuf, inbuflimit, skip, FALSE);
 
-    if (next_codepoint > UINT32_C(0xffff0000)) return next_codepoint;
+    if (next_codepoint > UINT32_C(0xffff0000)) {
+      return next_codepoint;
+    }
 
     if ((next_codepoint & UINT32_C(0x1ffc00)) != UINT32_C(0xdc00)) {
-      if (!skip) return TRANSCRIPT_UTF_ILLEGAL;
+      if (!skip) {
+        return TRANSCRIPT_UTF_ILLEGAL;
+      }
       *inbuf = _inbuf_save;
       return 0;
     }
@@ -311,7 +325,9 @@ static uint_fast32_t get_utf8(const char **inbuf, const char *inbuflimit, bool_t
     codepoint <<= 10;
     codepoint += next_codepoint - UINT32_C(0xdc00) + UINT32_C(0x10000);
   } else if ((codepoint & UINT32_C(0x1ffc00)) == UINT32_C(0xdc00)) {
-    if (!skip) return TRANSCRIPT_UTF_ILLEGAL;
+    if (!skip) {
+      return TRANSCRIPT_UTF_ILLEGAL;
+    }
     *inbuf = _inbuf;
     return 0;
   }

@@ -64,15 +64,18 @@ PARSE_FUNCTION(parse_options)
 
     printf("Unknown option " OPTFMT "\n", OPTPRARG);
     NO_OPTION
-      if (option_iconv_name == NULL)
+      if (option_iconv_name == NULL) {
         option_iconv_name = optcurrent;
-      else
+      } else {
         fatal("Only one converter name allowed\n");
+}
   END_OPTIONS
-  if (option_iconv_name == NULL)
+  if (option_iconv_name == NULL) {
     fatal("No converter specified\n");
-  if (option_transcript_name == NULL)
+}
+  if (option_transcript_name == NULL) {
     option_transcript_name = option_iconv_name;
+}
 END_FUNCTION
 /* clang-format on */
 
@@ -102,8 +105,12 @@ static uint32_t iconv_revert(iconv_t handle, char *seq, int length) {
 
   iconv_result = iconv(handle, &seq, &seq_len, &codepoint_ptr, &codepoint_len);
   iconv(handle, NULL, NULL, &codepoint_ptr, &codepoint_len);
-  if (iconv_result == (size_t)-1) return UINT32_C(0xffffffff);
-  if ((80 - codepoint_len) != 4) return UINT32_C(0xfffffffe);
+  if (iconv_result == (size_t)-1) {
+    return UINT32_C(0xffffffff);
+  }
+  if ((80 - codepoint_len) != 4) {
+    return UINT32_C(0xfffffffe);
+  }
   return codepoint_buffer[0];
 }
 
@@ -122,7 +129,9 @@ static int transcript_convert(transcript_t *handle, uint32_t codepoint, char *re
       }
       break;
     case TRANSCRIPT_FALLBACK:
-      if (!option_check_fallbacks) return -1;
+      if (!option_check_fallbacks) {
+        return -1;
+      }
 
       if (transcript_from_unicode(handle, &codepoint_ptr, codepoint_ptr + 4, &result, result_limit,
                                   TRANSCRIPT_FILE_START | TRANSCRIPT_ALLOW_PRIVATE_USE |
@@ -157,7 +166,9 @@ static uint32_t transcript_revert(transcript_t *handle, const char *seq, int len
       return UINT32_C(0xffffffff);
   }
   transcript_to_unicode_reset(handle);
-  if ((codepoint_ptr - (char *)codepoint_buffer) != 4) return UINT32_C(0xfffffffe);
+  if ((codepoint_ptr - (char *)codepoint_buffer) != 4) {
+    return UINT32_C(0xfffffffe);
+  }
   return codepoint_buffer[0];
 }
 
@@ -166,8 +177,12 @@ static void print_result(char *result, int result_length, int fallback) {
   if (result_length == -1) {
     printf("<failed>");
   } else {
-    if (fallback) printf("*");
-    for (i = 0; i < result_length; i++) printf("%02x", ((unsigned char *)result)[i]);
+    if (fallback) {
+      printf("*");
+    }
+    for (i = 0; i < result_length; i++) {
+      printf("%02x", ((unsigned char *)result)[i]);
+    }
   }
 }
 
@@ -181,18 +196,21 @@ int main(int argc, char *argv[]) {
   parse_options(argc, argv);
 
   if ((iconv_handle = iconv_open(option_iconv_name, htons(1) == 1 ? "UTF-32BE" : "UTF-32LE")) ==
-      (iconv_t)-1)
+      (iconv_t)-1) {
     fatal("Could not open iconv converter %s\n", option_iconv_name);
+  }
   if ((iconv_revert_handle =
-           iconv_open(htons(1) == 1 ? "UTF-32BE" : "UTF-32LE", option_iconv_name)) == (iconv_t)-1)
+           iconv_open(htons(1) == 1 ? "UTF-32BE" : "UTF-32LE", option_iconv_name)) == (iconv_t)-1) {
     fatal("Could not open iconv revertor %s\n", option_iconv_name);
+  }
 
   transcript_init();
   if ((transcript_handle = transcript_open_converter(
            option_transcript_name, htons(1) == 1 ? TRANSCRIPT_UTF32BE : TRANSCRIPT_UTF32LE, 0,
-           &error)) == NULL)
+           &error)) == NULL) {
     fatal("Could not open transcript converter %s: %s\n", option_transcript_name,
           transcript_strerror(error));
+  }
 
   for (i = option_start; i < 0x110000; i++) {
     char iconv_result[80], transcript_result[80];
@@ -209,16 +227,19 @@ int main(int argc, char *argv[]) {
       /* Filter out tag mappings. These can not be mapped, but glibc iconv sometimes simply discards
        * them. */
       if (i >= 0xe0000 && i < 0xe0100 && (option_ignore_tag || iconv_result_length == 0) &&
-          transcript_result_length == -1)
+          transcript_result_length == -1) {
         continue;
+      }
       /* For unicode: ignore surrogates and non-character mappings */
       if (option_unicode &&
-          ((i >= 0xd800 && i < 0xe000) || (i & 0xfffe) == 0xfffe || (i >= 0xfdd0 && i < 0xfdf0)))
+          ((i >= 0xd800 && i < 0xe000) || (i & 0xfffe) == 0xfffe || (i >= 0xfdd0 && i < 0xfdf0))) {
         continue;
+      }
       /* Ignore private use mappings on request if transcript can't convert them. */
       if (option_no_private_use && ((i >= 0xe000 && i < 0xf900) || i >= 0xf0000) &&
-          transcript_result_length == -1)
+          transcript_result_length == -1) {
         continue;
+      }
 
       result |= 1;
       printf("U%04X: different result: iconv: ", i);

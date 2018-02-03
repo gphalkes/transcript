@@ -32,7 +32,9 @@ void show_names(void) {
   const transcript_name_t *names;
   names = transcript_get_names(&count);
   printf("Display name count: %d\n", count);
-  for (i = 0; i < count; i++) printf("name: %s (%d)\n", names[i].name, names[i].available);
+  for (i = 0; i < count; i++) {
+    printf("name: %s (%d)\n", names[i].name, names[i].available);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -80,7 +82,9 @@ int main(int argc, char *argv[]) {
             break;
           }
         }
-        if (i == sizeof(utf_list) / sizeof(utf_list[0])) fatal("Invalid argument for -u\n");
+        if (i == sizeof(utf_list) / sizeof(utf_list[0])) {
+          fatal("Invalid argument for -u\n");
+        }
         break;
       case 'D':
         option_dump = 1;
@@ -99,13 +103,15 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (argc - optind != 1)
+  if (argc - optind != 1) {
     fatal(
         "Usage: test [-d <direction(from)>] [-u <utf type(UTF-8)>] [-D] [-f] <codepage name>\n     "
         "or: test -l");
+  }
 
-  if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL)
+  if ((conv = transcript_open_converter(argv[optind], utf_type, 0, &error)) == NULL) {
     fatal("Error opening converter: %s\n", transcript_strerror(error));
+  }
 
   while ((result = fread(inbuf + fill, 1, 1024 - fill, stdin)) != 0) {
     inbuf_ptr = inbuf;
@@ -113,20 +119,26 @@ int main(int argc, char *argv[]) {
     fill += result;
     if ((error = convert(conv, &inbuf_ptr, inbuf + fill, &outbuf_ptr, outbuf + 1024,
                          feof(stdin) ? (flags | TRANSCRIPT_END_OF_TEXT) : flags)) >
-        TRANSCRIPT_PART_SUCCESS_MAX)
+        TRANSCRIPT_PART_SUCCESS_MAX) {
       fatal("conversion result: %s\n", transcript_strerror(error));
+    }
 
     fill -= inbuf_ptr - inbuf;
     if (!option_dump) {
       printf("fill: %zu, outleft: %zu\n", fill, outbuf + 1024 - outbuf_ptr);
-      for (i = 0; i < (size_t)(outbuf_ptr - outbuf); i++) printf("\\x%02X", (uint8_t)outbuf[i]);
+      for (i = 0; i < (size_t)(outbuf_ptr - outbuf); i++) {
+        printf("\\x%02X", (uint8_t)outbuf[i]);
+      }
       putchar('\n');
     }
-    if (option_dump || (dir == TO && utf_type == TRANSCRIPT_UTF8))
+    if (option_dump || (dir == TO && utf_type == TRANSCRIPT_UTF8)) {
       printf("%.*s", (int)(outbuf_ptr - outbuf), outbuf);
+    }
     memmove(inbuf, inbuf_ptr, fill);
     flags &= TRANSCRIPT_FILE_START;
   }
-  if (!option_dump && dir == TO && utf_type == TRANSCRIPT_UTF8) putchar('\n');
+  if (!option_dump && dir == TO && utf_type == TRANSCRIPT_UTF8) {
+    putchar('\n');
+  }
   return 0;
 }

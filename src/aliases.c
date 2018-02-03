@@ -49,19 +49,24 @@ static bool_t availability_initialized = FALSE;
 /** Add a name to the ::display_names array, resizing the array if necessary. */
 static void add_display_name(const char *name, int available) {
   if (display_names_allocated == 0) {
-    if ((display_names = malloc(64 * sizeof(transcript_name_t))) == NULL) return;
+    if ((display_names = malloc(64 * sizeof(transcript_name_t))) == NULL) {
+      return;
+    }
     display_names_allocated = 64;
   } else if (display_names_used >= display_names_allocated) {
     transcript_name_t *tmp;
 
     if ((tmp = realloc(display_names, display_names_allocated * 2 * sizeof(transcript_name_t))) ==
-        NULL)
+        NULL) {
       return;
+    }
     display_names = tmp;
     display_names_allocated *= 2;
   }
 
-  if ((display_names[display_names_used].name = _transcript_strdup(name)) == NULL) return;
+  if ((display_names[display_names_used].name = _transcript_strdup(name)) == NULL) {
+    return;
+  }
   display_names[display_names_used].available = available;
   display_names_used++;
 }
@@ -72,7 +77,9 @@ static bool_t add_converter_name(const char *name) {
   char normalized_name[NORMALIZE_NAME_MAX];
   bool_t is_display_name = *name == '*';
 
-  if (is_display_name) name++;
+  if (is_display_name) {
+    name++;
+  }
 
   transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
@@ -88,9 +95,10 @@ static bool_t add_converter_name(const char *name) {
     goto return_error;
   }
   LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-  if (strcmp(normalized_name, alias->name) == 0)
+  if (strcmp(normalized_name, alias->name) == 0) {
     _transcript_log("warning: converter name '%s' is shadowed by an alias for '%s'\n", name,
                     ptr->real_name);
+  }
   END_LOOP_LIST
   END_LOOP_LIST
 
@@ -112,10 +120,11 @@ static bool_t add_converter_name(const char *name) {
   }
 
   /* Link into list. */
-  if (converters_tail != NULL)
+  if (converters_tail != NULL) {
     converters_tail->next = converter;
-  else
+  } else {
     converters = converter;
+  }
   converters_tail = converter;
   return TRUE;
 
@@ -144,7 +153,9 @@ static bool_t add_converter_alias(const char *name) {
   char normalized_name[NORMALIZE_NAME_MAX];
   bool_t is_display_name = *name == '*';
 
-  if (is_display_name) name++;
+  if (is_display_name) {
+    name++;
+  }
 
   transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
@@ -155,14 +166,18 @@ static bool_t add_converter_alias(const char *name) {
 
   /* Check if the name is already in use as a converter or an alias. */
   LOOP_LIST(transcript_name_desc_t, ptr, converters)
-  if (ptr == converters_tail) break;
-  if (strcmp(normalized_name, ptr->name) == 0)
+  if (ptr == converters_tail) {
+    break;
+  }
+  if (strcmp(normalized_name, ptr->name) == 0) {
     _transcript_log("error: alias name '%s' is shadowd by a converter\n", name);
+  }
 
   LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-  if (strcmp(normalized_name, alias->name) == 0)
+  if (strcmp(normalized_name, alias->name) == 0) {
     _transcript_log("warning: alias name '%s' is shadowed by an alias for '%s'\n", name,
                     ptr->real_name);
+  }
   END_LOOP_LIST
   END_LOOP_LIST
 
@@ -206,10 +221,14 @@ transcript_name_desc_t *_transcript_get_name_desc(const char *name, int need_nor
   }
 
   LOOP_LIST(transcript_name_desc_t, ptr, converters)
-  if (strcmp(name, ptr->name) == 0) return ptr;
+  if (strcmp(name, ptr->name) == 0) {
+    return ptr;
+  }
 
   LOOP_LIST(transcript_alias_name_t, alias, ptr->aliases)
-  if (strcmp(name, alias->name) == 0) return ptr;
+  if (strcmp(name, alias->name) == 0) {
+    return ptr;
+  }
   END_LOOP_LIST
   END_LOOP_LIST
   return NULL;
@@ -240,8 +259,9 @@ static void init_availability(void) {
   }
 
   /* Probe all the converters listed as aliases from the file. */
-  for (i = 0; i < (size_t)display_names_used; i++)
+  for (i = 0; i < (size_t)display_names_used; i++) {
     display_names[i].available = transcript_probe_converter_nolock(display_names[i].name);
+  }
 
   /* FIXME: perhaps we should add the default links for the full-type converters here. */
 
@@ -249,12 +269,19 @@ static void init_availability(void) {
   if ((dir = opendir(DB_DIRECTORY)) != NULL) {
     while ((entry = readdir(dir)) != NULL) {
       size_t entry_name_len = strlen(entry->d_name);
-      if (entry_name_len < 5) continue;
-      if (entry->d_name[0] == '_') continue;
-      if (strcmp(entry->d_name + entry_name_len - 4, ".ltc") != 0) continue;
+      if (entry_name_len < 5) {
+        continue;
+      }
+      if (entry->d_name[0] == '_') {
+        continue;
+      }
+      if (strcmp(entry->d_name + entry_name_len - 4, ".ltc") != 0) {
+        continue;
+      }
       entry->d_name[entry_name_len - 4] = 0;
-      if (_transcript_get_name_desc(entry->d_name, 1) == NULL)
+      if (_transcript_get_name_desc(entry->d_name, 1) == NULL) {
         add_display_name(entry->d_name, transcript_probe_converter_nolock(entry->d_name));
+      }
     }
     closedir(dir);
   }
@@ -269,7 +296,9 @@ static void init_availability(void) {
 */
 const transcript_name_t *transcript_get_names(int *count) {
   init_availability();
-  if (count != NULL) *count = display_names_used;
+  if (count != NULL) {
+    *count = display_names_used;
+  }
   return display_names;
 }
 
@@ -307,7 +336,9 @@ static void *read_alias_file(const char *name) {
   _transcript_log("Processing alias file %s\n", name);
 
   while ((c = fgetc(aliases)) != EOF) {
-    if (c == '\n') line_number++;
+    if (c == '\n') {
+      line_number++;
+    }
 
     switch (state) {
       case LINE_START:
@@ -331,10 +362,11 @@ static void *read_alias_file(const char *name) {
         if (state == LINE_START) {
           state = ID_FIRST;
         } else {
-          if (converter_found)
+          if (converter_found) {
             state = ID_ALIAS;
-          else
+          } else {
             state = SKIP_REST;
+          }
         }
 
         id[0] = c;
@@ -344,7 +376,9 @@ static void *read_alias_file(const char *name) {
       /* FALLTHROUGH */
       case ID_ALIAS:
         if (_transcript_isidchr(c)) {
-          if (idx < MAX_ID) id[idx++] = c;
+          if (idx < MAX_ID) {
+            id[idx++] = c;
+          }
           break;
         }
 
@@ -356,12 +390,13 @@ static void *read_alias_file(const char *name) {
             /* Start with the new converter. */
             converter_found = add_converter_name(id);
           } else {
-            if (strcmp(id, ":disable") == 0)
+            if (strcmp(id, ":disable") == 0) {
               converters_tail->flags |= NAME_DESC_FLAG_DISABLED;
-            else if (strcmp(id, ":probe_load") == 0)
+            } else if (strcmp(id, ":probe_load") == 0) {
               converters_tail->flags |= NAME_DESC_FLAG_PROBE_LOAD;
-            else
+            } else {
               add_converter_alias(id);
+            }
           }
           state = c == '#' ? COMMENT : AFTER_ID;
         } else {
@@ -370,7 +405,9 @@ static void *read_alias_file(const char *name) {
         }
         break;
       case AFTER_ID:
-        if (_transcript_isspace(c)) break;
+        if (_transcript_isspace(c)) {
+          break;
+        }
         if (_transcript_isidchr(c) || c == '*') {
           id[0] = c;
           idx = 1;
@@ -392,7 +429,9 @@ static void *read_alias_file(const char *name) {
         fclose(aliases);
         return NULL;
     }
-    if (c == '\n') state = LINE_START;
+    if (c == '\n') {
+      state = LINE_START;
+    }
   }
   /* Finish handling the last converter. */
   converter_done();
@@ -418,7 +457,9 @@ void _transcript_free_aliases(void) {
   int i;
 
   availability_initialized = FALSE;
-  for (i = 0; i < display_names_used; i++) free(display_names[i].name);
+  for (i = 0; i < display_names_used; i++) {
+    free(display_names[i].name);
+  }
   free(display_names);
   display_names = NULL;
   display_names_allocated = 0;

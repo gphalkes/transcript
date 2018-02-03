@@ -50,11 +50,13 @@ static bool_t probe_converter(const char *normalized_name, bool_t probe_load) {
     int result = 0;
 
     if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t)do_dlopen, NULL)) ==
-        NULL)
+        NULL) {
       return 0;
+    }
 
-    if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL)
+    if ((probe = get_sym(handle, "transcript_probe_", normalized_name)) != NULL) {
       result = probe(normalized_name);
+    }
 
     lt_dlclose(handle);
     return result;
@@ -62,8 +64,9 @@ static bool_t probe_converter(const char *normalized_name, bool_t probe_load) {
     FILE *handle = NULL;
     /* For most converters it is sufficient to know that the file is readable. */
     if ((handle = _transcript_db_open(normalized_name, "ltc", (open_func_t)fopen_wrapper, NULL)) !=
-        NULL)
+        NULL) {
       fclose(handle);
+    }
     return handle != NULL;
   }
 }
@@ -80,7 +83,9 @@ int transcript_probe_converter_nolock(const char *name) {
   transcript_normalize_name(name, normalized_name, NORMALIZE_NAME_MAX);
 
   if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
-    if (converter->flags & NAME_DESC_FLAG_DISABLED) return FALSE;
+    if (converter->flags & NAME_DESC_FLAG_DISABLED) {
+      return FALSE;
+    }
     return probe_converter(converter->name, !!(converter->flags & NAME_DESC_FLAG_PROBE_LOAD));
   }
   return probe_converter(normalized_name, FALSE);
@@ -95,13 +100,21 @@ static transcript_error_t success_nop(void) { return TRANSCRIPT_SUCCESS; }
 /** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct and put in a NOP
  * function for missing functions. */
 static transcript_t *complete_converter(transcript_t *handle, transcript_utf_t utf_type) {
-  if (handle == NULL) return NULL;
+  if (handle == NULL) {
+    return NULL;
+  }
   handle->get_unicode = _transcript_get_get_unicode(utf_type);
   handle->put_unicode = _transcript_get_put_unicode(utf_type);
 
-  if (handle->reset_to == NULL) handle->reset_to = (reset_func_t)void_nop;
-  if (handle->reset_from == NULL) handle->reset_from = (reset_func_t)void_nop;
-  if (handle->flush_from == NULL) handle->flush_from = (flush_func_t)success_nop;
+  if (handle->reset_to == NULL) {
+    handle->reset_to = (reset_func_t)void_nop;
+  }
+  if (handle->reset_from == NULL) {
+    handle->reset_from = (reset_func_t)void_nop;
+  }
+  if (handle->flush_from == NULL) {
+    handle->flush_from = (flush_func_t)success_nop;
+  }
   if (handle->save == NULL || handle->load == NULL) {
     handle->save = (save_load_func_t)void_nop;
     handle->load = (save_load_func_t)void_nop;
@@ -121,22 +134,25 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
     FILE *test_handle;
     transcript_error_t local_error;
     if ((test_handle = _transcript_db_open(normalized_name, "ltc", (open_func_t)fopen_wrapper,
-                                           &local_error)) == NULL)
+                                           &local_error)) == NULL) {
       ERROR(local_error);
+    }
     fclose(test_handle);
     ERROR(TRANSCRIPT_DLOPEN_FAILURE);
   }
 
-  if ((get_iface = get_sym(handle, "transcript_get_iface_", normalized_name)) == NULL)
+  if ((get_iface = get_sym(handle, "transcript_get_iface_", normalized_name)) == NULL) {
     ERROR(TRANSCRIPT_INVALID_FORMAT);
+  }
 
   switch (get_iface()) {
     case TRANSCRIPT_DUMMY:
       ERROR(TRANSCRIPT_PACKAGE_FILE);
     case TRANSCRIPT_STATE_TABLE_V1: {
       const converter_tables_v1_t *(*get_table)(void);
-      if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
+      if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL) {
         ERROR(TRANSCRIPT_INVALID_FORMAT);
+      }
       if ((result = _transcript_open_state_table_converter(get_table(), flags, error)) != NULL) {
         result->library_handle = handle;
         return result;
@@ -146,8 +162,9 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
     case TRANSCRIPT_FULL_MODULE_V1: {
       transcript_t *(*open_converter)(const char *, transcript_utf_t, int flags,
                                       transcript_error_t *);
-      if ((open_converter = get_sym(handle, "transcript_open_", normalized_name)) == NULL)
+      if ((open_converter = get_sym(handle, "transcript_open_", normalized_name)) == NULL) {
         ERROR(TRANSCRIPT_INVALID_FORMAT);
+      }
       if ((result = open_converter(normalized_name, utf_type, flags, error)) != NULL) {
         result->library_handle = handle;
         return result;
@@ -156,8 +173,9 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
     }
     case TRANSCRIPT_SBCS_TABLE_V1: {
       const sbcs_converter_v1_t *(*get_table)(void);
-      if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL)
+      if ((get_table = get_sym(handle, "transcript_get_table_", normalized_name)) == NULL) {
         ERROR(TRANSCRIPT_INVALID_FORMAT);
+      }
       if ((result = _transcript_open_sbcs_table_converter(get_table(), flags, error)) != NULL) {
         result->library_handle = handle;
         return result;
@@ -169,7 +187,9 @@ static transcript_t *open_converter(const char *normalized_name, transcript_utf_
   }
 
 end_error:
-  if (handle != NULL) lt_dlclose(handle);
+  if (handle != NULL) {
+    lt_dlclose(handle);
+  }
   return result;
 }
 
@@ -186,7 +206,9 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
   char normalized_name[NORMALIZE_NAME_MAX];
 
   if (utf_type > TRANSCRIPT_UTF32LE || utf_type <= 0) {
-    if (error != NULL) *error = TRANSCRIPT_BAD_ARG;
+    if (error != NULL) {
+      *error = TRANSCRIPT_BAD_ARG;
+    }
     return NULL;
   }
 
@@ -194,7 +216,9 @@ transcript_t *transcript_open_converter_nolock(const char *name, transcript_utf_
 
   if ((converter = _transcript_get_name_desc(normalized_name, 0)) != NULL) {
     if (converter->flags & NAME_DESC_FLAG_DISABLED) {
-      if (error != NULL) *error = TRANSCRIPT_CONVERTER_DISABLED;
+      if (error != NULL) {
+        *error = TRANSCRIPT_CONVERTER_DISABLED;
+      }
       return NULL;
     }
     return complete_converter(open_converter(converter->name, utf_type, flags, error), utf_type);
@@ -216,7 +240,9 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
   size_t len;
 
   len = strlen(dir) + strlen(name) + 2 + strlen(ext) + 1;
-  if ((file_name = malloc(len)) == NULL) ERROR(TRANSCRIPT_OUT_OF_MEMORY);
+  if ((file_name = malloc(len)) == NULL) {
+    ERROR(TRANSCRIPT_OUT_OF_MEMORY);
+  }
 
   strcpy(file_name, dir);
   strcat(file_name, "/"); /* Even on Windows, / is recognised as directory separator internally. */
@@ -224,7 +250,9 @@ static FILE *db_open(const char *name, const char *ext, const char *dir, open_fu
   strcat(file_name, ".");
   strcat(file_name, ext);
 
-  if ((result = open_func(file_name)) == NULL) ERROR(TRANSCRIPT_ERRNO);
+  if ((result = open_func(file_name)) == NULL) {
+    ERROR(TRANSCRIPT_ERRNO);
+  }
 
 end_error:
   _transcript_log("Trying to open file '%s': %p\n", file_name, result);
@@ -249,7 +277,9 @@ void *_transcript_db_open(const char *name, const char *ext, open_func_t open_fu
   FILE *result;
 
   for (next_dir = _transcript_search_path; *next_dir != NULL; next_dir++) {
-    if ((result = db_open(name, ext, *next_dir, open_func, error)) != NULL) return result;
+    if ((result = db_open(name, ext, *next_dir, open_func, error)) != NULL) {
+      return result;
+    }
   }
   return NULL;
 }
