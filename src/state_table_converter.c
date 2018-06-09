@@ -819,12 +819,6 @@ static uint8_t bits2flags4[][16];
 static uint8_t bits2flags2[][4];
 static uint8_t bits2flags1[][2];
 
-static _TRANSCRIPT_INLINE uint8_t get_default_flags(const flags_v1_t *flags,
-                                                    const uint8_t *bits2flags, uint_fast32_t idx) {
-  (void)idx;
-  (void)bits2flags;
-  return flags->default_flags;
-}
 static _TRANSCRIPT_INLINE uint8_t get_flags_1(const flags_v1_t *flags, const uint8_t *bits2flags,
                                               uint_fast32_t idx) {
   return flags->default_flags | bits2flags[(flags->flags[idx >> 3] >> (idx & 7)) & 0x1];
