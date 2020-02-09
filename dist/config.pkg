@@ -224,7 +224,7 @@ EOF
 	PKGCONFIG_DESC="Character-set conversion library"
 	PKGCONFIG_VERSION="<VERSION>"
 	PKGCONFIG_URL="http://os.ghalkes.nl/libtranscript.html"
-	PKGCONFIG_CFLAGS="-I\${includedir}/transcript"
+	PKGCONFIG_CFLAGS="-I\${includedir}"
 	PKGCONFIG_LIBS="-ltranscript"
 	PKGCONFIG_LIBS_PRIVATE="$CONFIGLIBS $PTHREADLIBS"
 

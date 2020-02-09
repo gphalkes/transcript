@@ -72,8 +72,8 @@ install: all
 	export STRIPOPT=-s; $(INSTALL) $${STRIPOPT} -m0644 src/modules/.libs/ascii.ltc $(_libdir)/transcript<LIBVERSION> || export STRIPOPT= ; \
 		$(INSTALL) $${STRIPOPT} -m0644 src/tables/.libs/*.ltc src/modules/.libs/*.ltc $(_libdir)/transcript<LIBVERSION>
 	$(INSTALL) -m0644 src/aliases.txt $(_libdir)/transcript<LIBVERSION>
-	$(INSTALL) -d $(_includedir)/transcript/transcript
-	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(_includedir)/transcript/transcript
+	$(INSTALL) -d $(_includedir)/transcript
+	$(INSTALL) -m0644 src/transcript.h src/api.h src/moduledefs.h src/utf.h src/handle.h src/bool.h $(_includedir)/transcript
 	$(INSTALL) -d $(_docdir)
 	$(INSTALL) -m0644 COPYING README Changelog doc/motivation.txt $(_docdir)
 	$(INSTALL) -d $(_pkgconfigdir)
@@ -81,7 +81,7 @@ install: all
 	./install_links.sh $(_libdir)/transcript<LIBVERSION>
 
 install-moddev: install
-	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(_includedir)/transcript/transcript
+	$(INSTALL) -m0644 src/moduledefs.h src/api.h src/bool.h src/handle.h src/utf.h $(_includedir)/transcript
 	$(INSTALL) -d $(_bindir)
 	$(INSTALL) -s src.util/linkltc/linkltc $(_bindir)
 	$(INSTALL) -d $(_mandir)/man1
