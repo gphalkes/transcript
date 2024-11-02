@@ -66,6 +66,7 @@ config() {
 #include <sys/types.h>
 #include <stdint.h>
 #include <dirent.h>
+#include <stdio.h>
 
 int main(int argc, char *argv[]) {
 	DIR *dir;
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
 
 	dir = opendir(".");
 	entry = readdir(dir);
-	puts(entry->d_name[0]);
+	puts(entry->d_name);
 	closedir(dir);
 	return 0;
 }
