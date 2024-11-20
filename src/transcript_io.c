@@ -95,10 +95,11 @@ int transcript_probe_converter_nolock(const char *name) {
 static void void_nop(void) {}
 
 /** Do-nothing function for flush_from. */
-static transcript_error_t success_nop(struct transcript_t *handle, char **outbuf, const char *outbuflimit) {
-  (void) handle;
-  (void) outbuf;
-  (void) outbuflimit;
+static transcript_error_t success_nop(struct transcript_t *handle, char **outbuf,
+                                      const char *outbuflimit) {
+  (void)handle;
+  (void)outbuf;
+  (void)outbuflimit;
   return TRANSCRIPT_SUCCESS;
 }
 

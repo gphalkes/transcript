@@ -93,6 +93,6 @@ linkltc: libtranscript.la
 	@$(MAKE) -q -C ../src.util/linkltc || $(MAKE) --no-print-directory -C ../src.util/linkltc
 
 clang-format:
-	clang-format -i *.c *.h
+	clang-format -i *.c *.h modules/*.c modules/*.h
 
 .PHONY: converter-links linkltc clang-format

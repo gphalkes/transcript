@@ -69,7 +69,9 @@ enum { MULTI_FROM_UNICODE_FALLBACK = (1 << 0), MULTI_TO_UNICODE_FALLBACK = (1 <<
 
 /** @struct save_state_t
     Structure holding the shift state of a state table converter. */
-typedef struct _transcript_state_table_state_t { uint8_t to, from; } save_state_t;
+typedef struct _transcript_state_table_state_t {
+  uint8_t to, from;
+} save_state_t;
 
 /* Make sure that the saved state will fit in an allocated block. */
 static_assert(sizeof(save_state_t) <= TRANSCRIPT_SAVE_STATE_SIZE);
@@ -347,14 +349,12 @@ static transcript_error_t to_unicode_skip(converter_state_t *handle, const char 
                                           const char *inbuflimit) {
   const uint8_t *_inbuf = (const uint8_t *)*inbuf;
   uint_fast8_t state = handle->state.to;
-  uint_fast32_t idx = handle->tables.converter->codepage_states[handle->state.to].base;
   const entry_v1_t *entry;
 
   while (_inbuf < (const uint8_t *)inbuflimit) {
     entry = &handle->tables.converter->codepage_states[state]
                  .entries[handle->tables.converter->codepage_states[state].map[*_inbuf]];
 
-    idx += entry->base + (uint_fast32_t)(*_inbuf - entry->low) * entry->mul;
     _inbuf++;
 
     switch (entry->action) {
@@ -593,7 +593,7 @@ static void find_from_unicode_variant(const variant_v1_t *variant, uint32_t code
      (in as far as they exist of course). We already checked that we don't
      have a precision 3 mapping, so this mapping is the one we want. */
   *conv_flags = mapping->from_unicode_flags;
-  *bytes = (uint8_t *)&mapping->codepage_bytes;
+  *bytes = (const uint8_t *)&mapping->codepage_bytes;
 }
 
 /** convert_from implementation for state table converters. */

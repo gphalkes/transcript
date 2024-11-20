@@ -211,10 +211,9 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
           cd->to, (const char **)&const_codepoint_ptr,
           (const char *)codepoints + 20 * sizeof(codepoints[0]), outbuf, outbuflimit,
           TRANSCRIPT_NO_1N_CONVERSION |
-              (non_reversible
-                   ? TRANSCRIPT_SUBST_UNASSIGNED | TRANSCRIPT_SUBST_ILLEGAL |
-                         TRANSCRIPT_ALLOW_FALLBACK
-                   : 0))) {
+              (non_reversible ? TRANSCRIPT_SUBST_UNASSIGNED | TRANSCRIPT_SUBST_ILLEGAL |
+                                    TRANSCRIPT_ALLOW_FALLBACK
+                              : 0))) {
         case TRANSCRIPT_SUCCESS:
           break;
         case TRANSCRIPT_FALLBACK:
@@ -240,7 +239,9 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
       result++;
       non_reversible = FALSE;
     }
-    /* This can't assign from _inbuf, as it's const qualified. However, we can subtract *inbuf from it, and then add the difference to *inbuf to have the same effect without violating any constness rules. */
+    /* This can't assign from _inbuf, as it's const qualified. However, we can subtract *inbuf from
+     * it, and then add the difference to *inbuf to have the same effect without violating any
+     * constness rules. */
     *inbuf += (_inbuf - *inbuf);
   }
 

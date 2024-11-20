@@ -47,7 +47,7 @@ static transcript_error_t to_unicode_conversion(converter_state_t *handle, const
     codepoint = handle->tables.byte_to_codepoint[*(const uint8_t *)*inbuf];
 
     if (codepoint < UINT32_C(0xfffe)) {
-      if (handle->tables.byte_to_codepoint_flags != NULL && !(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
+      if (!(flags & TRANSCRIPT_ALLOW_FALLBACK) &&
           (handle->tables.byte_to_codepoint_flags[(*(const uint8_t *)*inbuf) >> 3] &
            (1 << ((*(const uint8_t *)*inbuf) & 7)))) {
         return TRANSCRIPT_FALLBACK;
