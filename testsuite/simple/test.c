@@ -5,7 +5,7 @@
 #include <strings.h>
 #include <string.h>
 
-#include "transcript.h"
+#include "transcript/transcript.h"
 
 void fatal(const char *fmt, ...) {
 	va_list args;
@@ -25,11 +25,8 @@ int main(int argc, char *argv[]) {
 	size_t fill = 0;
 
 	int c;
-	enum { FROM, TO } dir = FROM;
 	transcript_error_t (*convert)(transcript_t *, const char **, const char *, char **, const char *, int) = transcript_from_unicode;
 	int utf_type = TRANSCRIPT_UTF8;
-	int option_dump = 0;
-	int flags = TRANSCRIPT_FILE_START;
 
 	static struct { const char *name; int type; } utf_list[] = {
 		{ "UTF-8", TRANSCRIPT_UTF8 },
@@ -46,10 +43,8 @@ int main(int argc, char *argv[]) {
 		switch (c) {
 			case 'd':
 				if (strcasecmp(optarg, "to") == 0) {
-					dir = TO;
 					convert = transcript_to_unicode;
 				} else if (strcasecmp(optarg, "from") == 0) {
-					dir = FROM;
 					convert = transcript_from_unicode;
 				} else {
 					fatal("Invalid argument for -d\n");
@@ -64,9 +59,6 @@ int main(int argc, char *argv[]) {
 				}
 				if (i == sizeof(utf_list) / sizeof(utf_list[0]))
 					fatal("Invalid argument for -u\n");
-				break;
-			case 'D':
-				option_dump = 1;
 				break;
 			default:
 				fatal("Error processing options\n");
@@ -91,7 +83,6 @@ int main(int argc, char *argv[]) {
 		putchar('\n');
 		fill -= (inbuf_ptr - inbuf);
 		memmove(inbuf, inbuf_ptr, fill);
-		flags &= ~TRANSCRIPT_FILE_START;
 	} while (!feof(stdin));
 	return 0;
 }

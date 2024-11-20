@@ -121,11 +121,12 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
      we have to save the intermediate results as well. */
   size_t result = 0;
 
-  char *_inbuf;
+  const char *_inbuf;
   char saved_state[TRANSCRIPT_SAVE_STATE_SIZE];
 
   uint32_t codepoints[20];
   char *codepoint_ptr;
+  const char *const_codepoint_ptr;
   bool_t non_reversible;
 
   const char *inbuflimit, *outbuflimit;
@@ -202,12 +203,12 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
         non_reversible = TRUE;
       }
 
-      codepoint_ptr = (char *)&codepoints;
+      const_codepoint_ptr = (char *)&codepoints;
     try_again:
       /* Try to convert. If so far the conversion is reversible, try without substitutions and
        * fallbacks first. */
       switch (transcript_from_unicode(
-          cd->to, (const char **)&codepoint_ptr,
+          cd->to, (const char **)&const_codepoint_ptr,
           (const char *)codepoints + 20 * sizeof(codepoints[0]), outbuf, outbuflimit,
           TRANSCRIPT_NO_1N_CONVERSION |
               (non_reversible
@@ -239,7 +240,8 @@ size_t transcript_iconv(transcript_iconv_t cd, char **inbuf, size_t *inbytesleft
       result++;
       non_reversible = FALSE;
     }
-    *inbuf = _inbuf;
+    /* This can't assign from _inbuf, as it's const qualified. However, we can subtract *inbuf from it, and then add the difference to *inbuf to have the same effect without violating any constness rules. */
+    *inbuf += (_inbuf - *inbuf);
   }
 
   return result;

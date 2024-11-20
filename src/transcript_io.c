@@ -95,7 +95,12 @@ int transcript_probe_converter_nolock(const char *name) {
 static void void_nop(void) {}
 
 /** Do-nothing function for flush_from. */
-static transcript_error_t success_nop(void) { return TRANSCRIPT_SUCCESS; }
+static transcript_error_t success_nop(struct transcript_t *handle, char **outbuf, const char *outbuflimit) {
+  (void) handle;
+  (void) outbuf;
+  (void) outbuflimit;
+  return TRANSCRIPT_SUCCESS;
+}
 
 /** Fill the @c get_unicode and @c put_unicode members of a ::transcript_t struct and put in a NOP
  * function for missing functions. */

@@ -12,7 +12,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SOURCES.test := test.c
-CFLAGS.test := -I../../src/
+CFLAGS.test := -I../../include
 LDFLAGS.test := -L../../src/.libs
 LDLIBS.test := -ltranscript
 

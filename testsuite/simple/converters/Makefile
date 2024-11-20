@@ -10,7 +10,7 @@ ibm139x.c: ../../../icu-mappings/ibm-1390_P110-2003.ucm ../../../icu-mappings/ib
 		-module -shared -shrext .ltc -avoid-version -rpath /usr/lib
 
 .libs/%.lo: %.c
-	libtool --mode=compile --tag=CC $(CC) -I../../../src -c -o $@ $< -L../../../transcript/.libs -ltranscript
+	libtool --mode=compile --tag=CC $(CC) -I../../../include -c -o $@ $< -L../../../transcript/.libs -ltranscript
 
 links: | $(CONVERTERS)
 	LD_LIBRARY_PATH=../../../src/.libs ../../../src.util/linkltc/linkltc $(patsubst %.la, .libs/%.ltc, $(CONVERTERS))
