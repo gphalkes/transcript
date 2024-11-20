@@ -186,13 +186,18 @@ static void make_links(const char *name) {
       fprintf(stderr, "%s -> %s\n", base_name, filename(name));
     }
 
+    const char *target_name = filename(name);
     if (lstat(base_name, &statbuf) != 0) {
       if (errno == ENOENT) {
-        symlink(filename(name), base_name);
+        if (symlink(target_name, base_name) == -1) {
+          fprintf(stderr, "%s: could not create symlink to %s: %s\n", base_name, target_name, strerror(errno));
+        }
       }
     } else if (S_ISLNK(statbuf.st_mode)) {
       unlink(base_name);
-      symlink(filename(name), base_name);
+      if (symlink(target_name, base_name) == -1) {
+        fprintf(stderr, "%s: could not create symlink to %s: %s\n", base_name, target_name, strerror(errno));
+      }
     }
     free(base_name);
   }
