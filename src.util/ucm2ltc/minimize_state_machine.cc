@@ -586,7 +586,7 @@ void minimize_state_machine(Ucm::StateMachineInfo *info, int flags) {
         }
       } else {
         for (j = 0; j < nr_initial_states; j++) {
-          if (ptr->entries[i].next_state == (full_state_t *)initial_states[j].state) {
+          if (ptr->entries[i].next_state == (const full_state_t *)initial_states[j].state) {
             ptr->entries[i].next_state = (full_state_t *)(intptr_t)j;
             break;
           }
