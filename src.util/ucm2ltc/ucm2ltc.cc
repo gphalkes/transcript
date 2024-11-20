@@ -45,6 +45,9 @@ static VariantMap variant_map(compare_string);
     @param fmt The format string for the message. See fprintf(3) for details.
     @param ... The arguments for printing.
 */
+#if __cplusplus >= 201103L
+  [[noreturn]]
+#endif
 void fatal(const char *fmt, ...) {
   va_list args;
 

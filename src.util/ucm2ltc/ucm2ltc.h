@@ -315,7 +315,11 @@ class Ucm : public UcmBase {
 extern "C" int line_number;
 extern "C" char *file_name;
 
-extern "C" void fatal(const char *fmt, ...);
+extern "C"
+#if __cplusplus >= 201103L
+  [[noreturn]]
+#endif
+void fatal(const char *fmt, ...);
 #define PANIC() fatal("Program logic error at line: %s:%d\n", __FILE__, __LINE__)
 #define OOM() fatal("Out of memory\n")
 #define ASSERT(x)      \
