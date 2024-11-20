@@ -1,7 +1,7 @@
 Version 0.3.4:
-  Bug fixes:
-  - Fix build script on more recent systems (from github/jengelh).
-  - Fix warnings from newer compilers.
+	Bug fixes:
+	- Fix build script on more recent systems (from github/jengelh).
+	- Fix warnings from newer compilers.
 
 Version 0.3.3:
   Changes:
