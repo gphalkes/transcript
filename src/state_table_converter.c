@@ -436,20 +436,28 @@ write_bytes:
   switch (count) {
     case 8:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 7:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 6:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 5:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 4:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 3:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 2:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     case 1:
       *(*outbuf)++ = *bytes++;
+      /* FALLTHROUGH */
     default:;
   }
   return TRANSCRIPT_SUCCESS;
